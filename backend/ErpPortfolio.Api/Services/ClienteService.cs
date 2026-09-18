@@ -1,12 +1,13 @@
 // =====================================================================================
 // Arquivo....: ClienteService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 18/09/2026
 // Descrição..: Regras de negócio e persistência de clientes.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.clientes
-//                - SELECT : listagem (ILIKE em nome, ORDER BY nome, id, LIMIT/OFFSET),
+//                - SELECT : listagem (ILIKE em nome, uf = ANY(@ufs), ativo = @ativo,
+//                           ORDER BY nome, id, LIMIT/OFFSET),
 //                           consulta por id e checagem de documento duplicado
 //                - INSERT : inclusão
 //                - UPDATE : edição e inativação (ativo = false)
@@ -16,6 +17,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 18/09/2026 - Criação do arquivo.
+//   1.1.0 - 18/09/2026 - Filtros da listagem por UFs e por status.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -39,6 +41,17 @@ public class ClienteService(ErpPortfolioDbContext contexto) : IClienteService
         {
             var padrao = $"%{EscaparCuringasLike(filtro.Nome.Trim())}%";
             consulta = consulta.Where(c => EF.Functions.ILike(c.Nome, padrao));
+        }
+
+        if (filtro.Ufs is { Count: > 0 })
+        {
+            var ufs = filtro.Ufs.Select(uf => uf.Trim().ToUpperInvariant()).Distinct().ToList();
+            consulta = consulta.Where(c => ufs.Contains(c.Uf));
+        }
+
+        if (filtro.Ativo is bool ativo)
+        {
+            consulta = consulta.Where(c => c.Ativo == ativo);
         }
 
         var totalItens = await consulta.CountAsync(cancelamento);

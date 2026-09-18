@@ -1,9 +1,10 @@
 // =====================================================================================
 // Arquivo....: ClientesController.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 18/09/2026
 // Descrição..: Endpoints REST do módulo de Clientes.
-//                GET    /api/clientes                 -> listagem paginada (filtro por nome)
+//                GET    /api/clientes                 -> listagem paginada (filtros: nome,
+//                                                        ufs, ativo)
 //                GET    /api/clientes/{id}            -> consulta por id
 //                POST   /api/clientes                 -> inclusão
 //                PUT    /api/clientes/{id}            -> edição
@@ -17,6 +18,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 18/09/2026 - Criação do arquivo.
+//   1.1.0 - 18/09/2026 - Documentação dos novos filtros da listagem (ufs, ativo).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -30,7 +32,7 @@ namespace ErpPortfolio.Api.Controllers;
 [Produces("application/json")]
 public class ClientesController(IClienteService clienteService) : ControllerBase
 {
-    /// <summary>Lista clientes com paginação e filtro opcional por nome.</summary>
+    /// <summary>Lista clientes com paginação e filtros opcionais por nome, UFs e status.</summary>
     [HttpGet]
     [ProducesResponseType<ResultadoPaginadoDto<ClienteRespostaDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]

@@ -1,0 +1,28 @@
+.logo-ambition {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.logo-ambition svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.logo-ambition-texto {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  color: var(--cor-texto);
+  white-space: nowrap;
+}
+
+.logo-ambition-erp {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--cor-primaria);
+}

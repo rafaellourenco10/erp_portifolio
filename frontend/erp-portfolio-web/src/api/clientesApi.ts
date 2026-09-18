@@ -1,12 +1,12 @@
 /**
  * =====================================================================
  * Arquivo....: clientesApi.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 18/09/2026
  * Descrição..: Chamadas HTTP do módulo de Clientes.
  * ---------------------------------------------------------------------
- * Fontes.....: API ErpPortfolio (ClientesController)
- *                GET    /clientes?nome=&pagina=&tamanhoPagina=
+ * Fontes.....: API Ambition ERP (ClientesController)
+ *                GET    /clientes?nome=&ufs=&ativo=&pagina=&tamanhoPagina=
  *                GET    /clientes/{id}
  *                POST   /clientes
  *                PUT    /clientes/{id}
@@ -14,6 +14,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
+ *   1.1.0 - 18/09/2026 - Documentação dos filtros ufs e ativo.
  * =====================================================================
  */
 

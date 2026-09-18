@@ -1,12 +1,15 @@
-# ERP Portfólio
+# Ambition ERP
 
-ERP simples desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**.
+ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
 O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Clientes** completo (API + banco + tela).
 
 | Etapa | Módulo | Situação |
 |---|---|---|
 | 1 | Clientes | Concluída e testada de ponta a ponta (18/09/2026) |
+| 1.1 | Tema visual Ambition ERP + filtros por UF e status | Concluída e testada (18/09/2026) |
 | 2+ | Produtos, Pedidos, Login | Planejadas |
+
+> Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
 ---
 
@@ -14,30 +17,32 @@ O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Client
 
 1. [Funcionalidades](#funcionalidades-etapa-1--clientes)
 2. [Stack e versões](#stack-e-versões)
-3. [Estrutura de pastas](#estrutura-de-pastas)
-4. [Como rodar (passo a passo)](#como-rodar-passo-a-passo)
-5. [API](#api)
-6. [Regras de validação](#regras-de-validação)
-7. [Banco de dados](#banco-de-dados)
-8. [Dados de teste](#dados-de-teste)
-9. [Decisões técnicas](#decisões-técnicas)
-10. [Testes realizados](#testes-realizados)
-11. [Padrões do projeto](#padrões-do-projeto)
-12. [Solução de problemas](#solução-de-problemas)
-13. [Próximas etapas](#próximas-etapas)
+3. [Tema visual](#tema-visual)
+4. [Estrutura de pastas](#estrutura-de-pastas)
+5. [Como rodar (passo a passo)](#como-rodar-passo-a-passo)
+6. [API](#api)
+7. [Regras de validação](#regras-de-validação)
+8. [Banco de dados](#banco-de-dados)
+9. [Dados de teste](#dados-de-teste)
+10. [Decisões técnicas](#decisões-técnicas)
+11. [Testes realizados](#testes-realizados)
+12. [Padrões do projeto](#padrões-do-projeto)
+13. [Solução de problemas](#solução-de-problemas)
+14. [Próximas etapas](#próximas-etapas)
 
 ---
 
 ## Funcionalidades (etapa 1 — Clientes)
 
-- Listagem em tabela com **paginação no servidor** (10, 20, 50 ou 100 por página) e **busca por nome** (sem diferenciar maiúsculas/minúsculas)
-- **Inclusão e edição** em formulário (modal), com validação no front (Zod) e na API (DataAnnotations)
+- Listagem em tabela com **paginação no servidor** (10, 20, 50 ou 100 por página)
+- **Filtros**: busca por nome (sem diferenciar maiúsculas/minúsculas), **Estado (UF) com seleção múltipla** em dropdown (busca sem acentos: "sao" encontra São Paulo) e **status** (Todos / Ativos / Inativos); aplicados pelo botão **Filtrar** ou Enter
+- **Inclusão e edição** em painel lateral, com validação no front (Zod) e na API (DataAnnotations)
 - **Inativação** (exclusão lógica) com confirmação; o cliente continua na lista com a tag "Inativo" e pode ser **reativado** pela edição
 - Validação de **CPF e CNPJ** pelos dígitos verificadores, incluindo o **CNPJ alfanumérico** (emitido pela Receita desde julho/2026)
 - CPF/CNPJ aceito **com ou sem máscara**; é gravado sem máscara e exibido formatado
 - **Documento único**: tentar cadastrar um CPF/CNPJ repetido retorna **409 Conflict**, e a tela mostra o erro no próprio campo
 - Erros de validação da API aparecem campo a campo no formulário
-- Layout responsivo: em telas menores, colunas secundárias são ocultadas e só a tabela rola na horizontal
+- Layout responsivo: menu lateral recolhível (vira gaveta no celular), colunas secundárias ocultadas em telas menores e, no celular, cada cliente exibido como cartão
 - Documentação interativa da API com **Swagger**
 
 ---
@@ -57,9 +62,52 @@ O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Client
 | Componentes | Ant Design + @ant-design/icons | 6 |
 | Chamadas à API | TanStack Query + Axios | 5 / 1 |
 | Formulários | React Hook Form + Zod + @hookform/resolvers | 7 / 4 / 5 |
+| Fonte | Inter (auto-hospedada via @fontsource-variable/inter) | 5 |
 | Lint do front | oxlint | 1 |
 
 Ambiente usado no desenvolvimento: Windows 11, Node.js 24, Docker Desktop com Docker Compose.
+
+---
+
+## Tema visual
+
+O visual segue o design system **Ambition ERP**, criado no Google Stitch. Os arquivos originais ficam em [`docs/tema/`](docs/tema/):
+
+| Pasta | Conteúdo |
+|---|---|
+| `stitch_erp_comercial_web_dark/` | `DESIGN.md` (guia de cores, tipografia, espaçamentos e componentes) e o logo em SVG |
+| `stitch_erp_comercial_web_dark (1)/` | Mockup do dashboard de vendas (`code.html`) |
+| `stitch_erp_comercial_web_dark (2)/` | Mockup da tela de Clientes (`code.html`) |
+| `stitch_erp_comercial_web_dark (3)/` | Mockup do formulário "Novo cliente" (`code.html` e `screen.png`) |
+
+> As imagens `screen.png` das pastas (1) e (2) vieram corrompidas na exportação do Stitch; as telas completas estão nos `code.html` (abra no navegador).
+
+Principais definições:
+
+| Elemento | Valor |
+|---|---|
+| Fundo da aplicação | `#1B1E21` |
+| Cards, tabelas, menu e painéis | `#272B30`, borda `#3B4046` |
+| Hover / elevação | `#30353A` |
+| Campos de entrada | `#1F2225` (mais escuros que o card, para parecerem "afundados") |
+| Texto principal / secundário | `#E6E8EA` / `#A3A9AF` |
+| Destaque (marca, ações, ativo) | Verde `#22C55E` (hover `#16A34A`) |
+| Alerta / erro / informativo | `#F59E0B` / `#EF4444` / `#38BDF8` |
+| Fonte | Inter, com algarismos tabulares em CPF/CNPJ, telefones e datas |
+| Cantos | 8px (botões e campos), 12px (cards e painéis) |
+
+Onde o tema está no código:
+- [`src/tema/temaAmbition.ts`](frontend/erp-portfolio-web/src/tema/temaAmbition.ts): **fonte única das cores**. Alimenta os tokens do Ant Design (`ConfigProvider`) e publica as variáveis CSS `--cor-*` usadas nos arquivos `.css`. Para mudar uma cor, altere só aqui.
+- [`src/components/LogoAmbition.tsx`](frontend/erp-portfolio-web/src/components/LogoAmbition.tsx): logo (completo ou só o ícone, com o menu recolhido).
+- [`src/components/TagStatus.tsx`](frontend/erp-portfolio-web/src/components/TagStatus.tsx): tag Ativo/Inativo no padrão do `DESIGN.md`.
+
+Os mockups também mostram itens que dependem de dados que o sistema ainda não tem. Eles **não** foram implementados, para não exibir informação falsa:
+- Indicadores (ticket médio, inadimplência)
+- Usuário logado e notificações
+- Integrações SEFAZ/WhatsApp e consulta à Receita
+- Filtro por cidades
+- Campos PF/PJ, Inscrição Estadual, Nome Fantasia e Observações
+- Menus de módulos futuros
 
 ---
 
@@ -73,6 +121,8 @@ erp_portifolio/
 ├── .env.example                    # modelo do .env (senha do banco)
 ├── .gitignore                      # regras para .NET e Node
 ├── README.md
+├── docs/
+│   └── tema/                       # design system e mockups do Stitch (ver "Tema visual")
 │
 ├── backend/
 │   └── ErpPortfolio.Api/
@@ -106,24 +156,32 @@ erp_portifolio/
     └── erp-portfolio-web/
         ├── .env.development                 # VITE_API_URL
         ├── vite.config.ts                   # porta fixa 5173
+        ├── public/favicon.svg               # ícone do Ambition ERP
         └── src/
-            ├── main.tsx                     # providers (TanStack Query, Ant Design pt-BR)
-            ├── App.tsx                      # layout: cabeçalho, menu lateral, conteúdo
+            ├── main.tsx                     # providers (TanStack Query, Ant Design pt-BR + tema) e fonte Inter
+            ├── App.tsx / App.css            # layout: menu lateral recolhível, cabeçalho, conteúdo
+            ├── index.css                    # estilos globais (fundo, fonte, barras de rolagem)
+            ├── tema/
+            │   └── temaAmbition.ts          # cores e tokens do tema (fonte única)
+            ├── components/
+            │   ├── LogoAmbition.tsx/.css    # logo
+            │   └── TagStatus.tsx/.css       # tag Ativo/Inativo
             ├── api/
             │   ├── axiosClient.ts           # instância do Axios + leitura de ProblemDetails
             │   └── clientesApi.ts           # chamadas da API de clientes
             ├── hooks/
             │   └── useClientes.ts           # useQuery / useMutation
             ├── pages/Clientes/
-            │   ├── ClientesListaPage.tsx    # tabela, busca, paginação, ações
-            │   └── ClienteFormModal.tsx     # formulário de inclusão/edição
+            │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
+            │   ├── ClienteFormDrawer.tsx    # painel lateral de inclusão/edição
+            │   └── clientes.css             # estilos da tela e do painel
             ├── schemas/
             │   └── clienteSchema.ts         # schema Zod do formulário
             ├── types/
             │   └── cliente.ts               # tipos (espelham os DTOs)
             └── utils/
                 ├── documento.ts             # validação e máscara de CPF/CNPJ
-                └── ufs.ts                   # lista das 27 UFs
+                └── ufs.ts                   # 27 UFs com nome, busca sem acentos e ordenação
 ```
 
 ---
@@ -189,6 +247,7 @@ dotnet run --project backend/ErpPortfolio.Api --launch-profile http
 4. Envie um JSON inválido (ex.: `"nome": "A"`, `"uf": "XX"`). Resposta esperada: **400** com as mensagens por campo em `errors`.
 5. Teste também:
    - `GET /api/clientes?nome=silva` (listagem paginada com filtro)
+   - `GET /api/clientes?ufs=SP&ufs=MG&ativo=true` (várias UFs + só ativos)
    - `GET /api/clientes/{id}` (200, ou 404 se não existir)
    - `PUT /api/clientes/{id}` (edição; mande `"ativo": true` para reativar)
    - `PATCH /api/clientes/{id}/inativar` (204)
@@ -209,12 +268,14 @@ Acesse <http://localhost:5173>. Na tela:
 
 | Ação | Como fazer |
 |---|---|
-| Cadastrar | Botão **Novo cliente** → preencher → **Salvar** |
-| Buscar | Digitar parte do nome em **Buscar por nome** e pressionar Enter (o **x** limpa a busca) |
+| Cadastrar | Botão **Novo cliente** → preencher no painel lateral → **Salvar cliente** |
+| Filtrar | No card de filtros: nome em **Buscar cadastro**, uma ou mais UFs em **Estado (UF)** (dá para digitar o nome ou a sigla) e **Status cadastral** → **Filtrar** (ou Enter na busca) |
+| Limpar filtros | Botão **Limpar filtros** |
 | Paginar | Rodapé da tabela: páginas e quantidade por página |
 | Editar | Ícone de **lápis** na linha |
 | Inativar | Ícone **vermelho** na linha → confirmar (desabilitado se o cliente já estiver inativo) |
-| Reativar | Editar o cliente e ligar a chave **Ativo** |
+| Reativar | Editar o cliente e ligar a chave em **Status do cadastro** |
+| Recolher o menu | Ícone ao lado do breadcrumb, no cabeçalho (no celular, o ☰ abre o menu) |
 
 Dica: o CPF/CNPJ pode ser digitado sem máscara; ao sair do campo ele é formatado automaticamente.
 
@@ -234,11 +295,22 @@ URL base em desenvolvimento: `http://localhost:5065/api`
 
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
-| GET | `/clientes?nome=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome, com filtro opcional por nome | 200, 400 |
+| GET | `/clientes?nome=&ufs=&ativo=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome, com filtros opcionais | 200, 400 |
 | GET | `/clientes/{id}` | Obtém um cliente | 200, 404 |
 | POST | `/clientes` | Cadastra um cliente | 201, 400, 409 |
 | PUT | `/clientes/{id}` | Edita um cliente (inclusive o campo `ativo`) | 200, 400, 404, 409 |
 | PATCH | `/clientes/{id}/inativar` | Inativa um cliente; repetir a chamada também retorna 204 | 204, 404 |
+
+### Filtros da listagem
+
+| Parâmetro | Exemplo | Efeito |
+|---|---|---|
+| `nome` | `nome=silva` | Trecho do nome, sem diferenciar maiúsculas/minúsculas |
+| `ufs` | `ufs=SP&ufs=MG` | Uma ou mais UFs (repita o parâmetro); aceita minúsculas; UF inválida retorna 400 |
+| `ativo` | `ativo=true` / `ativo=false` | Só ativos / só inativos; sem o parâmetro, traz todos |
+| `pagina`, `tamanhoPagina` | `pagina=2&tamanhoPagina=20` | Paginação (página 1 a 100.000; 1 a 100 por página) |
+
+Os filtros podem ser combinados.
 
 ### Exemplo de resposta da listagem
 
@@ -372,7 +444,16 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Inativação em vez de exclusão | Preserva o histórico (exclusão lógica); a reativação é feita pelo `PUT`. |
 | E-mail/telefone vazios viram `null` no DTO | Quem testa pelo Swagger costuma mandar `""`; sem isso a API recusaria um e-mail vazio. |
 | `noValidate` no formulário | A validação nativa do navegador (`type="email"`) bloqueava o envio antes do Zod e escondia as mensagens do Ant Design. |
-| Tabela com `scroll.x = 900` e colunas responsivas | Cabe inteira a partir de ~1400 px. Abaixo de 1200 px some a coluna Cadastro, abaixo de 992 px o E-mail e abaixo de 768 px o Telefone; quando falta espaço, só a tabela rola, não a página. |
+| Colunas responsivas + cartões no celular | Todas as colunas aparecem a partir de 1600 px. Abaixo disso some "Cadastro" (que nem existe no mockup), e abaixo de 1200 px somem E-mail e Telefone (visíveis no painel de edição). No celular (< 768 px), cada cliente vira um cartão com nome, documento, cidade e status. A página nunca rola na horizontal. |
+| Cores definidas só em `temaAmbition.ts` | Os tokens do Ant Design e as variáveis CSS `--cor-*` saem do mesmo objeto; trocar uma cor em um lugar atualiza a interface toda. |
+| Cores do texto do `DESIGN.md`, não do cabeçalho YAML | O cabeçalho do `DESIGN.md` traz uma paleta gerada (`#111416`, `#4be277`) um pouco diferente da descrita no texto e usada nos mockups (`#0F1112`, `#22C55E`); valem as dos mockups. |
+| Fundo e cards mais claros que no `DESIGN.md` | Com o fundo original (`#0F1112`) e os cards (`#1A1D1F`) quase iguais, não dava para distinguir os cards. Os tons de cinza foram clareados e afastados entre si (fundo `#1B1E21`, card `#272B30`, borda `#3B4046`); o verde e as cores de status seguem o `DESIGN.md`. |
+| Fonte Inter auto-hospedada | Vem do pacote npm (`@fontsource-variable/inter`), sem depender do Google Fonts nem de internet. |
+| Logo com texto em HTML | Texto dentro de SVG não acompanha a largura real da fonte; o "ERP" ficava sobreposto. Só o ícone é SVG. |
+| Formulário em painel lateral (Drawer) | Segue o mockup e mantém a lista visível ao fundo durante a edição. |
+| Filtros aplicados pelo botão **Filtrar** | Segue o mockup: o usuário monta a combinação (nome + UFs + status) e aplica de uma vez, sem uma consulta a cada clique. |
+| Busca de UF ordenada por relevância | Ao digitar "RN", "peRNambuco" também combina; a sigla exata vem primeiro para o Enter selecionar a UF certa. |
+| Lista na query string sem colchetes | O Axios envia `ufs[]=SP` por padrão; configurado para `ufs=SP&ufs=MG`, o formato que o ASP.NET entende. |
 | Vite com `strictPort` na 5173 | É a origem liberada no CORS; se a porta estiver ocupada, o Vite avisa em vez de trocar de porta. |
 | Paginação limitada a 100.000 páginas | Evita estouro de inteiro no cálculo do OFFSET. |
 
@@ -403,6 +484,10 @@ Testes manuais de ponta a ponta executados em 18/09/2026, com o banco em Docker,
 | Preflight CORS vindo de `http://localhost:5173` | Cabeçalhos `Access-Control-Allow-*` presentes | ✅ |
 | Requisição de origem não permitida | Sem cabeçalhos de CORS | ✅ |
 | Swagger (`/swagger`) | Página no ar com os 3 caminhos de `/api/clientes` | ✅ |
+| GET `ufs=SP` / `ufs=SP&ufs=mg` | Só clientes dessas UFs (minúscula aceita) | ✅ |
+| GET `ativo=false` / `ativo=true&ufs=ES` | Só inativos / combinação sem resultado | ✅ |
+| GET `nome=silva&ufs=SP` | Filtros combinados | ✅ |
+| GET `ufs=XX` | 400 "UF inválida." | ✅ |
 
 ### Tela
 
@@ -410,15 +495,22 @@ Testes manuais de ponta a ponta executados em 18/09/2026, com o banco em Docker,
 |---|---|
 | Listagem carrega com total de registros | ✅ |
 | Busca por nome filtra a tabela e o **x** limpa o filtro | ✅ |
-| Salvar formulário vazio/inválido mostra as 5 mensagens do Zod nos campos | ✅ |
+| Salvar formulário vazio/inválido mostra as mensagens do Zod nos campos | ✅ |
 | CPF digitado sem máscara é formatado ao sair do campo | ✅ |
-| Inclusão válida fecha o modal, mostra "Cliente cadastrado com sucesso." e a linha aparece | ✅ |
+| Inclusão válida fecha o painel, mostra "Cliente cadastrado com sucesso." e a linha aparece | ✅ |
 | CPF duplicado mostra o erro 409 embaixo do campo CPF/CNPJ | ✅ |
-| Edição carrega os dados no formulário e atualiza a linha | ✅ |
-| Inativação com confirmação muda a tag para "Inativo" e desabilita o botão | ✅ |
-| Tabela cabe inteira em 1400 px e 1920 px | ✅ |
-| Em 1024 px e 390 px (celular), a página não rola na horizontal | ✅ |
+| Edição carrega os dados no painel e atualiza a linha | ✅ |
+| Inativação com confirmação muda a tag para "Inativo", esmaece a linha e desabilita o botão | ✅ |
+| Reativação pela chave "Status do cadastro" no painel de edição | ✅ |
+| Filtro de UF: "sao" encontra "São Paulo (SP)"; "RN" seleciona Rio Grande do Norte; contador "2 selecionadas" | ✅ |
+| Opções do dropdown de UF com espaçamento normal (36 px por opção) | ✅ |
+| Filtro SP + MG, status Inativos, combinação sem resultado ("Nenhum cliente corresponde aos filtros.") e Limpar filtros | ✅ |
+| Fonte Inter carregada e fundo `#0F1112` aplicado | ✅ |
+| Em 1920, 1440, 1024, 800 e 390 px a página não rola na horizontal; a tabela cabe inteira a partir de 800 px | ✅ |
+| Menu lateral: 256 px em 1024 px+, 72 px (ícones) entre 768 e 991 px, gaveta no celular | ✅ |
 | Nenhum erro no console além do 409 esperado | ✅ |
+
+Os testes do tema (etapa 1.1) rodaram numa cópia isolada (banco `erp_portfolio_teste`, API na porta 5075 e front na 5174), apagada ao final, sem tocar nos dados de desenvolvimento.
 
 Verificações de build: `dotnet build` sem avisos, `tsc -b` sem erros e `oxlint` sem apontamentos.
 
@@ -504,7 +596,9 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 
 ## Próximas etapas
 
-- Filtro por **UF** na listagem de clientes, com dropdown **multi-select** (padrão do projeto para filtros de seleção múltipla, com espaçamento normal entre as opções)
+- Campos do mockup de cliente ainda não implementados: **PF/PJ**, **Inscrição Estadual**, **Nome Fantasia** e **Observações** (exige migration)
+- Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
+- Dashboard com indicadores (depende de Pedidos)
 - Módulo de **Produtos**
 - Módulo de **Pedidos**
 - **Autenticação/login**

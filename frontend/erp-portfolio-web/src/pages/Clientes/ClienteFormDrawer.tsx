@@ -1,25 +1,30 @@
 /**
  * =====================================================================
- * Arquivo....: ClienteFormModal.tsx
+ * Arquivo....: ClienteFormDrawer.tsx
  * Versão.....: 1.0.0
  * Data.......: 18/09/2026
- * Descrição..: Modal com o formulário de inclusão/edição de cliente
- *              (React Hook Form + Zod). Erros de validação (400) e de
- *              documento duplicado (409) da API são exibidos nos campos.
+ * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
+ *              de cliente (React Hook Form + Zod), no layout do tema
+ *              Ambition ERP. Erros de validação (400) e de documento
+ *              duplicado (409) da API são exibidos nos campos.
+ *              Substitui o antigo ClienteFormModal.tsx.
  * ---------------------------------------------------------------------
  * Fontes.....: POST /api/clientes e PUT /api/clientes/{id}
  *              (via useSalvarCliente)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
- *   1.0.0 - 18/09/2026 - Criação do arquivo.
+ *   1.0.0 - 18/09/2026 - Criação do arquivo (formulário migrado do modal
+ *                        para painel lateral).
  * =====================================================================
  */
 
+import { CheckOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { App, Col, Form, Input, Modal, Row, Select, Switch } from 'antd'
+import { App, Button, Col, Drawer, Flex, Form, Grid, Input, Row, Select, Switch } from 'antd'
 import { useEffect, type ReactNode } from 'react'
 import { Controller, useForm, type FieldError } from 'react-hook-form'
 import { lerErroApi } from '../../api/axiosClient'
+import { TagStatus } from '../../components/TagStatus'
 import { useSalvarCliente } from '../../hooks/useClientes'
 import {
   clienteSchema,
@@ -29,13 +34,14 @@ import {
 } from '../../schemas/clienteSchema'
 import type { Cliente } from '../../types/cliente'
 import { formatarDocumento } from '../../utils/documento'
-import { UFS } from '../../utils/ufs'
+import { UFS, compararRelevanciaUf, ufCorrespondeBusca } from '../../utils/ufs'
+import './clientes.css'
 
 const ID_FORMULARIO = 'formulario-cliente'
 
-const opcoesUf = UFS.map((uf) => ({ value: uf, label: uf }))
+const opcoesUf = UFS.map((uf) => ({ value: uf.sigla, label: `${uf.nome} (${uf.sigla})`, uf }))
 
-interface ClienteFormModalProps {
+interface ClienteFormDrawerProps {
   aberto: boolean
   /** Cliente em edição; null para inclusão. */
   cliente: Cliente | null
@@ -52,8 +58,12 @@ interface ItemFormularioProps {
 function ItemFormulario({ rotulo, erro, obrigatorio, children }: ItemFormularioProps) {
   return (
     <Form.Item
-      label={rotulo}
-      required={obrigatorio}
+      label={
+        <>
+          {rotulo}
+          {obrigatorio && <span className="campo-obrigatorio">*</span>}
+        </>
+      }
       validateStatus={erro ? 'error' : undefined}
       help={erro?.message}
     >
@@ -62,8 +72,9 @@ function ItemFormulario({ rotulo, erro, obrigatorio, children }: ItemFormularioP
   )
 }
 
-export function ClienteFormModal({ aberto, cliente, aoFechar }: ClienteFormModalProps) {
+export function ClienteFormDrawer({ aberto, cliente, aoFechar }: ClienteFormDrawerProps) {
   const { message } = App.useApp()
+  const telas = Grid.useBreakpoint()
   const salvarCliente = useSalvarCliente()
   const emEdicao = cliente !== null
 
@@ -121,36 +132,68 @@ export function ClienteFormModal({ aberto, cliente, aoFechar }: ClienteFormModal
   }
 
   return (
-    <Modal
+    <Drawer
       open={aberto}
-      title={emEdicao ? 'Editar cliente' : 'Novo cliente'}
-      okText="Salvar"
-      cancelText="Cancelar"
-      okButtonProps={{ htmlType: 'submit', form: ID_FORMULARIO }}
-      confirmLoading={salvarCliente.isPending}
-      onCancel={aoFechar}
+      onClose={aoFechar}
+      size={telas.sm === false ? '100%' : 640}
+      closable={{ placement: 'end' }}
       destroyOnHidden
-      width={640}
+      className="drawer-cliente"
+      title={
+        <div>
+          <div className="drawer-cliente-titulo">
+            <span className="ponto-destaque" />
+            {emEdicao ? 'Editar cliente' : 'Novo cliente'}
+          </div>
+          <div className="drawer-cliente-subtitulo">Preencha os dados cadastrais da empresa ou pessoa física</div>
+        </div>
+      }
+      footer={
+        <Flex justify="flex-end" gap={12}>
+          <Button size="large" onClick={aoFechar}>
+            Cancelar
+          </Button>
+          <Button
+            type="primary"
+            size="large"
+            icon={<CheckOutlined />}
+            htmlType="submit"
+            form={ID_FORMULARIO}
+            loading={salvarCliente.isPending}
+          >
+            Salvar cliente
+          </Button>
+        </Flex>
+      }
     >
       {/* noValidate: a validação nativa do navegador (type="email") impediria o Zod de exibir as mensagens */}
-      <Form id={ID_FORMULARIO} layout="vertical" noValidate onFinish={() => handleSubmit(salvar)()}>
-        <ItemFormulario rotulo="Nome" erro={errors.nome} obrigatorio>
-          <Controller
-            name="nome"
-            control={control}
-            render={({ field }) => <Input {...field} maxLength={150} autoFocus />}
-          />
-        </ItemFormulario>
-
-        <Row gutter={16}>
+      <Form
+        id={ID_FORMULARIO}
+        layout="vertical"
+        size="large"
+        requiredMark={false}
+        noValidate
+        onFinish={() => handleSubmit(salvar)()}
+      >
+        <Row gutter={20}>
           <Col xs={24} sm={12}>
-            <ItemFormulario rotulo="CPF/CNPJ" erro={errors.documento} obrigatorio>
+            <ItemFormulario rotulo="Razão Social / Nome completo" erro={errors.nome} obrigatorio>
+              <Controller
+                name="nome"
+                control={control}
+                render={({ field }) => <Input {...field} maxLength={150} autoFocus />}
+              />
+            </ItemFormulario>
+          </Col>
+          <Col xs={24} sm={12}>
+            <ItemFormulario rotulo="CNPJ / CPF" erro={errors.documento} obrigatorio>
               <Controller
                 name="documento"
                 control={control}
                 render={({ field }) => (
                   <Input
                     {...field}
+                    className="numeros-tabulares"
                     maxLength={18}
                     placeholder="Somente números ou com máscara"
                     onBlur={() => {
@@ -162,27 +205,31 @@ export function ClienteFormModal({ aberto, cliente, aoFechar }: ClienteFormModal
               />
             </ItemFormulario>
           </Col>
+
           <Col xs={24} sm={12}>
-            <ItemFormulario rotulo="Telefone" erro={errors.telefone}>
+            <ItemFormulario rotulo="E-mail principal" erro={errors.email}>
               <Controller
-                name="telefone"
+                name="email"
                 control={control}
-                render={({ field }) => <Input {...field} maxLength={20} placeholder="(11) 98765-4321" />}
+                render={({ field }) => (
+                  <Input {...field} type="email" maxLength={150} placeholder="contato@empresa.com.br" />
+                )}
               />
             </ItemFormulario>
           </Col>
-        </Row>
+          <Col xs={24} sm={12}>
+            <ItemFormulario rotulo="Telefone / WhatsApp" erro={errors.telefone}>
+              <Controller
+                name="telefone"
+                control={control}
+                render={({ field }) => (
+                  <Input {...field} className="numeros-tabulares" maxLength={20} placeholder="(11) 98765-4321" />
+                )}
+              />
+            </ItemFormulario>
+          </Col>
 
-        <ItemFormulario rotulo="E-mail" erro={errors.email}>
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => <Input {...field} type="email" maxLength={150} />}
-          />
-        </ItemFormulario>
-
-        <Row gutter={16}>
-          <Col xs={24} sm={16}>
+          <Col xs={24} sm={12}>
             <ItemFormulario rotulo="Cidade" erro={errors.cidade} obrigatorio>
               <Controller
                 name="cidade"
@@ -191,8 +238,8 @@ export function ClienteFormModal({ aberto, cliente, aoFechar }: ClienteFormModal
               />
             </ItemFormulario>
           </Col>
-          <Col xs={24} sm={8}>
-            <ItemFormulario rotulo="UF" erro={errors.uf} obrigatorio>
+          <Col xs={24} sm={12}>
+            <ItemFormulario rotulo="Estado (UF)" erro={errors.uf} obrigatorio>
               <Controller
                 name="uf"
                 control={control}
@@ -203,7 +250,10 @@ export function ClienteFormModal({ aberto, cliente, aoFechar }: ClienteFormModal
                     onBlur={field.onBlur}
                     options={opcoesUf}
                     placeholder="Selecione"
-                    showSearch
+                    showSearch={{
+                      filterOption: (busca, opcao) => !!opcao && ufCorrespondeBusca(busca, opcao.uf),
+                      filterSort: (a, b, { searchValue }) => compararRelevanciaUf(a.uf, b.uf, searchValue),
+                    }}
                   />
                 )}
               />
@@ -212,15 +262,24 @@ export function ClienteFormModal({ aberto, cliente, aoFechar }: ClienteFormModal
         </Row>
 
         {emEdicao && (
-          <ItemFormulario rotulo="Ativo" erro={errors.ativo}>
-            <Controller
-              name="ativo"
-              control={control}
-              render={({ field }) => <Switch checked={field.value} onChange={field.onChange} />}
-            />
-          </ItemFormulario>
+          <Controller
+            name="ativo"
+            control={control}
+            render={({ field }) => (
+              <div className="caixa-status">
+                <div>
+                  <div className="caixa-status-titulo">Status do cadastro</div>
+                  <div className="caixa-status-descricao">Inativos continuam no cadastro, sem exclusão.</div>
+                </div>
+                <Flex align="center" gap={12}>
+                  <TagStatus ativo={field.value} rotuloAtivo="Cliente Ativo" rotuloInativo="Cliente Inativo" />
+                  <Switch checked={field.value} onChange={field.onChange} aria-label="Cliente ativo" />
+                </Flex>
+              </div>
+            )}
+          />
         )}
       </Form>
-    </Modal>
+    </Drawer>
   )
 }

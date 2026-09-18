@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: axiosClient.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 18/09/2026
  * Descrição..: Instância do Axios apontando para a API (VITE_API_URL) e
  *              leitura dos erros no formato ProblemDetails do ASP.NET Core.
@@ -10,6 +10,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
+ *   1.1.0 - 18/09/2026 - Serialização de listas na query string (ufs=SP&ufs=MG).
  * =====================================================================
  */
 
@@ -18,6 +19,8 @@ import axios from 'axios'
 export const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   headers: { 'Content-Type': 'application/json' },
+  // Listas no formato que o ASP.NET entende: ufs=SP&ufs=MG (e não ufs[]=SP).
+  paramsSerializer: { indexes: null },
 })
 
 interface ProblemDetails {

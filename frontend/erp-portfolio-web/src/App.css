@@ -1,0 +1,84 @@
+/* Layout principal (App.tsx). Cores em src/tema/temaAmbition.ts. */
+
+.app {
+  min-height: 100vh;
+}
+
+.app-menu-lateral {
+  border-right: 1px solid var(--cor-borda);
+  position: sticky !important;
+  top: 0;
+  height: 100vh;
+}
+
+.app-logo {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--cor-borda);
+  overflow: hidden;
+}
+
+.ant-layout-sider-collapsed .app-logo {
+  justify-content: center;
+  padding: 0;
+}
+
+.app-secao-menu {
+  padding: 20px 24px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cor-texto-secundario);
+}
+
+.ant-layout-sider-collapsed .ant-menu {
+  margin-top: 16px;
+}
+
+.app-menu-lateral .ant-menu,
+.app-menu-celular .ant-menu {
+  border-inline-end: none !important;
+  font-weight: 500;
+}
+
+.app-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--cor-borda);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-cabecalho .ant-breadcrumb {
+  font-weight: 500;
+}
+
+.app-conteudo {
+  padding: 24px 32px 32px;
+  min-width: 0;
+}
+
+.app-menu-celular .ant-drawer-body {
+  padding: 0 0 16px;
+}
+
+@media (max-width: 1439px) {
+  .app-conteudo {
+    padding: 24px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-cabecalho {
+    padding: 0 12px;
+  }
+
+  .app-conteudo {
+    padding: 16px;
+  }
+}

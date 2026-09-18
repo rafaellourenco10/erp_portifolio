@@ -4,6 +4,10 @@
 GET {{api}}/clientes?nome=silva&pagina=1&tamanhoPagina=10
 Accept: application/json
 
+### Listar clientes ativos de SP ou MG
+GET {{api}}/clientes?ufs=SP&ufs=MG&ativo=true
+Accept: application/json
+
 ### Obter cliente por id
 GET {{api}}/clientes/1
 Accept: application/json

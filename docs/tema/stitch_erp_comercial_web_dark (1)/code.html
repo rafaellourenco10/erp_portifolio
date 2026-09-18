@@ -1,0 +1,577 @@
+<!DOCTYPE html><html class="dark" lang="pt-BR"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0" name="viewport"><meta content="web_dashboard" name="shell-type"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "outline": "#869585", "on-secondary": "#003914", "inverse-on-surface": "#2e3133", "secondary-container": "#1ca64d", "on-error": "#690005", "primary": "#4be277", "surface-container-low": "#191c1e", "surface-container-highest": "#323537", "outline-variant": "#3d4a3d", "inverse-surface": "#e1e2e5", "on-tertiary-container": "#00455f", "error": "#ffb4ab", "tertiary-container": "#2eb7f2", "surface-bright": "#373a3c", "on-surface": "#e1e2e5", "surface-container-lowest": "#0c0f10", "surface-tint": "#4ae176", "secondary-fixed": "#7ffc97", "tertiary": "#7cd0ff", "surface-container": "#1d2022", "on-primary": "#003915", "on-background": "#e1e2e5", "on-primary-container": "#004b1e", "secondary": "#62df7d", "primary-container": "#22c55e", "on-error-container": "#ffdad6", "on-primary-fixed-variant": "#005321", "primary-fixed": "#6bff8f", "on-surface-variant": "#bccbb9", "on-tertiary": "#00354a", "on-secondary-fixed": "#002109", "background": "#111416", "on-secondary-container": "#003111", "on-tertiary-fixed-variant": "#004c69", "error-container": "#93000a", "surface-dim": "#111416", "surface-variant": "#323537", "on-tertiary-fixed": "#001e2c", "secondary-fixed-dim": "#62df7d", "on-secondary-fixed-variant": "#005320", "surface": "#111416", "primary-fixed-dim": "#4ae176", "surface-container-high": "#272a2c", "inverse-primary": "#006e2f", "tertiary-fixed": "#c4e7ff", "on-primary-fixed": "#002109", "tertiary-fixed-dim": "#7bd0ff" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "gutter": "1rem", "space-md": "1rem", "space-sm": "0.5rem", "space-lg": "1.5rem", "space-xs": "0.25rem", "margin": "1.5rem", "space-xl": "2rem" }, "fontFamily": { "label-md": ["Inter"], "display-lg": ["Inter"], "headline-xl": ["Inter"], "body-lg": ["Inter"], "headline-sm": ["Inter"], "data-mono": ["Inter"], "body-sm": ["Inter"], "label-sm": ["Inter"], "body-md": ["Inter"], "headline-lg": ["Inter"] }, "fontSize": { "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "500" }], "display-lg": ["30px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "headline-xl": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.015em", "fontWeight": "600" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.005em", "fontWeight": "600" }], "data-mono": ["13px", { "lineHeight": "18px", "letterSpacing": "0", "fontWeight": "500" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "headline-lg": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }] } } } };</script></head><body class="bg-surface-container-lowest font-body-md text-body-md text-on-surface min-h-screen"><aside class="fixed left-0 top-0 h-screen w-[260px] bg-surface-container-low border-r border-surface-container-highest z-50 flex flex-col justify-between select-none"><div class="flex flex-col"><div class="h-16 px-space-md flex items-center justify-between border-b border-surface-container-highest/60"><div class="flex items-center gap-space-sm"><img alt="Ambition ERP Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Wll2mztL3nkuNcyzDzthG30OfkIeSfLtLgbJFrPafFs72NzyouGmHjhTenKIk0WIODDpJZw5pMY74WB6nL43Kb96Fw5HLr77qZ_QzduWrX5kLCje5S6aoqu6SzvvxEdGDCkocGcqGow73-8WECi7QXeJtbpJcUUgxrW38OZXRSVEW4lSXQruVMClEKD2WOaHsudzzmrvq9r6U5nhzQ8CSnEZbtWvNqHhlBxkDxEaFWWJo3UxjRuzSI1Q3D"><span class="font-headline-sm text-headline-sm text-on-surface tracking-tight">Ambition ERP</span></div><button class="p-space-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded transition-colors" title="Recolher menu" type="button"><span class="material-symbols-outlined text-[20px]">menu_open</span></button></div><div class="px-space-md py-space-sm"><span class="font-label-sm text-label-sm uppercase tracking-wider text-outline">Gestão Comercial</span></div><nav class="flex flex-col gap-1 px-space-sm" data-active-classes="bg-primary-container text-on-primary-container font-headline-sm"><a aria-current="page" class="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors bg-primary-container text-on-primary-container font-headline-sm" data-path="dashboard" href="#"><span class="material-symbols-outlined text-[20px]">grid_view</span><span class="font-body-md text-body-md">Dashboard</span></a><a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="clientes" href="#"><span class="material-symbols-outlined text-[20px]">group</span><span class="font-body-md text-body-md">Clientes</span></a><a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="produtos" href="#"><span class="material-symbols-outlined text-[20px]">inventory_2</span><span class="font-body-md text-body-md">Produtos</span></a><a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="pedidos" href="#"><span class="material-symbols-outlined text-[20px]">shopping_cart</span><span class="font-body-md text-body-md">Pedidos</span></a><a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="estoque" href="#"><span class="material-symbols-outlined text-[20px]">warehouse</span><span class="font-body-md text-body-md">Estoque</span></a><a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="relatorios" href="#"><span class="material-symbols-outlined text-[20px]">bar_chart_4_bars</span><span class="font-body-md text-body-md">Relatórios</span></a><a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors" data-path="configuracoes" href="#"><span class="material-symbols-outlined text-[20px]">settings</span><span class="font-body-md text-body-md">Configurações</span></a></nav></div><div class="p-space-md border-t border-surface-container-highest/60 bg-surface-container-low"><div class="flex items-center justify-between font-label-sm text-label-sm"><div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span><span class="text-on-surface-variant">Servidor Conectado</span></div><span class="text-outline font-data-mono text-data-mono">v2.4.0</span></div></div></aside><div class="pl-[260px]"><header class="fixed top-0 left-[260px] right-0 h-16 bg-surface-container-low/95 backdrop-blur-md border-b border-surface-container-highest z-40 px-space-xl flex items-center justify-between"><div class="flex items-center gap-space-sm"><img alt="Ambition ERP Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Wll2mztL3nkuNcyzDzthG30OfkIeSfLtLgbJFrPafFs72NzyouGmHjhTenKIk0WIODDpJZw5pMY74WB6nL43Kb96Fw5HLr77qZ_QzduWrX5kLCje5S6aoqu6SzvvxEdGDCkocGcqGow73-8WECi7QXeJtbpJcUUgxrW38OZXRSVEW4lSXQruVMClEKD2WOaHsudzzmrvq9r6U5nhzQ8CSnEZbtWvNqHhlBxkDxEaFWWJo3UxjRuzSI1Q3D"><nav class="flex items-center gap-2 font-body-sm text-body-sm text-on-surface-variant"><span class="hover:text-on-surface cursor-pointer">Módulos</span><span class="material-symbols-outlined text-[14px]">chevron_right</span><span class="text-primary font-label-sm text-label-sm">Operação Comercial</span></nav></div><div class="flex items-center gap-space-md"><div class="relative flex items-center"><span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">search</span><input class="bg-surface-container-lowest border border-surface-container-highest rounded-lg pl-9 pr-14 py-1.5 font-body-sm text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:border-primary w-64 lg:w-80 transition-all" placeholder="Buscar pedidos, clientes, itens..." type="text"><div class="absolute right-2 px-1.5 py-0.5 rounded bg-surface-container-high border border-surface-container-highest text-outline font-data-mono text-[10px] tracking-tight">Ctrl + K</div></div><button class="relative p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-lg transition-colors" title="Notificações" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-container font-label-sm text-[10px] text-on-primary-container font-bold">3</span></button><div class="h-6 w-[1px] bg-surface-container-highest"></div><div class="flex items-center gap-3 pl-1"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-primary/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDa_BXFnJbjBy3bXnWOAqVWe7INcdeAdl24BU2Y3-qLlqufbm51pl2mCk25MdNMZdjtVgRtTZx3GtonxIuJvoj-6PxmdYcy05RXakoEBPcT94Bi3WHP1gRR5COISw-NeuMIYZFBToZjrTJXe4mff2XnrfqdjdJvFcBP0yzc7MTzPZswy7JnaAcY-BvlV0c8UzEVVGtrJoq3aymw-SWdGAMHyrH7qEIA_7rlto2qipxhRLXIl9cPy-AJag"><div class="hidden md:flex flex-col text-left"><span class="font-label-md text-label-md text-on-surface leading-tight">Carlos Mendes</span><span class="font-body-sm text-body-sm text-on-surface-variant leading-tight">Administrador</span></div><span class="material-symbols-outlined text-outline text-[18px]">expand_more</span></div></div></header><main class="relative pt-16 bg-surface-container-lowest min-h-screen"><div class="w-full p-space-xl"><div class="flex flex-col w-full gap-space-lg">
+<!-- Sub-Header & Controls -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+<span class="font-label-sm text-label-sm text-outline tracking-wider uppercase">Painel de Controle Financeiro</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-on-surface">Visão Geral das Vendas</h1>
+</div>
+<div class="flex flex-wrap items-center gap-space-sm">
+<!-- Period Selector dropdown pill -->
+<div class="flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-lg border-0 shadow-sm cursor-pointer hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-outline text-[18px]">calendar_today</span>
+<span class="font-label-md text-label-md text-on-surface">Este mês (Outubro 2024)</span>
+<span class="material-symbols-outlined text-outline text-[16px]">expand_more</span>
+</div>
+<!-- Action Button -->
+<button class="flex items-center gap-2 bg-surface-container hover:bg-surface-container-high text-on-surface px-3 py-1.5 rounded-lg shadow-sm font-label-md text-label-md transition-colors" type="button">
+<span class="material-symbols-outlined text-primary text-[18px]">file_download</span>
+<span class="">Exportar Relatório</span>
+</button>
+<!-- Primary Action -->
+<button class="flex items-center gap-2 bg-primary-container hover:bg-secondary-container text-on-primary-container px-3 py-1.5 rounded-lg shadow-sm font-label-md text-label-md font-semibold transition-all" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="">Novo Pedido</span>
+</button>
+</div>
+</div>
+<!-- KPI Indicators Grid (Ant Design Dark / 4 Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+<!-- Card 1: Vendas do mês -->
+<div class="bg-surface-container p-5 rounded-lg shadow-sm flex flex-col justify-between relative overflow-hidden group hover:bg-surface-container-high/90 transition-colors">
+<div class="flex items-start justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Vendas do mês</span>
+<div class="p-2 rounded-lg bg-surface-container-highest/60 text-primary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[20px]">attach_money</span>
+</div>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-on-surface tracking-tight">R$ 148.920,00</div>
+<div class="flex items-center gap-2 mt-3 font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-primary-container/15 text-primary font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+            14,2%
+          </span>
+<span class="text-outline">vs mês anterior</span>
+</div>
+</div>
+<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+</div>
+<!-- Card 2: Pedidos no mês -->
+<div class="bg-surface-container p-5 rounded-lg shadow-sm flex flex-col justify-between relative overflow-hidden group hover:bg-surface-container-high/90 transition-colors">
+<div class="flex items-start justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Pedidos no mês</span>
+<div class="p-2 rounded-lg bg-surface-container-highest/60 text-primary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[20px]">shopping_cart</span>
+</div>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-on-surface tracking-tight">342 <span class="font-headline-sm text-headline-sm text-on-surface-variant font-normal">pedidos</span></div>
+<div class="flex items-center gap-2 mt-3 font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-primary-container/15 text-primary font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+            8,7%
+          </span>
+<span class="text-outline">vs mês anterior</span>
+</div>
+</div>
+<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+</div>
+<!-- Card 3: Ticket médio -->
+<div class="bg-surface-container p-5 rounded-lg shadow-sm flex flex-col justify-between relative overflow-hidden group hover:bg-surface-container-high/90 transition-colors">
+<div class="flex items-start justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Ticket médio</span>
+<div class="p-2 rounded-lg bg-surface-container-highest/60 text-tertiary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[20px]">sell</span>
+</div>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-on-surface tracking-tight">R$ 435,44</div>
+<div class="flex items-center gap-2 mt-3 font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-error-container/40 text-error font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+            2,4%
+          </span>
+<span class="text-outline">vs mês anterior</span>
+</div>
+</div>
+<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-error/5 rounded-full blur-2xl pointer-events-none"></div>
+</div>
+<!-- Card 4: Clientes ativos -->
+<div class="bg-surface-container p-5 rounded-lg shadow-sm flex flex-col justify-between relative overflow-hidden group hover:bg-surface-container-high/90 transition-colors">
+<div class="flex items-start justify-between mb-3">
+<span class="font-label-md text-label-md text-on-surface-variant">Clientes ativos</span>
+<div class="p-2 rounded-lg bg-surface-container-highest/60 text-primary group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-[20px]">domain</span>
+</div>
+</div>
+<div>
+<div class="font-display-lg text-display-lg text-on-surface tracking-tight">1.280 <span class="font-headline-sm text-headline-sm text-on-surface-variant font-normal">empresas</span></div>
+<div class="flex items-center gap-2 mt-3 font-label-sm text-label-sm">
+<span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full bg-primary-container/15 text-primary font-medium">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+            5,1%
+          </span>
+<span class="text-outline">vs mês anterior</span>
+</div>
+</div>
+<div class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+</div>
+</div>
+<!-- Charts Section: 60% / 40% Bento Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-md">
+<!-- Left Chart: Evolução de Vendas (7 cols) -->
+<div class="lg:col-span-7 bg-surface-container p-5 rounded-lg shadow-sm flex flex-col justify-between">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Evolução de Vendas</h2>
+<p class="font-body-sm text-body-sm text-outline">Histórico consolidado dos últimos 12 meses faturados</p>
+</div>
+<!-- Ant Design style pill tabs -->
+<div class="flex items-center bg-surface-container-lowest p-1 rounded-lg self-start sm:self-auto">
+<button class="px-3 py-1 rounded bg-surface-container-high text-primary font-label-sm text-label-sm shadow-sm transition-all" type="button">Receita</button>
+<button class="px-3 py-1 rounded text-outline hover:text-on-surface font-label-sm text-label-sm transition-colors" type="button">Pedidos</button>
+<button class="px-3 py-1 rounded text-outline hover:text-on-surface font-label-sm text-label-sm transition-colors" type="button">Volume</button>
+</div>
+</div>
+<!-- SVG Line Chart with Gradient and Floating Tooltip Simulation -->
+<div class="relative w-full overflow-hidden pt-4 pb-2">
+<!-- Tooltip callout over October -->
+<div class="absolute top-2 right-4 sm:right-12 z-20 bg-surface-container-highest/95 backdrop-blur-md px-3 py-2 rounded-lg shadow-xl pointer-events-none transform -translate-y-1">
+<div class="font-label-sm text-[11px] text-outline uppercase tracking-wider">Outubro 2024</div>
+<div class="font-headline-sm text-headline-sm text-primary font-bold">R$ 148.920,00</div>
+<div class="font-body-sm text-[11px] text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]">arrow_upward</span> +14,2% vs meta
+          </div>
+</div>
+<svg class="w-full h-56 sm:h-64 overflow-visible" preserveAspectRatio="none" viewBox="0 0 760 260">
+<defs>
+<linearGradient id="salesGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#4be277" stop-opacity="0.32"></stop>
+<stop offset="60%" stop-color="#22c55e" stop-opacity="0.08"></stop>
+<stop offset="100%" stop-color="#22c55e" stop-opacity="0.00"></stop>
+</linearGradient>
+<filter height="140%" id="glow" width="140%" x="-20%" y="-20%">
+<feDropShadow dx="0" dy="4" flood-color="#22c55e" flood-opacity="0.25" stdDeviation="4"></feDropShadow>
+</filter>
+</defs>
+<!-- Horizontal Subtle Gridlines -->
+<line stroke="#323537" stroke-dasharray="3 4" stroke-width="1" x1="40" x2="740" y1="20" y2="20"></line>
+<line stroke="#323537" stroke-dasharray="3 4" stroke-width="1" x1="40" x2="740" y1="75" y2="75"></line>
+<line stroke="#323537" stroke-dasharray="3 4" stroke-width="1" x1="40" x2="740" y1="130" y2="130"></line>
+<line stroke="#323537" stroke-dasharray="3 4" stroke-width="1" x1="40" x2="740" y1="185" y2="185"></line>
+<line stroke="#323537" stroke-width="1" x1="40" x2="740" y1="240" y2="240"></line>
+<!-- Y Axis Values -->
+<text class="text-[11px] font-mono" fill="#869585" text-anchor="end" x="32" y="24">160k</text>
+<text class="text-[11px] font-mono" fill="#869585" text-anchor="end" x="32" y="79">120k</text>
+<text class="text-[11px] font-mono" fill="#869585" text-anchor="end" x="32" y="134">80k</text>
+<text class="text-[11px] font-mono" fill="#869585" text-anchor="end" x="32" y="189">40k</text>
+<!-- Area Under Curve -->
+<path d="M 60 170 
+                   Q 120 160 120 155
+                   T 180 145
+                   T 240 165
+                   T 300 130
+                   T 360 115
+                   T 420 125
+                   T 480 95
+                   T 540 85
+                   T 600 70
+                   T 660 60
+                   T 720 30
+                   L 720 240 
+                   L 60 240 Z" fill="url(#salesGradient)"></path>
+<!-- High Precision Line -->
+<path d="M 60 170 
+                   Q 120 160 120 155
+                   T 180 145
+                   T 240 165
+                   T 300 130
+                   T 360 115
+                   T 420 125
+                   T 480 95
+                   T 540 85
+                   T 600 70
+                   T 660 60
+                   T 720 30" fill="none" filter="url(#glow)" stroke="#22c55e" stroke-linecap="round" stroke-width="3"></path>
+<!-- Active Marker on Last Point (Out 2024) -->
+<line opacity="0.75" stroke="#4be277" stroke-dasharray="2 3" stroke-width="1.5" x1="720" x2="720" y1="30" y2="240"></line>
+<circle cx="720" cy="30" fill="#0c0f10" r="6" stroke="#4be277" stroke-width="3"></circle>
+<circle cx="720" cy="30" fill="#4be277" r="2.5"></circle>
+<!-- Past Data Points (Subtle) -->
+<circle cx="60" cy="170" fill="#22c55e" r="3"></circle>
+<circle cx="180" cy="145" fill="#22c55e" r="3"></circle>
+<circle cx="300" cy="130" fill="#22c55e" r="3"></circle>
+<circle cx="420" cy="125" fill="#22c55e" r="3"></circle>
+<circle cx="540" cy="85" fill="#22c55e" r="3"></circle>
+<circle cx="660" cy="60" fill="#22c55e" r="3"></circle>
+</svg>
+<!-- X Axis labels aligned with points -->
+<div class="flex justify-between pl-8 pr-1 font-label-sm text-[11px] text-outline mt-1">
+<span class="">Nov</span>
+<span class="">Dez</span>
+<span class="">Jan</span>
+<span class="">Fev</span>
+<span class="">Mar</span>
+<span class="">Abr</span>
+<span class="">Mai</span>
+<span class="">Jun</span>
+<span class="">Jul</span>
+<span class="">Ago</span>
+<span class="">Set</span>
+<span class="text-primary font-semibold">Out</span>
+</div>
+</div>
+</div>
+<!-- Right Chart: Top 5 Produtos (5 cols) -->
+<div class="lg:col-span-5 bg-surface-container p-5 rounded-lg shadow-sm flex flex-col justify-between">
+<div class="flex items-center justify-between mb-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Top 5 Produtos Mais Vendidos</h2>
+<p class="font-body-sm text-body-sm text-outline">Ranking por faturamento bruto acumulado</p>
+</div>
+<button class="text-outline hover:text-on-surface transition-colors p-1" title="Opções" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+<!-- Horizontal Progress Bar list -->
+<div class="flex flex-col gap-4 my-auto pt-2">
+<!-- Item 1 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-on-surface truncate max-w-[220px]" title="Parafuso Sextavado Aço 3/8">1. Parafuso Sextavado Aço 3/8"</span>
+<span class="text-on-surface font-semibold font-data-mono text-data-mono">R$ 28.628,00</span>
+</div>
+<div class="w-full bg-surface-container-highest/50 h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+</div>
+<span class="font-body-sm text-[11px] text-outline">842 unidades vendidas</span>
+</div>
+<!-- Item 2 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-on-surface truncate max-w-[220px]" title="Furadeira de Impacto 750W">2. Furadeira de Impacto 750W</span>
+<span class="text-on-surface font-semibold font-data-mono text-data-mono">R$ 22.050,00</span>
+</div>
+<div class="w-full bg-surface-container-highest/50 h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 77%"></div>
+</div>
+<span class="font-body-sm text-[11px] text-outline">315 unidades vendidas</span>
+</div>
+<!-- Item 3 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-on-surface truncate max-w-[220px]" title="Disco de Corte Inox 4.5">3. Disco de Corte Inox 4.5"</span>
+<span class="text-on-surface font-semibold font-data-mono text-data-mono">R$ 18.600,00</span>
+</div>
+<div class="w-full bg-surface-container-highest/50 h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 65%"></div>
+</div>
+<span class="font-body-sm text-[11px] text-outline">1.240 unidades vendidas</span>
+</div>
+<!-- Item 4 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-on-surface truncate max-w-[220px]" title="Luva de Proteção Nitrílica">4. Luva de Proteção Nitrílica</span>
+<span class="text-on-surface font-semibold font-data-mono text-data-mono">R$ 14.700,00</span>
+</div>
+<div class="w-full bg-surface-container-highest/50 h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 51%"></div>
+</div>
+<span class="font-body-sm text-[11px] text-outline">980 unidades vendidas</span>
+</div>
+<!-- Item 5 -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-md text-label-md">
+<span class="text-on-surface truncate max-w-[220px]" title="Tinta Epóxi Industrial 3.6L">5. Tinta Epóxi Industrial 3.6L</span>
+<span class="text-on-surface font-semibold font-data-mono text-data-mono">R$ 12.325,00</span>
+</div>
+<div class="w-full bg-surface-container-highest/50 h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary-container h-full rounded-full transition-all duration-500" style="width: 43%"></div>
+</div>
+<span class="font-body-sm text-[11px] text-outline">145 unidades vendidas</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Section: Últimos Pedidos Data Table -->
+<div class="bg-surface-container rounded-lg shadow-sm overflow-hidden flex flex-col">
+<!-- Table Header & Controls -->
+<div class="p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-container">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Últimos Pedidos Faturados</h2>
+<p class="font-body-sm text-body-sm text-outline">Fluxo de pedidos de venda em processamento no ERP</p>
+</div>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-outline text-[16px]">filter_list</span>
+<input class="bg-surface-container-lowest text-on-surface placeholder:text-outline font-body-sm text-body-sm pl-8 pr-3 py-1.5 rounded-lg focus:outline-none focus:bg-surface-container-high transition-colors w-44 sm:w-56" placeholder="Filtrar pedidos..." type="text">
+</div>
+<button class="p-1.5 bg-surface-container-lowest hover:bg-surface-container-high text-outline hover:text-on-surface rounded-lg transition-colors" title="Atualizar dados" type="button">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+</button>
+</div>
+</div>
+<!-- Responsive Table Container -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low font-label-sm text-label-sm text-outline uppercase tracking-wider">
+<th class="py-3 px-4 font-semibold">Nº Pedido</th>
+<th class="py-3 px-4 font-semibold">Cliente</th>
+<th class="py-3 px-4 font-semibold text-center">Data &amp; Hora</th>
+<th class="py-3 px-4 font-semibold text-right">Valor Total</th>
+<th class="py-3 px-4 font-semibold">Forma Pagto</th>
+<th class="py-3 px-4 font-semibold text-center">Status</th>
+<th class="py-3 px-4 font-semibold text-right">Ações</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md divide-y-0">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors bg-surface-container group">
+<td class="py-3.5 px-4 font-data-mono text-data-mono">
+<a class="text-primary hover:underline font-semibold flex items-center gap-1" href="#">
+<span class="">#PED-2024-1089</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant font-label-sm text-[11px] font-bold">MS</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-medium leading-tight">Metalúrgica Silva &amp; Filhos Ltda</span>
+<span class="font-body-sm text-[11px] text-outline">CNPJ: 14.821.902/0001-44</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center text-on-surface-variant font-data-mono text-body-sm">
+              28/10/2024 <span class="text-outline">14:32</span>
+</td>
+<td class="py-3.5 px-4 text-right font-data-mono text-data-mono font-semibold text-on-surface">
+              R$ 4.850,00
+            </td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[11px]">
+<span class="material-symbols-outlined text-[14px] text-outline">receipt_long</span>
+                Boleto 30D
+              </span>
+</td>
+<td class="py-3.5 px-4 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-container/20 text-primary font-label-sm text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                Faturado
+              </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded transition-colors" title="Visualizar Detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded transition-colors" title="Mais opções" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors bg-surface-container-low/40 group">
+<td class="py-3.5 px-4 font-data-mono text-data-mono">
+<a class="text-primary hover:underline font-semibold flex items-center gap-1" href="#">
+<span class="">#PED-2024-1088</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant font-label-sm text-[11px] font-bold">CH</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-medium leading-tight">Construtora Horizonte S/A</span>
+<span class="font-body-sm text-[11px] text-outline">CNPJ: 08.432.112/0001-90</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center text-on-surface-variant font-data-mono text-body-sm">
+              28/10/2024 <span class="text-outline">11:15</span>
+</td>
+<td class="py-3.5 px-4 text-right font-data-mono text-data-mono font-semibold text-on-surface">
+              R$ 12.420,00
+            </td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[11px]">
+<span class="material-symbols-outlined text-[14px] text-primary">qr_code_2</span>
+                PIX
+              </span>
+</td>
+<td class="py-3.5 px-4 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-on-surface font-label-sm text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                Entregue
+              </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded transition-colors" title="Visualizar Detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded transition-colors" title="Mais opções" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors bg-surface-container group">
+<td class="py-3.5 px-4 font-data-mono text-data-mono">
+<a class="text-primary hover:underline font-semibold flex items-center gap-1" href="#">
+<span class="">#PED-2024-1087</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant font-label-sm text-[11px] font-bold">AP</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-medium leading-tight">Auto Peças Bandeirantes</span>
+<span class="font-body-sm text-[11px] text-outline">CNPJ: 02.198.543/0002-18</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center text-on-surface-variant font-data-mono text-body-sm">
+              28/10/2024 <span class="text-outline">09:48</span>
+</td>
+<td class="py-3.5 px-4 text-right font-data-mono text-data-mono font-semibold text-on-surface">
+              R$ 890,50
+            </td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[11px]">
+<span class="material-symbols-outlined text-[14px] text-outline">credit_card</span>
+                Cartão PJ
+              </span>
+</td>
+<td class="py-3.5 px-4 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary/15 text-tertiary font-label-sm text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                Em Separação
+              </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded transition-colors" title="Visualizar Detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded transition-colors" title="Mais opções" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors bg-surface-container-low/40 group">
+<td class="py-3.5 px-4 font-data-mono text-data-mono">
+<a class="text-primary hover:underline font-semibold flex items-center gap-1" href="#">
+<span class="">#PED-2024-1086</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant font-label-sm text-[11px] font-bold">FB</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-medium leading-tight">Ferragens Brasil Central</span>
+<span class="font-body-sm text-[11px] text-outline">CNPJ: 19.348.672/0001-05</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center text-on-surface-variant font-data-mono text-body-sm">
+              27/10/2024 <span class="text-outline">17:02</span>
+</td>
+<td class="py-3.5 px-4 text-right font-data-mono text-data-mono font-semibold text-on-surface">
+              R$ 3.120,00
+            </td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[11px]">
+<span class="material-symbols-outlined text-[14px] text-outline">receipt_long</span>
+                Boleto 30D
+              </span>
+</td>
+<td class="py-3.5 px-4 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-highest text-outline font-label-sm text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                Aguardando Pagto
+              </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded transition-colors" title="Visualizar Detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded transition-colors" title="Mais opções" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-high/60 transition-colors bg-surface-container group">
+<td class="py-3.5 px-4 font-data-mono text-data-mono">
+<a class="text-primary hover:underline font-semibold flex items-center gap-1" href="#">
+<span class="">#PED-2024-1085</span>
+<span class="material-symbols-outlined text-[14px] opacity-0 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</a>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-surface-container-highest flex items-center justify-center text-on-surface-variant font-label-sm text-[11px] font-bold">TS</div>
+<div class="flex flex-col">
+<span class="text-on-surface font-medium leading-tight">TecnoSolda Soluções Industriais</span>
+<span class="font-body-sm text-[11px] text-outline">CNPJ: 33.119.452/0001-88</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center text-on-surface-variant font-data-mono text-body-sm">
+              27/10/2024 <span class="text-outline">15:20</span>
+</td>
+<td class="py-3.5 px-4 text-right font-data-mono text-data-mono font-semibold text-on-surface">
+              R$ 7.640,00
+            </td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[11px]">
+<span class="material-symbols-outlined text-[14px] text-primary">qr_code_2</span>
+                PIX
+              </span>
+</td>
+<td class="py-3.5 px-4 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary-container/20 text-primary font-label-sm text-[11px] font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                Faturado
+              </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1">
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-primary rounded transition-colors" title="Visualizar Detalhes" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+<button class="p-1.5 hover:bg-surface-container-highest text-on-surface-variant hover:text-on-surface rounded transition-colors" title="Mais opções" type="button">
+<span class="material-symbols-outlined text-[18px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="p-4 bg-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-outline font-label-sm text-label-sm">
+<span class="">Exibindo 5 de 342 pedidos cadastrados</span>
+<div class="flex items-center gap-1">
+<button class="px-2.5 py-1 rounded bg-surface-container-highest/60 hover:bg-surface-container-high text-on-surface transition-colors disabled:opacity-40" disabled="" type="button">
+<span class="material-symbols-outlined text-[16px] align-middle">chevron_left</span>
+</button>
+<button class="px-2.5 py-1 rounded bg-primary-container text-on-primary-container font-semibold" type="button">1</button>
+<button class="px-2.5 py-1 rounded bg-surface-container-highest/40 hover:bg-surface-container-high text-on-surface transition-colors" type="button">2</button>
+<button class="px-2.5 py-1 rounded bg-surface-container-highest/40 hover:bg-surface-container-high text-on-surface transition-colors" type="button">3</button>
+<span class="px-1">...</span>
+<button class="px-2.5 py-1 rounded bg-surface-container-highest/40 hover:bg-surface-container-high text-on-surface transition-colors" type="button">69</button>
+<button class="px-2.5 py-1 rounded bg-surface-container-highest/60 hover:bg-surface-container-high text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] align-middle">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div></div></main></div>
+
+</body></html>

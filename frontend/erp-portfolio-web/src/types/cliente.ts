@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: cliente.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 18/09/2026
  * Descrição..: Tipos do módulo de Clientes, espelhando os DTOs da API
  *              (ClienteRespostaDto, ClienteCriacaoDto, ClienteAtualizacaoDto,
@@ -9,6 +9,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
+ *   1.1.0 - 18/09/2026 - Filtros ufs e ativo em ClienteFiltro.
  * =====================================================================
  */
 
@@ -40,6 +41,9 @@ export interface ClienteAtualizacao extends ClienteCriacao {
 
 export interface ClienteFiltro {
   nome?: string
+  ufs?: string[]
+  /** true = só ativos, false = só inativos, ausente = todos. */
+  ativo?: boolean
   pagina: number
   tamanhoPagina: number
 }

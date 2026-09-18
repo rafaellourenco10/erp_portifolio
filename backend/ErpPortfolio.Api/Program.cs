@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 18/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
@@ -14,6 +14,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 18/09/2026 - Criação do arquivo.
+//   1.1.0 - 18/09/2026 - Swagger renomeado para "Ambition ERP API".
 // =====================================================================================
 
 using System.Reflection;
@@ -39,9 +40,9 @@ builder.Services.AddSwaggerGen(opcoes =>
 {
     opcoes.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "ERP Portfolio API",
+        Title = "Ambition ERP API",
         Version = "v1",
-        Description = "API do ERP de portfólio - módulo de Clientes."
+        Description = "API do Ambition ERP (projeto de portfólio) - módulo de Clientes."
     });
 
     var arquivoXml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
@@ -61,7 +62,7 @@ app.UseStatusCodePages();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(opcoes => opcoes.DocumentTitle = "ERP Portfolio API");
+    app.UseSwaggerUI(opcoes => opcoes.DocumentTitle = "Ambition ERP API");
 }
 else
 {
