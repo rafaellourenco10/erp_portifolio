@@ -1,0 +1,35 @@
+# =====================================================================
+# Arquivo....: docker-compose.yml
+# Versão.....: 1.0.0
+# Data.......: 18/09/2026
+# Descrição..: PostgreSQL para desenvolvimento local.
+#              Banco erp_portfolio_db / usuário erp_user / porta 5433 no host
+#              (5432 dentro do container; 5433 evita conflito com outro
+#              Postgres local). A senha vem de POSTGRES_PASSWORD (arquivo .env).
+# ---------------------------------------------------------------------
+# Histórico de alterações:
+#   1.0.0 - 18/09/2026 - Criação do arquivo.
+# =====================================================================
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: erp_portfolio_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: erp_portfolio_db
+      POSTGRES_USER: erp_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env (veja .env.example)}
+    ports:
+      - "5433:5432"
+    volumes:
+      # A partir do PostgreSQL 18 a imagem oficial usa /var/lib/postgresql como volume.
+      - erp_portfolio_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp_user -d erp_portfolio_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  erp_portfolio_pgdata:

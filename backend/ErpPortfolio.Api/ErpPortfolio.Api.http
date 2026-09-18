@@ -1,0 +1,39 @@
+@api = http://localhost:5065/api
+
+### Listar clientes (paginado, filtro por nome)
+GET {{api}}/clientes?nome=silva&pagina=1&tamanhoPagina=10
+Accept: application/json
+
+### Obter cliente por id
+GET {{api}}/clientes/1
+Accept: application/json
+
+### Criar cliente (CPF de teste válido)
+POST {{api}}/clientes
+Content-Type: application/json
+
+{
+  "nome": "Maria da Silva",
+  "documento": "529.982.247-25",
+  "email": "maria@exemplo.com.br",
+  "telefone": "(11) 98765-4321",
+  "cidade": "São Paulo",
+  "uf": "SP"
+}
+
+### Editar cliente
+PUT {{api}}/clientes/1
+Content-Type: application/json
+
+{
+  "nome": "Maria da Silva Souza",
+  "documento": "52998224725",
+  "email": "maria.souza@exemplo.com.br",
+  "telefone": "(11) 98765-4321",
+  "cidade": "Campinas",
+  "uf": "SP",
+  "ativo": true
+}
+
+### Inativar cliente
+PATCH {{api}}/clientes/1/inativar
