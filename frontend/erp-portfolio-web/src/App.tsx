@@ -1,12 +1,12 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.3.0
+ * Versão.....: 1.4.0
  * Data.......: 21/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
- *              por rota (/clientes, /produtos) com o React Router.
+ *              por rota (/clientes, /produtos, /categorias, /pedidos) com o React Router.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
@@ -15,6 +15,8 @@
  *   1.2.0 - 21/09/2026 - Rotas com React Router; módulo Produtos no menu;
  *                        breadcrumb acompanha a rota.
  *   1.3.0 - 21/09/2026 - Rota e item de menu de Categorias.
+ *   1.4.0 - 21/09/2026 - Item de menu e rotas de Pedidos (/pedidos, /pedidos/novo,
+ *                        /pedidos/:id); o menu e o breadcrumb valem também nas subpáginas.
  * =====================================================================
  */
 
@@ -23,16 +25,19 @@ import {
   MenuFoldOutlined,
   MenuOutlined,
   MenuUnfoldOutlined,
+  ShoppingCartOutlined,
   TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { Breadcrumb, Button, Drawer, Grid, Layout, Menu, type MenuProps } from 'antd'
 import { useState } from 'react'
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { LogoAmbition } from './components/LogoAmbition'
 import { CategoriasListaPage } from './pages/Categorias/CategoriasListaPage'
 import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
+import { PedidoPage } from './pages/Pedidos/PedidoPage'
+import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
 
 // A chave de cada item é o caminho da rota.
@@ -40,7 +45,15 @@ const itensMenu = [
   { key: '/clientes', icon: <TeamOutlined />, label: 'Clientes' },
   { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
   { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
+  { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos' },
 ] satisfies MenuProps['items']
+
+/** Título da subpágina de um módulo (a última parte do breadcrumb), ou undefined na página principal. */
+function tituloDaSubpagina(pathname: string): string | undefined {
+  if (pathname === '/pedidos/novo') return 'Novo pedido'
+  const numero = /^\/pedidos\/(\d+)$/.exec(pathname)?.[1]
+  return numero ? `Pedido nº ${numero}` : undefined
+}
 
 export default function App() {
   const telas = Grid.useBreakpoint()
@@ -48,7 +61,15 @@ export default function App() {
 
   const { pathname } = useLocation()
   const navegar = useNavigate()
-  const trilha = [{ title: 'Gestão Comercial' }, { title: itensMenu.find((item) => item.key === pathname)?.label }]
+  // O item do menu vale também nas subpáginas (/pedidos/novo, /pedidos/12 continuam marcando "Pedidos").
+  const itemAtual = itensMenu.find((item) => pathname === item.key || pathname.startsWith(`${item.key}/`))
+  const chavesSelecionadas = itemAtual ? [itemAtual.key] : []
+  const subpagina = tituloDaSubpagina(pathname)
+  const trilha = [
+    { title: 'Gestão Comercial' },
+    { title: subpagina && itemAtual ? <Link to={itemAtual.key}>{itemAtual.label}</Link> : itemAtual?.label },
+    ...(subpagina ? [{ title: subpagina }] : []),
+  ]
 
   const [recolhido, setRecolhido] = useState(false)
   const [menuCelularAberto, setMenuCelularAberto] = useState(false)
@@ -70,7 +91,7 @@ export default function App() {
             <LogoAmbition compacto={recolhido} />
           </div>
           {!recolhido && <div className="app-secao-menu">Gestão comercial</div>}
-          <Menu mode="inline" selectedKeys={[pathname]} items={itensMenu} onClick={({ key }) => navegar(key)} />
+          <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensMenu} onClick={({ key }) => navegar(key)} />
         </Layout.Sider>
       )}
 
@@ -104,6 +125,9 @@ export default function App() {
             <Route path="/clientes" element={<ClientesListaPage />} />
             <Route path="/produtos" element={<ProdutosListaPage />} />
             <Route path="/categorias" element={<CategoriasListaPage />} />
+            <Route path="/pedidos" element={<PedidosListaPage />} />
+            <Route path="/pedidos/novo" element={<PedidoPage />} />
+            <Route path="/pedidos/:id" element={<PedidoPage />} />
             <Route path="*" element={<Navigate to="/clientes" replace />} />
           </Routes>
         </Layout.Content>
@@ -120,7 +144,7 @@ export default function App() {
         <div className="app-secao-menu">Gestão comercial</div>
         <Menu
           mode="inline"
-          selectedKeys={[pathname]}
+          selectedKeys={chavesSelecionadas}
           items={itensMenu}
           onClick={({ key }) => {
             navegar(key)

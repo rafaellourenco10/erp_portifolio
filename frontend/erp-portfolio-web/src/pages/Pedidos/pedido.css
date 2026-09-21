@@ -1,0 +1,77 @@
+/* Página do pedido (novo / rascunho / consulta). Cores em src/tema/temaAmbition.ts. */
+
+.pedido-secao {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.pedido-secao-titulo {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cor-texto);
+}
+
+.pedido-secao .ant-form-item {
+  margin-bottom: 0;
+}
+
+.tabela-itens-pedido {
+  margin-top: 16px;
+}
+
+.tabela-itens-pedido .ant-table-tbody > tr > td {
+  vertical-align: top;
+}
+
+.erro-celula {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--cor-erro);
+}
+
+.erro-secao {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--cor-erro);
+}
+
+.resumo-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-left: auto;
+  max-width: 420px;
+}
+
+.resumo-linha {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--cor-texto-secundario);
+}
+
+.resumo-total {
+  padding-top: 12px;
+  border-top: 1px solid var(--cor-borda);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cor-texto);
+}
+
+.resumo-total .valor-total {
+  color: var(--cor-primaria);
+}
+
+.pedido-rodape {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 767px) {
+  .pedido-secao {
+    padding: 16px;
+  }
+}

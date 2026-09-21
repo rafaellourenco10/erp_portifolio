@@ -30,3 +30,22 @@
   background: rgba(154, 160, 166, 0.1);
   border-color: rgba(154, 160, 166, 0.25);
 }
+
+/* Status do pedido (TagStatusPedido): rascunho = azul (info), confirmado = verde, cancelado = vermelho. */
+.tag-status-rascunho {
+  color: var(--cor-info);
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.tag-status-confirmado {
+  color: var(--cor-primaria);
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.tag-status-cancelado {
+  color: var(--cor-erro);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}

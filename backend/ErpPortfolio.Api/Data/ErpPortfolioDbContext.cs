@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 21/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -10,6 +10,19 @@
 //                - PK  : pk_clientes (id, identity)
 //                - UK  : ix_clientes_documento (documento)
 //                - IDX : ix_clientes_nome (nome)
+//              public.pedidos
+//                - PK  : pk_pedidos (id, identity)
+//                - IDX : ix_pedidos_cliente_id (cliente_id), ix_pedidos_data_pedido (data_pedido)
+//                - FK  : fk_pedidos_clientes (cliente_id -> clientes.id, restrict)
+//                - CK  : ck_pedidos_desconto_percentual, ck_pedidos_valor_total
+//              public.pedido_itens
+//                - PK  : pk_pedido_itens (id, identity)
+//                - UK  : ux_pedido_itens_pedido_produto (pedido_id, produto_id)
+//                - IDX : ix_pedido_itens_produto_id (produto_id)
+//                - FK  : fk_pedido_itens_pedidos (pedido_id -> pedidos.id, cascade),
+//                        fk_pedido_itens_produtos (produto_id -> produtos.id, restrict)
+//                - CK  : ck_pedido_itens_quantidade, ck_pedido_itens_preco_unitario,
+//                        ck_pedido_itens_desconto_percentual
 //              public.categorias
 //                - PK  : pk_categorias (id, identity)
 //                - UK  : ix_categorias_nome (nome)
@@ -25,6 +38,7 @@
 //   1.0.0 - 18/09/2026 - Criação do arquivo com o mapeamento de Cliente.
 //   1.1.0 - 21/09/2026 - Mapeamento de Produto (tabela produtos).
 //   1.2.0 - 21/09/2026 - Mapeamento de Categoria e FK produtos.categoria_id.
+//   1.3.0 - 21/09/2026 - Mapeamento de Pedido e PedidoItem (tabelas pedidos e pedido_itens).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -40,8 +54,130 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
     public DbSet<Categoria> Categorias => Set<Categoria>();
 
+    public DbSet<Pedido> Pedidos => Set<Pedido>();
+
+    public DbSet<PedidoItem> PedidoItens => Set<PedidoItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Pedido>(entidade =>
+        {
+            entidade.ToTable("pedidos", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_pedidos_desconto_percentual", "desconto_percentual >= 0 AND desconto_percentual <= 100");
+                tabela.HasCheckConstraint("ck_pedidos_valor_total", "valor_total >= 0");
+            });
+
+            entidade.HasKey(p => p.Id).HasName("pk_pedidos");
+
+            entidade.Property(p => p.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(p => p.ClienteId)
+                .HasColumnName("cliente_id");
+
+            // Restrict: pedido nunca é excluído, então o cliente também não pode ser apagado enquanto tiver pedidos.
+            entidade.HasOne(p => p.Cliente)
+                .WithMany()
+                .HasForeignKey(p => p.ClienteId)
+                .HasConstraintName("fk_pedidos_clientes")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(p => p.DataPedido)
+                .HasColumnName("data_pedido")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
+                .IsRequired();
+
+            // Enums gravados como texto ("Rascunho"...), legíveis no banco.
+            entidade.Property(p => p.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidade.Property(p => p.FormaPagamento)
+                .HasColumnName("forma_pagamento")
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            entidade.Property(p => p.DescontoPercentual)
+                .HasColumnName("desconto_percentual")
+                .HasColumnType("numeric(5,2)")
+                .HasDefaultValue(0m)
+                .IsRequired();
+
+            entidade.Property(p => p.ValorTotal)
+                .HasColumnName("valor_total")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.HasIndex(p => p.ClienteId)
+                .HasDatabaseName("ix_pedidos_cliente_id");
+
+            entidade.HasIndex(p => p.DataPedido)
+                .HasDatabaseName("ix_pedidos_data_pedido");
+        });
+
+        modelBuilder.Entity<PedidoItem>(entidade =>
+        {
+            entidade.ToTable("pedido_itens", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_pedido_itens_quantidade", "quantidade > 0");
+                tabela.HasCheckConstraint("ck_pedido_itens_preco_unitario", "preco_unitario >= 0");
+                tabela.HasCheckConstraint("ck_pedido_itens_desconto_percentual", "desconto_percentual >= 0 AND desconto_percentual <= 100");
+            });
+
+            entidade.HasKey(i => i.Id).HasName("pk_pedido_itens");
+
+            entidade.Property(i => i.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(i => i.PedidoId)
+                .HasColumnName("pedido_id");
+
+            // Cascade: os itens só existem dentro do pedido (o rascunho atualiza os itens no lugar).
+            entidade.HasOne(i => i.Pedido)
+                .WithMany(p => p.Itens)
+                .HasForeignKey(i => i.PedidoId)
+                .HasConstraintName("fk_pedido_itens_pedidos")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entidade.Property(i => i.ProdutoId)
+                .HasColumnName("produto_id");
+
+            entidade.HasOne(i => i.Produto)
+                .WithMany()
+                .HasForeignKey(i => i.ProdutoId)
+                .HasConstraintName("fk_pedido_itens_produtos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(i => i.Quantidade)
+                .HasColumnName("quantidade")
+                .HasColumnType("numeric(12,3)")
+                .IsRequired();
+
+            entidade.Property(i => i.PrecoUnitario)
+                .HasColumnName("preco_unitario")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(i => i.DescontoPercentual)
+                .HasColumnName("desconto_percentual")
+                .HasColumnType("numeric(5,2)")
+                .HasDefaultValue(0m)
+                .IsRequired();
+
+            entidade.HasIndex(i => new { i.PedidoId, i.ProdutoId })
+                .IsUnique()
+                .HasDatabaseName("ux_pedido_itens_pedido_produto");
+
+            entidade.HasIndex(i => i.ProdutoId)
+                .HasDatabaseName("ix_pedido_itens_produto_id");
+        });
+
         modelBuilder.Entity<Categoria>(entidade =>
         {
             entidade.ToTable("categorias");
