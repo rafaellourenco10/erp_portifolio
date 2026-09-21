@@ -1,13 +1,14 @@
 /**
  * =====================================================================
  * Arquivo....: clienteSchema.ts
- * Versão.....: 1.0.0
- * Data.......: 18/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 21/09/2026
  * Descrição..: Schema Zod do formulário de cliente (mesmas regras dos DTOs
  *              da API) e conversão dos valores do formulário para o payload.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
+ *   1.1.0 - 21/09/2026 - E-mail com trim antes de validar (igual à API).
  * =====================================================================
  */
 
@@ -26,10 +27,16 @@ export const clienteSchema = z.object({
     .trim()
     .min(1, 'Informe o CPF ou CNPJ.')
     .refine(documentoValido, 'CPF/CNPJ inválido.'),
-  email: z.union([
-    z.literal(''),
-    z.email('E-mail inválido.').max(150, 'O e-mail deve ter no máximo 150 caracteres.'),
-  ]),
+  // trim antes da validação: a API também faz trim, então "a@b.com " não pode falhar só no front.
+  email: z
+    .string()
+    .trim()
+    .pipe(
+      z.union([
+        z.literal(''),
+        z.email('E-mail inválido.').max(150, 'O e-mail deve ter no máximo 150 caracteres.'),
+      ]),
+    ),
   telefone: z
     .string()
     .trim()

@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: ClienteService.cs
-// Versão.....: 1.1.0
-// Data.......: 18/09/2026
+// Versão.....: 1.2.0
+// Data.......: 21/09/2026
 // Descrição..: Regras de negócio e persistência de clientes.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
@@ -18,6 +18,8 @@
 // Histórico de alterações:
 //   1.0.0 - 18/09/2026 - Criação do arquivo.
 //   1.1.0 - 18/09/2026 - Filtros da listagem por UFs e por status.
+//   1.2.0 - 21/09/2026 - Edição só altera o status quando "ativo" é enviado; o conflito de
+//                        documento avisa quando o cadastro existente está inativo.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -32,6 +34,8 @@ namespace ErpPortfolio.Api.Services;
 public class ClienteService(ErpPortfolioDbContext contexto) : IClienteService
 {
     private const string MensagemDocumentoDuplicado = "Já existe um cliente cadastrado com este CPF/CNPJ.";
+    private const string MensagemDocumentoDuplicadoInativo =
+        "Já existe um cliente INATIVO com este CPF/CNPJ. Reative o cadastro existente em vez de criar outro.";
 
     public async Task<ResultadoPaginadoDto<ClienteRespostaDto>> ListarAsync(ClienteFiltroDto filtro, CancellationToken cancelamento)
     {
@@ -97,7 +101,8 @@ public class ClienteService(ErpPortfolioDbContext contexto) : IClienteService
             return null;
 
         AplicarDados(cliente, dados);
-        cliente.Ativo = dados.Ativo;
+        if (dados.Ativo is bool ativo)
+            cliente.Ativo = ativo;
 
         await GarantirDocumentoUnicoAsync(cliente.Documento, idIgnorado: id, cancelamento);
         await SalvarAsync(cancelamento);
@@ -129,11 +134,13 @@ public class ClienteService(ErpPortfolioDbContext contexto) : IClienteService
 
     private async Task GarantirDocumentoUnicoAsync(string documento, int? idIgnorado, CancellationToken cancelamento)
     {
-        var existe = await contexto.Clientes
-            .AnyAsync(c => c.Documento == documento && c.Id != idIgnorado, cancelamento);
+        var existente = await contexto.Clientes
+            .Where(c => c.Documento == documento && c.Id != idIgnorado)
+            .Select(c => new { c.Ativo })
+            .FirstOrDefaultAsync(cancelamento);
 
-        if (existe)
-            throw new ConflitoException(MensagemDocumentoDuplicado);
+        if (existente is not null)
+            throw new ConflitoException(existente.Ativo ? MensagemDocumentoDuplicado : MensagemDocumentoDuplicadoInativo);
     }
 
     // O índice único cobre a corrida entre a checagem prévia e o INSERT/UPDATE.
