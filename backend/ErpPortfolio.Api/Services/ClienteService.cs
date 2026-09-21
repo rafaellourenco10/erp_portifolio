@@ -157,6 +157,6 @@ public class ClienteService(ErpPortfolioDbContext contexto) : IClienteService
     }
 
     // Impede que '%' e '_' digitados pelo usuário funcionem como curingas no ILIKE.
-    private static string EscaparCuringasLike(string texto) =>
+    internal static string EscaparCuringasLike(string texto) =>
         texto.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
 }

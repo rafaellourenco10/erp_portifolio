@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: cliente.ts
- * Versão.....: 1.1.0
- * Data.......: 18/09/2026
+ * Versão.....: 1.2.0
+ * Data.......: 21/09/2026
  * Descrição..: Tipos do módulo de Clientes, espelhando os DTOs da API
  *              (ClienteRespostaDto, ClienteCriacaoDto, ClienteAtualizacaoDto,
  *              ClienteFiltroDto e ResultadoPaginadoDto).
@@ -10,6 +10,7 @@
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
  *   1.1.0 - 18/09/2026 - Filtros ufs e ativo em ClienteFiltro.
+ *   1.2.0 - 21/09/2026 - ResultadoPaginado movido para paginacao.ts (reexportado aqui).
  * =====================================================================
  */
 
@@ -48,10 +49,4 @@ export interface ClienteFiltro {
   tamanhoPagina: number
 }
 
-export interface ResultadoPaginado<T> {
-  itens: T[]
-  pagina: number
-  tamanhoPagina: number
-  totalItens: number
-  totalPaginas: number
-}
+export type { ResultadoPaginado } from './paginacao'

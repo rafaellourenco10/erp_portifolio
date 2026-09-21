@@ -3,6 +3,7 @@ using System;
 using ErpPortfolio.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ErpPortfolio.Api.Data.Migrations
 {
     [DbContext(typeof(ErpPortfolioDbContext))]
-    partial class ErpPortfolioDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921182807_CategoriasComoRegistro")]
+    partial class CategoriasComoRegistro
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

@@ -3,6 +3,7 @@ using System;
 using ErpPortfolio.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ErpPortfolio.Api.Data.Migrations
 {
     [DbContext(typeof(ErpPortfolioDbContext))]
-    partial class ErpPortfolioDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921174744_CriacaoTabelaProdutos")]
+    partial class CriacaoTabelaProdutos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,41 +24,6 @@ namespace ErpPortfolio.Api.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("ErpPortfolio.Api.Models.Categoria", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("boolean")
-                        .HasColumnName("ativo");
-
-                    b.Property<DateTime>("DataCadastro")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("data_cadastro")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<string>("Nome")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
-                        .HasColumnName("nome");
-
-                    b.HasKey("Id")
-                        .HasName("pk_categorias");
-
-                    b.HasIndex("Nome")
-                        .IsUnique()
-                        .HasDatabaseName("ix_categorias_nome");
-
-                    b.ToTable("categorias", (string)null);
-                });
 
             modelBuilder.Entity("ErpPortfolio.Api.Models.Cliente", b =>
                 {
@@ -135,9 +103,10 @@ namespace ErpPortfolio.Api.Data.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("ativo");
 
-                    b.Property<int?>("CategoriaId")
-                        .HasColumnType("integer")
-                        .HasColumnName("categoria_id");
+                    b.Property<string>("Categoria")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("categoria");
 
                     b.Property<decimal>("Custo")
                         .HasColumnType("numeric(12,2)")
@@ -174,9 +143,6 @@ namespace ErpPortfolio.Api.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_produtos");
 
-                    b.HasIndex("CategoriaId")
-                        .HasDatabaseName("ix_produtos_categoria_id");
-
                     b.HasIndex("Nome")
                         .HasDatabaseName("ix_produtos_nome");
 
@@ -185,17 +151,6 @@ namespace ErpPortfolio.Api.Data.Migrations
                         .HasDatabaseName("ix_produtos_sku");
 
                     b.ToTable("produtos", (string)null);
-                });
-
-            modelBuilder.Entity("ErpPortfolio.Api.Models.Produto", b =>
-                {
-                    b.HasOne("ErpPortfolio.Api.Models.Categoria", "Categoria")
-                        .WithMany()
-                        .HasForeignKey("CategoriaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .HasConstraintName("fk_produtos_categorias");
-
-                    b.Navigation("Categoria");
                 });
 #pragma warning restore 612, 618
         }

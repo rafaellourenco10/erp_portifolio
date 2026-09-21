@@ -1,13 +1,15 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Clientes** completo (API + banco + tela).
+O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Clientes** completo (API + banco + tela) e a **etapa 2** o **módulo de Produtos**, ambos dentro da área **Gestão Comercial** do menu.
 
 | Etapa | Módulo | Situação |
 |---|---|---|
 | 1 | Clientes | Concluída e testada de ponta a ponta (18/09/2026) |
 | 1.1 | Tema visual Ambition ERP + filtros por UF e status | Concluída e testada (18/09/2026) |
-| 2+ | Produtos, Pedidos, Login | Planejadas |
+| 2 | Produtos (+ navegação por rotas no menu) | Concluída e testada (21/09/2026) |
+| 2.1 | Categorias (cadastro próprio, escolhido por seleção no produto) | Concluída e testada (21/09/2026) |
+| 3+ | Pedidos, Login | Planejadas |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -44,6 +46,24 @@ O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Client
 - Erros de validação da API aparecem campo a campo no formulário
 - Layout responsivo: menu lateral recolhível (vira gaveta no celular), colunas secundárias ocultadas em telas menores e, no celular, cada cliente exibido como cartão
 - Documentação interativa da API com **Swagger**
+
+## Funcionalidades (etapa 2 — Produtos)
+
+- **Navegação por rotas** (React Router): o menu lateral troca a tela por URL (`/clientes`, `/produtos`); a página aberta sobrevive ao recarregar e uma rota desconhecida cai em `/clientes`
+- Cadastro com **nome**, **SKU** (número de série do produto: único e somente dígitos; o campo da tela nem deixa digitar letras), **categoria** (opcional, escolhida numa seleção com as categorias cadastradas), **unidade** (UN, KG, L, M ou CX), **preço de venda** e **custo** (obrigatórios, em reais, com 2 casas decimais)
+- Listagem com paginação no servidor, **busca por nome ou SKU** e filtro de status (mesmo painel **Filtrar** e tags removíveis de Clientes)
+- Coluna **Margem** calculada na tela: (preço − custo) ÷ preço; margem negativa aparece em vermelho
+- **Inativação** (exclusão lógica) e reativação pela edição, como em Clientes
+- **SKU único**: repetir um SKU retorna **409**; se o produto existente estiver **inativo**, a mensagem orienta a reativá-lo em vez de criar outro
+- Um `PUT` sem o campo `ativo` **mantém** o status atual do produto
+
+## Funcionalidades (etapa 2.1 — Categorias)
+
+- Tela **Categorias** no menu (Gestão Comercial): cadastro só com o **nome**, busca por nome, filtro Todas / Ativas / Inativas, edição e inativação
+- **Nome único sem diferenciar maiúsculas/minúsculas** ("Cabos" e "cabos" são a mesma categoria); se a existente estiver **inativa**, a mensagem orienta a reativá-la
+- No cadastro de **Produtos** o campo Categoria é uma **seleção** (com busca) das categorias ativas; é opcional e pode ser limpo
+- Inativar uma categoria **não mexe nos produtos**: eles continuam nela (a lista mostra o nome) e, ao editar, ela aparece como "(inativa)"; só deixa de ser oferecida em novos cadastros. Mover um produto para uma categoria inativa é recusado (400)
+- O produto que tinha categoria em texto livre **foi convertido pela migration**: cada texto vira uma categoria (sem duplicar por maiúsculas/minúsculas) e o produto continua ligado a ela
 
 ---
 
@@ -127,14 +147,20 @@ erp_portifolio/
 ├── backend/
 │   └── ErpPortfolio.Api/
 │       ├── Controllers/
-│       │   └── ClientesController.cs        # endpoints REST
+│       │   ├── ClientesController.cs        # endpoints REST de clientes
+│       │   ├── ProdutosController.cs        # endpoints REST de produtos
+│       │   └── CategoriasController.cs      # endpoints REST de categorias
 │       ├── Models/
-│       │   └── Cliente.cs                   # entidade
+│       │   ├── Cliente.cs                   # entidade
+│       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
+│       │   └── Categoria.cs                 # entidade
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
-│       │   ├── ClienteAtualizacaoDto.cs     # entrada do PUT (+ campo ativo)
+│       │   ├── ClienteAtualizacaoDto.cs     # entrada do PUT (+ campo ativo opcional)
 │       │   ├── ClienteRespostaDto.cs        # saída
 │       │   ├── ClienteFiltroDto.cs          # query string da listagem
+│       │   ├── Produto{Criacao,Atualizacao,Resposta,Filtro}Dto.cs   # mesmo desenho, para produtos
+│       │   ├── Categoria{Criacao,Atualizacao,Resposta,Filtro}Dto.cs # mesmo desenho, para categorias
 │       │   ├── ResultadoPaginadoDto.cs      # envelope genérico de paginação
 │       │   └── Validacoes/
 │       │       ├── DocumentoValidador.cs    # regra de CPF/CNPJ
@@ -143,7 +169,12 @@ erp_portifolio/
 │       ├── Services/
 │       │   ├── IClienteService.cs
 │       │   ├── ClienteService.cs            # regras de negócio + acesso a dados
-│       │   └── ConflitoException.cs         # vira HTTP 409
+│       │   ├── IProdutoService.cs
+│       │   ├── ProdutoService.cs            # regras de negócio + acesso a dados de produtos
+│       │   ├── ICategoriaService.cs
+│       │   ├── CategoriaService.cs          # regras de negócio + acesso a dados de categorias
+│       │   ├── ConflitoException.cs         # vira HTTP 409
+│       │   └── DadoInvalidoException.cs     # campo inválido que só o banco sabe (ex.: categoria inativa) -> HTTP 400
 │       ├── Data/
 │       │   ├── ErpPortfolioDbContext.cs     # mapeamento EF Core (snake_case)
 │       │   └── Migrations/                  # migrations geradas pelo EF Core
@@ -158,29 +189,46 @@ erp_portifolio/
         ├── vite.config.ts                   # porta fixa 5173
         ├── public/favicon.svg               # ícone do Ambition ERP
         └── src/
-            ├── main.tsx                     # providers (TanStack Query, Ant Design pt-BR + tema) e fonte Inter
-            ├── App.tsx / App.css            # layout: menu lateral recolhível, cabeçalho, conteúdo
+            ├── main.tsx                     # providers (TanStack Query, Ant Design pt-BR + tema, React Router) e fonte Inter
+            ├── App.tsx / App.css            # layout: menu lateral recolhível, cabeçalho, conteúdo e rotas
             ├── index.css                    # estilos globais (fundo, fonte, barras de rolagem)
             ├── tema/
             │   └── temaAmbition.ts          # cores e tokens do tema (fonte única)
             ├── components/
+            │   ├── ItemFormulario.tsx       # item de formulário (rótulo, obrigatório, erro) compartilhado
             │   ├── LogoAmbition.tsx/.css    # logo
             │   └── TagStatus.tsx/.css       # tag Ativo/Inativo
             ├── api/
             │   ├── axiosClient.ts           # instância do Axios + leitura de ProblemDetails
-            │   └── clientesApi.ts           # chamadas da API de clientes
+            │   ├── clientesApi.ts           # chamadas da API de clientes
+            │   ├── produtosApi.ts           # chamadas da API de produtos
+            │   └── categoriasApi.ts         # chamadas da API de categorias
             ├── hooks/
-            │   └── useClientes.ts           # useQuery / useMutation
+            │   ├── useClientes.ts           # useQuery / useMutation
+            │   ├── useProdutos.ts
+            │   └── useCategorias.ts         # inclui as categorias ativas do seletor de produtos
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
             │   ├── ClienteFormDrawer.tsx    # painel lateral de inclusão/edição
-            │   └── clientes.css             # estilos da tela e do painel
+            │   └── clientes.css             # estilos da tela e do painel (Produtos reaproveita)
+            ├── pages/Produtos/
+            │   ├── ProdutosListaPage.tsx    # filtros, tabela com margem, paginação, ações
+            │   └── ProdutoFormDrawer.tsx    # painel lateral de inclusão/edição (seleção de categoria)
+            ├── pages/Categorias/
+            │   ├── CategoriasListaPage.tsx  # busca, status, tabela, paginação, ações
+            │   └── CategoriaFormDrawer.tsx  # painel lateral de inclusão/edição
             ├── schemas/
-            │   └── clienteSchema.ts         # schema Zod do formulário
+            │   ├── clienteSchema.ts         # schema Zod do formulário de cliente
+            │   ├── produtoSchema.ts         # schema Zod do formulário de produto
+            │   └── categoriaSchema.ts       # schema Zod do formulário de categoria
             ├── types/
-            │   └── cliente.ts               # tipos (espelham os DTOs)
+            │   ├── cliente.ts               # tipos (espelham os DTOs)
+            │   ├── produto.ts
+            │   ├── categoria.ts
+            │   └── paginacao.ts             # ResultadoPaginado compartilhado
             └── utils/
                 ├── documento.ts             # validação e máscara de CPF/CNPJ
+                ├── moeda.ts                 # formatação em reais e cálculo de margem
                 └── ufs.ts                   # 27 UFs com nome, busca sem acentos e ordenação
 ```
 
@@ -301,6 +349,28 @@ URL base em desenvolvimento: `http://localhost:5065/api`
 | PUT | `/clientes/{id}` | Edita um cliente (inclusive o campo `ativo`) | 200, 400, 404, 409 |
 | PATCH | `/clientes/{id}/inativar` | Inativa um cliente; repetir a chamada também retorna 204 | 204, 404 |
 
+Produtos (mesmo desenho de respostas):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/produtos?busca=&ativo=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome; `busca` procura no nome **ou** no SKU | 200, 400 |
+| GET | `/produtos/{id}` | Obtém um produto | 200, 404 |
+| POST | `/produtos` | Cadastra um produto | 201, 400, 409 |
+| PUT | `/produtos/{id}` | Edita um produto; `ativo` é opcional (ausente = mantém) | 200, 400, 404, 409 |
+| PATCH | `/produtos/{id}/inativar` | Inativa um produto; repetir a chamada também retorna 204 | 204, 404 |
+
+Regras de validação de Produto (API e tela): nome de 3 a 150 caracteres (com `trim` **antes** de contar); SKU de 2 a 30 **dígitos** (somente números; letras e símbolos retornam 400); `categoriaId` opcional (precisa ser uma categoria **existente e ativa**, senão 400 no campo `categoriaId`; a categoria que o produto já tem continua aceita mesmo se inativada depois); unidade em `UN`, `KG`, `L`, `M`, `CX`; preço e custo entre 0 e 9.999.999.999,99 com no máximo 2 casas. A resposta traz `categoriaId` e `categoriaNome`.
+
+Categorias:
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/categorias?busca=&ativo=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome | 200, 400 |
+| GET | `/categorias/{id}` | Obtém uma categoria | 200, 404 |
+| POST | `/categorias` | Cadastra uma categoria (nome de 2 a 60 caracteres, com `trim`) | 201, 400, 409 |
+| PUT | `/categorias/{id}` | Edita uma categoria; `ativo` é opcional (ausente = mantém) | 200, 400, 404, 409 |
+| PATCH | `/categorias/{id}/inativar` | Inativa uma categoria; repetir a chamada também retorna 204 | 204, 404 |
+
 ### Filtros da listagem
 
 | Parâmetro | Exemplo | Efeito |
@@ -410,6 +480,33 @@ Tabela `public.clientes`:
 
 Migration inicial: `20260918172909_CriacaoTabelaClientes`.
 
+Tabela `public.produtos`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_produtos`, identity (generated always) |
+| `nome` | varchar(150) | obrigatório, índice `ix_produtos_nome` |
+| `sku` | varchar(30) | obrigatório, somente dígitos (número de série), índice **único** `ix_produtos_sku` |
+| `categoria_id` | integer | opcional, FK `fk_produtos_categorias` → `categorias.id` (restrict), índice `ix_produtos_categoria_id` |
+| `unidade` | varchar(2) | UN, KG, L, M ou CX |
+| `preco_venda` | numeric(12,2) | obrigatório |
+| `custo` | numeric(12,2) | obrigatório |
+| `ativo` | boolean | obrigatório |
+| `data_cadastro` | timestamptz | UTC, padrão `now()` |
+
+Migration: `20260921174744_CriacaoTabelaProdutos` (só cria a tabela e os índices; não altera `clientes`). Para aplicar em um banco já existente: `dotnet ef database update --project backend/ErpPortfolio.Api`.
+
+Tabela `public.categorias`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_categorias`, identity (generated always) |
+| `nome` | varchar(60) | obrigatório, índice **único** `ix_categorias_nome` (exato; o "sem diferenciar maiúsculas" é garantido pelo serviço) |
+| `ativo` | boolean | obrigatório |
+| `data_cadastro` | timestamptz | UTC, padrão `now()` |
+
+Migration: `20260921182807_CategoriasComoRegistro`. **Foi editada à mão**: o EF gerava a remoção da coluna `produtos.categoria` (texto) antes de criar a tabela nova, o que apagaria as categorias já cadastradas. Agora ela cria `categorias`, converte cada texto distinto (sem diferenciar maiúsculas/minúsculas e sem espaços nas pontas) em um registro, liga os produtos a ele e só então remove a coluna antiga; o `Down` devolve os nomes como texto. Foi testada num banco descartável (variações de maiúsculas, nulos e vazios, subida e volta) antes de ir para o banco de desenvolvimento.
+
 ---
 
 ## Dados de teste
@@ -458,6 +555,21 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Lista na query string sem colchetes | O Axios envia `ufs[]=SP` por padrão; configurado para `ufs=SP&ufs=MG`, o formato que o ASP.NET entende. |
 | Vite com `strictPort` na 5173 | É a origem liberada no CORS; se a porta estiver ocupada, o Vite avisa em vez de trocar de porta. |
 | Paginação limitada a 100.000 páginas | Evita estouro de inteiro no cálculo do OFFSET. |
+| Categoria como **cadastro próprio** (tabela `categorias`), escolhida por seleção | Texto livre deixava "Periférico" e "periferico" virarem categorias diferentes e não dava para renomear em um lugar só. Ficou opcional no produto. |
+| Categoria tem tela própria no menu, e não um "criar categoria" dentro do formulário do produto | Segue o padrão dos outros módulos (lista + painel lateral) e mantém o formulário de produto simples; um atalho "Nova categoria" no seletor pode ser acrescentado depois. |
+| Categoria só é inativada, e o FK é `RESTRICT` | Inativar não mexe nos produtos; o banco ainda impede excluir por engano uma categoria com produtos. |
+| Nome de categoria único **sem diferenciar maiúsculas/minúsculas**, checado no serviço (`ILIKE`) com índice único exato como reforço | O `citext` ou um índice por `lower(nome)` exigiriam extensão/SQL fora do modelo do EF; o serviço cobre o uso normal e o índice cobre a corrida entre duas gravações do mesmo texto exato. |
+| Categoria inexistente ou inativa no produto vira **400** no campo `categoriaId` (`DadoInvalidoException`) | Só o banco sabe; o formato é o mesmo dos erros de validação, então a tela mostra a mensagem no campo. A categoria que o produto já tem continua aceita, senão editar qualquer campo de um produto antigo falharia. |
+| Uma única projeção (`ProdutoRespostaDto.Projecao`) para SQL e para entidade carregada | O nome da categoria vem por join na listagem sem duplicar o mapeamento. |
+| Migration de categorias editada à mão | Ver a nota em "Banco de dados": a versão gerada apagaria os textos existentes. |
+| Custo do produto obrigatório | Toda linha da lista tem margem calculada; sem custo a margem ficaria vazia. |
+| React Router com a chave do item de menu igual ao caminho da rota | O menu marca o item pela URL, o breadcrumb acompanha a rota e a página aberta sobrevive ao recarregar. |
+| `ativo` opcional no `PUT` (`bool?`) | Com padrão `true`, um `PUT` sem o campo reativava o cadastro inativo em silêncio. Vale também para Clientes. |
+| Conflito de documento/SKU avisa quando o existente está inativo | O inativo continua ocupando o índice único; a mensagem orienta reativar em vez de recriar. |
+| `trim` (e maiúsculas na unidade) aplicados no DTO **antes** de validar tamanho/formato | Evita que `"  ab"` passe no mínimo de 3 caracteres e seja gravado como `"ab"`. |
+| SKU somente numérico (2 a 30 dígitos) | No ERP o SKU é o número de série do produto. A API recusa letras e símbolos e o campo da tela descarta o que não for dígito (também ao colar). A coluna continua `varchar(30)`, então liberar letras no futuro não exige migration. |
+| Preço e custo com mais de 2 casas são **recusados**, não arredondados | A coluna é `numeric(12,2)`; sem a checagem o banco arredondaria em silêncio. |
+| Telas de Produtos e Categorias reaproveitam as classes de `clientes.css` e o `ItemFormulario` | Evita duplicar estilos e o item de formulário; quando houver um terceiro módulo, vale mover o CSS para um arquivo compartilhado. |
 
 ---
 
@@ -520,6 +632,34 @@ Testes manuais de ponta a ponta executados em 18/09/2026, com o banco em Docker,
 Os testes do tema (etapa 1.1) rodaram numa cópia isolada (banco `erp_portfolio_teste`, API na porta 5075 e front na 5174), apagada ao final, sem tocar nos dados de desenvolvimento.
 
 Verificações de build: `dotnet build` sem avisos, `tsc -b` sem erros e `oxlint` sem apontamentos.
+
+### Categorias (21/09/2026)
+
+Também numa API temporária (porta 5099) e num Vite temporário (5174); os dados de teste (`ZZT…` e SKUs `77…`/`88…`) foram apagados ao final e o produto e a categoria reais ficaram intactos.
+
+| Verificação | Resultado |
+|---|---|
+| Migration num banco descartável: "PERIFÉRICO"/"periférico" e "Cabos"/"  Cabos  " viram uma categoria; nulos e vazios ficam sem categoria; o banco recusa excluir categoria em uso; o `Down` devolve os nomes | ✅ |
+| Migration no banco de desenvolvimento (com backup antes): o produto existente continuou ligado à categoria "PERIFÉRICO" e os clientes ficaram intactos | ✅ |
+| API de Categorias e da integração com Produtos: 34 verificações (criar com `trim`, 4 casos de 400, nome duplicado inclusive com outra caixa, aviso para categoria inativa, `PUT` sem `ativo`, trocar só a caixa do próprio nome, busca, `%` sem virar curinga, status, paginação, 404; produto com/sem categoria, categoria inexistente → 400, trocar/remover categoria, categoria inativa, FK) | ✅ |
+| Tela: cadastro com validação e nome com `trim`, nome duplicado com outra caixa no campo, categoria aparecendo na seleção do produto e na lista, limpar e trocar a categoria, inativar (produto mantém o nome; seleção deixa de oferecer; edição mostra "(inativa)"), renomear, filtro Inativas, celular sem rolagem horizontal | ✅ |
+| Regressão: testes de Produtos (API e tela) continuam passando | ✅ |
+
+### Produtos e correções de Clientes (21/09/2026)
+
+Executados numa segunda instância da API (porta 5099) e num Vite temporário (porta 5174), com os dados de teste apagados ao final; a API e o front de desenvolvimento não foram tocados.
+
+| Verificação | Resultado |
+|---|---|
+| API de Produtos: 31 verificações (criação com `trim` do SKU e normalização de unidade/categoria, 11 casos de 400 — inclusive SKU com letras, hífen, 1 dígito e 31 dígitos —, SKU duplicado com espaços diferentes, inativar, `PUT` sem `ativo`, conflito com produto inativo, troca de SKU no `PUT`, busca por nome/SKU, `%` sem virar curinga, filtro de status, paginação, 404) | ✅ |
+| Clientes: `PUT` sem `ativo` mantém o cliente inativo; `ativo=true` continua reativando | ✅ |
+| Clientes: conflito de documento avisa quando o cadastro existente está inativo | ✅ |
+| Clientes: e-mail com espaço no fim passa a ser aceito no formulário | ✅ |
+| Tela: `/` redireciona para `/clientes`; menu, breadcrumb e URL acompanham a navegação; `/produtos` direto e rota desconhecida | ✅ |
+| Tela: validação do formulário vazio, campo SKU descartando letras e símbolos, cadastro com dinheiro em vírgula, erro de SKU duplicado no campo, edição com campos preenchidos | ✅ |
+| Tela: margem calculada (53,6%) e margem negativa (−25,3%) em vermelho; inativar; busca por SKU; filtro de status; "Limpar tudo" | ✅ |
+| Celular (390 px): gaveta do menu navega até Produtos, sem rolagem horizontal | ✅ |
+| Nenhum erro no console além do 409 esperado | ✅ |
 
 ---
 
@@ -606,7 +746,9 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Campos do mockup de cliente ainda não implementados: **PF/PJ**, **Inscrição Estadual**, **Nome Fantasia** e **Observações** (exige migration)
 - Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
 - Dashboard com indicadores (depende de Pedidos)
-- Módulo de **Produtos**
-- Módulo de **Pedidos**
+- Filtro por **categoria** na lista de Produtos e atalho "Nova categoria" dentro do seletor do formulário
+- Módulo de **Pedidos** (com itens, desconto e condição de pagamento), seguido de contas a receber e estoque
+- Mover `clientes.css` (classes usadas também por Produtos e Categorias) para um arquivo compartilhado
+- Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**
 - Testes automatizados (unitários para validação de CPF/CNPJ e de integração para a API)

@@ -52,6 +52,11 @@
   width: 100%;
 }
 
+.campo-busca-categoria {
+  width: 260px;
+  max-width: 100%;
+}
+
 .texto-discreto,
 .icone-discreto {
   color: var(--cor-texto-secundario);

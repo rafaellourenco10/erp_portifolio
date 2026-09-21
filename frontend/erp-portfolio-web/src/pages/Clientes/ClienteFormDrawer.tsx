@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: ClienteFormDrawer.tsx
- * Versão.....: 1.0.0
- * Data.......: 18/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 21/09/2026
  * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
  *              de cliente (React Hook Form + Zod), no layout do tema
  *              Ambition ERP. Erros de validação (400) e de documento
@@ -15,15 +15,17 @@
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo (formulário migrado do modal
  *                        para painel lateral).
+ *   1.1.0 - 21/09/2026 - ItemFormulario extraído para components/.
  * =====================================================================
  */
 
 import { CheckOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { App, Button, Col, Drawer, Flex, Form, Grid, Input, Row, Select, Switch } from 'antd'
-import { useEffect, type ReactNode } from 'react'
-import { Controller, useForm, type FieldError } from 'react-hook-form'
+import { useEffect } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { lerErroApi } from '../../api/axiosClient'
+import { ItemFormulario } from '../../components/ItemFormulario'
 import { TagStatus } from '../../components/TagStatus'
 import { useSalvarCliente } from '../../hooks/useClientes'
 import {
@@ -46,30 +48,6 @@ interface ClienteFormDrawerProps {
   /** Cliente em edição; null para inclusão. */
   cliente: Cliente | null
   aoFechar: () => void
-}
-
-interface ItemFormularioProps {
-  rotulo: string
-  erro?: FieldError
-  obrigatorio?: boolean
-  children: ReactNode
-}
-
-function ItemFormulario({ rotulo, erro, obrigatorio, children }: ItemFormularioProps) {
-  return (
-    <Form.Item
-      label={
-        <>
-          {rotulo}
-          {obrigatorio && <span className="campo-obrigatorio">*</span>}
-        </>
-      }
-      validateStatus={erro ? 'error' : undefined}
-      help={erro?.message}
-    >
-      {children}
-    </Form.Item>
-  )
 }
 
 export function ClienteFormDrawer({ aberto, cliente, aoFechar }: ClienteFormDrawerProps) {

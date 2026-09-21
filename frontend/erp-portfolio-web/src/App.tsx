@@ -1,34 +1,54 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.1.0
- * Data.......: 18/09/2026
+ * Versão.....: 1.3.0
+ * Data.......: 21/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
- *              com breadcrumb e área de conteúdo. Nesta etapa existe
- *              apenas o módulo Clientes.
+ *              com breadcrumb e área de conteúdo. As telas são trocadas
+ *              por rota (/clientes, /produtos) com o React Router.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
  *   1.1.0 - 18/09/2026 - Layout do tema Ambition ERP (logo, menu recolhível,
  *                        gaveta no celular, breadcrumb).
+ *   1.2.0 - 21/09/2026 - Rotas com React Router; módulo Produtos no menu;
+ *                        breadcrumb acompanha a rota.
+ *   1.3.0 - 21/09/2026 - Rota e item de menu de Categorias.
  * =====================================================================
  */
 
-import { MenuFoldOutlined, MenuOutlined, MenuUnfoldOutlined, TeamOutlined } from '@ant-design/icons'
+import {
+  AppstoreOutlined,
+  MenuFoldOutlined,
+  MenuOutlined,
+  MenuUnfoldOutlined,
+  TagsOutlined,
+  TeamOutlined,
+} from '@ant-design/icons'
 import { Breadcrumb, Button, Drawer, Grid, Layout, Menu, type MenuProps } from 'antd'
 import { useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { LogoAmbition } from './components/LogoAmbition'
+import { CategoriasListaPage } from './pages/Categorias/CategoriasListaPage'
 import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
+import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
 
-const itensMenu: MenuProps['items'] = [{ key: 'clientes', icon: <TeamOutlined />, label: 'Clientes' }]
-
-const trilha = [{ title: 'Gestão Comercial' }, { title: 'Clientes' }]
+// A chave de cada item é o caminho da rota.
+const itensMenu = [
+  { key: '/clientes', icon: <TeamOutlined />, label: 'Clientes' },
+  { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
+  { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
+] satisfies MenuProps['items']
 
 export default function App() {
   const telas = Grid.useBreakpoint()
   const ehCelular = telas.md === false
+
+  const { pathname } = useLocation()
+  const navegar = useNavigate()
+  const trilha = [{ title: 'Gestão Comercial' }, { title: itensMenu.find((item) => item.key === pathname)?.label }]
 
   const [recolhido, setRecolhido] = useState(false)
   const [menuCelularAberto, setMenuCelularAberto] = useState(false)
@@ -50,7 +70,7 @@ export default function App() {
             <LogoAmbition compacto={recolhido} />
           </div>
           {!recolhido && <div className="app-secao-menu">Gestão comercial</div>}
-          <Menu mode="inline" selectedKeys={['clientes']} items={itensMenu} />
+          <Menu mode="inline" selectedKeys={[pathname]} items={itensMenu} onClick={({ key }) => navegar(key)} />
         </Layout.Sider>
       )}
 
@@ -80,7 +100,12 @@ export default function App() {
         </Layout.Header>
 
         <Layout.Content className="app-conteudo">
-          <ClientesListaPage />
+          <Routes>
+            <Route path="/clientes" element={<ClientesListaPage />} />
+            <Route path="/produtos" element={<ProdutosListaPage />} />
+            <Route path="/categorias" element={<CategoriasListaPage />} />
+            <Route path="*" element={<Navigate to="/clientes" replace />} />
+          </Routes>
         </Layout.Content>
       </Layout>
 
@@ -95,9 +120,12 @@ export default function App() {
         <div className="app-secao-menu">Gestão comercial</div>
         <Menu
           mode="inline"
-          selectedKeys={['clientes']}
+          selectedKeys={[pathname]}
           items={itensMenu}
-          onClick={() => setMenuCelularAberto(false)}
+          onClick={({ key }) => {
+            navegar(key)
+            setMenuCelularAberto(false)
+          }}
         />
       </Drawer>
     </Layout>

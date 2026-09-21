@@ -1,0 +1,50 @@
+/**
+ * =====================================================================
+ * Arquivo....: produto.ts
+ * Versão.....: 1.1.0
+ * Data.......: 21/09/2026
+ * Descrição..: Tipos do módulo de Produtos, espelhando os DTOs da API
+ *              (ProdutoRespostaDto, ProdutoCriacaoDto, ProdutoAtualizacaoDto
+ *              e ProdutoFiltroDto).
+ * ---------------------------------------------------------------------
+ * Histórico de alterações:
+ *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 21/09/2026 - categoria (texto) trocada por categoriaId / categoriaNome.
+ * =====================================================================
+ */
+
+export interface Produto {
+  id: number
+  nome: string
+  sku: string
+  categoriaId: number | null
+  categoriaNome: string | null
+  unidade: string
+  precoVenda: number
+  custo: number
+  ativo: boolean
+  /** Data/hora ISO 8601 em UTC. */
+  dataCadastro: string
+}
+
+export interface ProdutoCriacao {
+  nome: string
+  sku: string
+  categoriaId: number | null
+  unidade: string
+  precoVenda: number
+  custo: number
+}
+
+export interface ProdutoAtualizacao extends ProdutoCriacao {
+  ativo: boolean
+}
+
+export interface ProdutoFiltro {
+  /** Trecho do nome ou do SKU. */
+  busca?: string
+  /** true = só ativos, false = só inativos, ausente = todos. */
+  ativo?: boolean
+  pagina: number
+  tamanhoPagina: number
+}
