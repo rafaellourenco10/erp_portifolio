@@ -504,3 +504,6 @@ pnpm-debug.log*
 ##
 # Configurações locais do Claude Code (permissões e caminhos da máquina)
 .claude/
+
+# graphify (grafo local gerado; contem caminhos da maquina)
+graphify-out/
