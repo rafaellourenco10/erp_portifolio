@@ -35,7 +35,7 @@ O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Client
 ## Funcionalidades (etapa 1 — Clientes)
 
 - Listagem em tabela com **paginação no servidor** (10, 20, 50 ou 100 por página)
-- **Filtros**: busca por nome (sem diferenciar maiúsculas/minúsculas), **Estado (UF) com seleção múltipla** em dropdown (busca sem acentos: "sao" encontra São Paulo) e **status** (Todos / Ativos / Inativos); aplicados pelo botão **Filtrar** ou Enter
+- **Filtros**: botão **Filtrar** (com contador de filtros ativos) abre um painel com busca por nome (sem diferenciar maiúsculas/minúsculas), **Estado (UF) com seleção múltipla** em dropdown (busca sem acentos: "sao" encontra São Paulo) e **status** (Todos / Ativos / Inativos); os filtros aplicados aparecem como tags removíveis abaixo do cabeçalho
 - **Inclusão e edição** em painel lateral, com validação no front (Zod) e na API (DataAnnotations)
 - **Inativação** (exclusão lógica) com confirmação; o cliente continua na lista com a tag "Inativo" e pode ser **reativado** pela edição
 - Validação de **CPF e CNPJ** pelos dígitos verificadores, incluindo o **CNPJ alfanumérico** (emitido pela Receita desde julho/2026)
@@ -269,8 +269,8 @@ Acesse <http://localhost:5173>. Na tela:
 | Ação | Como fazer |
 |---|---|
 | Cadastrar | Botão **Novo cliente** → preencher no painel lateral → **Salvar cliente** |
-| Filtrar | No card de filtros: nome em **Buscar cadastro**, uma ou mais UFs em **Estado (UF)** (dá para digitar o nome ou a sigla) e **Status cadastral** → **Filtrar** (ou Enter na busca) |
-| Limpar filtros | Botão **Limpar filtros** |
+| Filtrar | Botão **Filtrar** (mostra a quantidade de filtros ativos) → preencher **Buscar cadastro**, **Estado (UF)** (uma ou mais, por nome ou sigla) e/ou **Status cadastral** → **Aplicar** (ou Enter na busca) |
+| Ver/remover filtros aplicados | Aparecem como tags abaixo do cabeçalho; o **x** de cada tag remove só aquele filtro, e **Limpar tudo** remove todos |
 | Paginar | Rodapé da tabela: páginas e quantidade por página |
 | Editar | Ícone de **lápis** na linha |
 | Inativar | Ícone **vermelho** na linha → confirmar (desabilitado se o cliente já estiver inativo) |
@@ -451,7 +451,9 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Fonte Inter auto-hospedada | Vem do pacote npm (`@fontsource-variable/inter`), sem depender do Google Fonts nem de internet. |
 | Logo com texto em HTML | Texto dentro de SVG não acompanha a largura real da fonte; o "ERP" ficava sobreposto. Só o ícone é SVG. |
 | Formulário em painel lateral (Drawer) | Segue o mockup e mantém a lista visível ao fundo durante a edição. |
-| Filtros aplicados pelo botão **Filtrar** | Segue o mockup: o usuário monta a combinação (nome + UFs + status) e aplica de uma vez, sem uma consulta a cada clique. |
+| Filtros num painel por trás do botão **Filtrar** (Popover), não num card fixo | O card sempre visível ficou "feio" e ocupava espaço mesmo sem filtro nenhum; o botão só mostra o painel quando clicado. Os filtros aplicados continuam visíveis como tags removíveis abaixo do cabeçalho, para não esconder o que está filtrado. |
+| Painel de filtros só aplica no botão **Aplicar** | O usuário monta a combinação (nome + UFs + status) e aplica de uma vez, sem uma consulta a cada tecla ou clique. |
+| Painel de filtros recarrega do estado aplicado ao abrir | Se o usuário mudar algo e fechar sem aplicar (clicando fora), a próxima abertura descarta esse rascunho e mostra de novo o que está realmente filtrado. |
 | Busca de UF ordenada por relevância | Ao digitar "RN", "peRNambuco" também combina; a sigla exata vem primeiro para o Enter selecionar a UF certa. |
 | Lista na query string sem colchetes | O Axios envia `ufs[]=SP` por padrão; configurado para `ufs=SP&ufs=MG`, o formato que o ASP.NET entende. |
 | Vite com `strictPort` na 5173 | É a origem liberada no CORS; se a porta estiver ocupada, o Vite avisa em vez de trocar de porta. |
@@ -505,6 +507,11 @@ Testes manuais de ponta a ponta executados em 18/09/2026, com o banco em Docker,
 | Filtro de UF: "sao" encontra "São Paulo (SP)"; "RN" seleciona Rio Grande do Norte; contador "2 selecionadas" | ✅ |
 | Opções do dropdown de UF com espaçamento normal (36 px por opção) | ✅ |
 | Filtro SP + MG, status Inativos, combinação sem resultado ("Nenhum cliente corresponde aos filtros.") e Limpar filtros | ✅ |
+| Botão **Filtrar** mostra o badge com a quantidade de filtros aplicados | ✅ |
+| Filtros aplicados aparecem como tags abaixo do cabeçalho; reabrir o painel mostra os mesmos valores | ✅ |
+| Remover uma tag individual (ex.: só a UF "MG") atualiza a lista sem precisar reabrir o painel | ✅ |
+| "Limpar tudo" remove todas as tags e volta a listar todos os clientes | ✅ |
+| Painel de filtros funciona no celular (390 px) sem estourar a largura da tela | ✅ |
 | Fonte Inter carregada e fundo `#0F1112` aplicado | ✅ |
 | Em 1920, 1440, 1024, 800 e 390 px a página não rola na horizontal; a tabela cabe inteira a partir de 800 px | ✅ |
 | Menu lateral: 256 px em 1024 px+, 72 px (ícones) entre 768 e 991 px, gaveta no celular | ✅ |

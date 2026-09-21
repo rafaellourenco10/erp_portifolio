@@ -1,10 +1,11 @@
 /**
  * =====================================================================
  * Arquivo....: ClientesListaPage.tsx
- * Versão.....: 1.1.0
- * Data.......: 18/09/2026
+ * Versão.....: 1.2.0
+ * Data.......: 21/09/2026
  * Descrição..: Tela de listagem de clientes: filtros (nome, UFs em
- *              multi-select e status), tabela com paginação no servidor,
+ *              multi-select e status) num painel que abre a partir do
+ *              botão "Filtrar", tabela com paginação no servidor,
  *              inclusão, edição e inativação.
  * ---------------------------------------------------------------------
  * Fontes.....: GET   /api/clientes?nome=&ufs=&ativo=&pagina=&tamanhoPagina=
@@ -15,6 +16,9 @@
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
  *   1.1.0 - 18/09/2026 - Tema Ambition ERP; filtros por UFs (multi-select)
  *                        e status; formulário em painel lateral.
+ *   1.2.0 - 21/09/2026 - Card de filtros sempre visível trocado por um
+ *                        botão "Filtrar" com Popover; filtros aplicados
+ *                        aparecem como tags removíveis abaixo do cabeçalho.
  * =====================================================================
  */
 
@@ -29,7 +33,22 @@ import {
   SearchOutlined,
   StopOutlined,
 } from '@ant-design/icons'
-import { Alert, App, Button, Col, Flex, Grid, Input, Popconfirm, Row, Segmented, Select, Table, Tooltip } from 'antd'
+import {
+  Alert,
+  App,
+  Badge,
+  Button,
+  Flex,
+  Grid,
+  Input,
+  Popconfirm,
+  Popover,
+  Segmented,
+  Select,
+  Table,
+  Tag,
+  Tooltip,
+} from 'antd'
 import type { TableProps } from 'antd'
 import { useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
@@ -73,6 +92,7 @@ export function ClientesListaPage() {
 
   const [filtro, setFiltro] = useState<ClienteFiltro>({ pagina: 1, tamanhoPagina: 10 })
   const [filtrosTela, setFiltrosTela] = useState<FiltrosTela>(FILTROS_VAZIOS)
+  const [filtroAberto, setFiltroAberto] = useState(false)
   const [painelAberto, setPainelAberto] = useState(false)
   const [clienteEmEdicao, setClienteEmEdicao] = useState<Cliente | null>(null)
 
@@ -81,6 +101,8 @@ export function ClientesListaPage() {
 
   const quantidadeFiltros =
     (filtro.nome ? 1 : 0) + (filtro.ufs?.length ? 1 : 0) + (filtro.ativo !== undefined ? 1 : 0)
+  const quantidadeFiltrosNaTela =
+    (filtrosTela.nome.trim() ? 1 : 0) + (filtrosTela.ufs.length > 0 ? 1 : 0) + (filtrosTela.status !== 'todos' ? 1 : 0)
 
   function aplicarFiltros(valores: FiltrosTela) {
     setFiltro((atual) => ({
@@ -90,11 +112,39 @@ export function ClientesListaPage() {
       ufs: valores.ufs.length > 0 ? valores.ufs : undefined,
       ativo: valores.status === 'todos' ? undefined : valores.status === 'ativos',
     }))
+    setFiltroAberto(false)
   }
 
   function limparFiltros() {
     setFiltrosTela(FILTROS_VAZIOS)
     aplicarFiltros(FILTROS_VAZIOS)
+  }
+
+  // Ao abrir o painel, o rascunho volta a refletir o que está aplicado (descarta edições não aplicadas de antes).
+  function aoAbrirFiltro(aberto: boolean) {
+    if (aberto) {
+      setFiltrosTela({
+        nome: filtro.nome ?? '',
+        ufs: filtro.ufs ?? [],
+        status: filtro.ativo === undefined ? 'todos' : filtro.ativo ? 'ativos' : 'inativos',
+      })
+    }
+    setFiltroAberto(aberto)
+  }
+
+  function removerFiltroNome() {
+    setFiltro((atual) => ({ ...atual, nome: undefined, pagina: 1 }))
+  }
+
+  function removerFiltroUf(sigla: string) {
+    setFiltro((atual) => {
+      const restantes = atual.ufs?.filter((uf) => uf !== sigla)
+      return { ...atual, ufs: restantes?.length ? restantes : undefined, pagina: 1 }
+    })
+  }
+
+  function removerFiltroStatus() {
+    setFiltro((atual) => ({ ...atual, ativo: undefined, pagina: 1 }))
   }
 
   function abrirInclusao() {
@@ -239,6 +289,79 @@ export function ClientesListaPage() {
     colunaAcoes,
   ]
 
+  const conteudoFiltro = (
+    <div className="popover-filtros">
+      <div>
+        <label className="rotulo-filtro" htmlFor="filtro-nome">
+          <SearchOutlined /> Buscar cadastro
+        </label>
+        <Input
+          id="filtro-nome"
+          prefix={<SearchOutlined className="icone-discreto" />}
+          placeholder="Buscar por nome ou razão social"
+          allowClear
+          maxLength={150}
+          value={filtrosTela.nome}
+          onChange={(e) => setFiltrosTela((atual) => ({ ...atual, nome: e.target.value }))}
+          onPressEnter={() => aplicarFiltros(filtrosTela)}
+        />
+      </div>
+
+      <div>
+        <Flex justify="space-between" align="baseline">
+          <span className="rotulo-filtro">Estado (UF)</span>
+          {filtrosTela.ufs.length > 0 && (
+            <span className="contador-selecao">
+              {filtrosTela.ufs.length === 1 ? '1 selecionada' : `${filtrosTela.ufs.length} selecionadas`}
+            </span>
+          )}
+        </Flex>
+        <Select
+          mode="multiple"
+          aria-label="Estado (UF)"
+          className="campo-cheio"
+          placeholder="Todas as UFs"
+          allowClear
+          maxTagCount="responsive"
+          options={opcoesUf}
+          optionRender={(opcao) => (
+            <span>
+              {opcao.data.uf.nome} <span className="icone-discreto">({opcao.data.uf.sigla})</span>
+            </span>
+          )}
+          showSearch={{
+            filterOption: (busca, opcao) => !!opcao && ufCorrespondeBusca(busca, opcao.uf),
+            filterSort: (a, b, { searchValue }) => compararRelevanciaUf(a.uf, b.uf, searchValue),
+          }}
+          value={filtrosTela.ufs}
+          onChange={(ufs: string[]) => setFiltrosTela((atual) => ({ ...atual, ufs }))}
+        />
+      </div>
+
+      <div>
+        <span className="rotulo-filtro">Status cadastral</span>
+        <Segmented
+          block
+          options={opcoesStatus}
+          value={filtrosTela.status}
+          onChange={(status) => setFiltrosTela((atual) => ({ ...atual, status: status as StatusFiltro }))}
+        />
+      </div>
+
+      <Flex justify="space-between" align="center" gap={12} className="popover-filtros-rodape">
+        <span className="texto-discreto">{textoFiltrosAplicados(quantidadeFiltrosNaTela)}</span>
+        <Flex gap={8}>
+          <Button size="small" onClick={limparFiltros}>
+            Limpar
+          </Button>
+          <Button size="small" type="primary" icon={<CheckOutlined />} onClick={() => aplicarFiltros(filtrosTela)}>
+            Aplicar
+          </Button>
+        </Flex>
+      </Flex>
+    </div>
+  )
+
   return (
     <div className="pagina-clientes">
       <Flex justify="space-between" align="flex-end" wrap gap={16} className="pagina-cabecalho">
@@ -246,81 +369,49 @@ export function ClientesListaPage() {
           <h1 className="pagina-titulo">Clientes</h1>
           <p className="pagina-subtitulo">Gerencie sua carteira de clientes e seus dados cadastrais.</p>
         </div>
-        <Button type="primary" size="large" icon={<PlusOutlined />} onClick={abrirInclusao}>
-          Novo cliente
-        </Button>
+        <Flex gap={12}>
+          <Popover
+            trigger="click"
+            placement="bottomRight"
+            open={filtroAberto}
+            onOpenChange={aoAbrirFiltro}
+            content={conteudoFiltro}
+          >
+            <Badge count={quantidadeFiltros} size="small" offset={[-6, 4]}>
+              <Button size="large" icon={<FilterOutlined />}>
+                Filtrar
+              </Button>
+            </Badge>
+          </Popover>
+          <Button type="primary" size="large" icon={<PlusOutlined />} onClick={abrirInclusao}>
+            Novo cliente
+          </Button>
+        </Flex>
       </Flex>
 
-      <section className="painel painel-filtros" aria-label="Filtros">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} lg={10}>
-            <label className="rotulo-filtro" htmlFor="filtro-nome">
-              <SearchOutlined /> Buscar cadastro
-            </label>
-            <Input
-              id="filtro-nome"
-              prefix={<SearchOutlined className="icone-discreto" />}
-              placeholder="Buscar por nome ou razão social"
-              allowClear
-              maxLength={150}
-              value={filtrosTela.nome}
-              onChange={(e) => setFiltrosTela((atual) => ({ ...atual, nome: e.target.value }))}
-              onPressEnter={() => aplicarFiltros(filtrosTela)}
-            />
-          </Col>
-          <Col xs={24} sm={14} lg={8}>
-            <Flex justify="space-between" align="baseline">
-              <span className="rotulo-filtro">Estado (UF)</span>
-              {filtrosTela.ufs.length > 0 && (
-                <span className="contador-selecao">
-                  {filtrosTela.ufs.length === 1 ? '1 selecionada' : `${filtrosTela.ufs.length} selecionadas`}
-                </span>
-              )}
-            </Flex>
-            <Select
-              mode="multiple"
-              aria-label="Estado (UF)"
-              className="campo-cheio"
-              placeholder="Todas as UFs"
-              allowClear
-              maxTagCount="responsive"
-              options={opcoesUf}
-              optionRender={(opcao) => (
-                <span>
-                  {opcao.data.uf.nome} <span className="icone-discreto">({opcao.data.uf.sigla})</span>
-                </span>
-              )}
-              showSearch={{
-                filterOption: (busca, opcao) => !!opcao && ufCorrespondeBusca(busca, opcao.uf),
-                filterSort: (a, b, { searchValue }) => compararRelevanciaUf(a.uf, b.uf, searchValue),
-              }}
-              value={filtrosTela.ufs}
-              onChange={(ufs: string[]) => setFiltrosTela((atual) => ({ ...atual, ufs }))}
-            />
-          </Col>
-          <Col xs={24} sm={10} lg={6}>
-            <span className="rotulo-filtro">Status cadastral</span>
-            <Segmented
-              block
-              options={opcoesStatus}
-              value={filtrosTela.status}
-              onChange={(status) => setFiltrosTela((atual) => ({ ...atual, status: status as StatusFiltro }))}
-            />
-          </Col>
-        </Row>
-
-        <Flex justify="space-between" align="center" wrap gap={12} className="painel-filtros-rodape">
-          <span className="texto-discreto">
-            <FilterOutlined /> {textoFiltrosAplicados(quantidadeFiltros)}
-          </span>
-          <Flex gap={8}>
-            <Button onClick={limparFiltros}>Limpar filtros</Button>
-            <Button type="primary" icon={<CheckOutlined />} onClick={() => aplicarFiltros(filtrosTela)}>
-              Filtrar
-            </Button>
-          </Flex>
+      {quantidadeFiltros > 0 && (
+        <Flex wrap align="center" gap={8} className="linha-filtros-ativos">
+          <FilterOutlined className="icone-discreto" />
+          {filtro.nome && (
+            <Tag closable onClose={removerFiltroNome}>
+              Nome: {filtro.nome}
+            </Tag>
+          )}
+          {filtro.ufs?.map((uf) => (
+            <Tag key={uf} closable onClose={() => removerFiltroUf(uf)}>
+              {uf}
+            </Tag>
+          ))}
+          {filtro.ativo !== undefined && (
+            <Tag closable onClose={removerFiltroStatus}>
+              {filtro.ativo ? 'Ativos' : 'Inativos'}
+            </Tag>
+          )}
+          <Button type="link" size="small" onClick={limparFiltros}>
+            Limpar tudo
+          </Button>
         </Flex>
-      </section>
+      )}
 
       {isError && (
         <Alert

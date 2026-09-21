@@ -30,17 +30,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.painel-filtros {
-  padding: 20px 24px;
-  margin-bottom: 24px;
-}
-
-.painel-filtros-rodape {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--cor-borda);
-}
-
 .rotulo-filtro {
   display: inline-flex;
   align-items: center;
@@ -70,6 +59,30 @@
 
 .alerta-erro {
   margin-bottom: 24px;
+}
+
+/* ---------- Painel de filtros (Popover do botão "Filtrar") ---------- */
+
+.popover-filtros {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  padding: 4px 2px 0;
+}
+
+.popover-filtros-rodape {
+  padding-top: 14px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.linha-filtros-ativos {
+  margin: -8px 0 24px;
+}
+
+.linha-filtros-ativos .icone-discreto {
+  font-size: 13px;
 }
 
 /* ---------- Tabela ---------- */
@@ -224,10 +237,6 @@
   .pagina-titulo {
     font-size: 24px;
     line-height: 32px;
-  }
-
-  .painel-filtros {
-    padding: 16px;
   }
 
   .painel-tabela .ant-table-pagination.ant-pagination {
