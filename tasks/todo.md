@@ -57,7 +57,7 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 3: API
 
-- [ ] **T4: Consulta (listar com filtro/status) + marcar recebido** (M)
+- [x] **T4: Consulta (listar com filtro/status) + marcar recebido** (M) — *concluída em 22/09/2026*
   - Descrição: `GET /api/contas-receber?busca=&status=&pagina=&tamanhoPagina=` (join com pedidos/clientes, `atrasado` calculado no servidor) e `PATCH /api/contas-receber/{id}/receber`.
   - Aceite:
     - `busca` acha por nome do cliente **ou** nº do pedido.
@@ -65,8 +65,9 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
     - Marcar como recebida grava `dataRecebimento`; marcar de novo é idempotente (C7); marcar uma `Cancelado` = 409.
     - `id` inexistente no PATCH = 404.
   - Verificar: E2E temporário (inserindo parcelas via SQL direto, já que a geração automática só vem na T5); `dotnet build` 0 avisos.
+  - Resultado: pedido de teste (id 149) com 3 parcelas inseridas via SQL (1 atrasada, 1 recebida, 1 pendente futura). Confirmado: `totalParcelas` correto, `atrasado: true` só na vencida, filtros `Atrasado`/`Recebido` certos, busca por nome e por `#149`, marcar como recebida (200, `dataRecebimento` gravado), marcar de novo idempotente (mesma data), 404 em parcela inexistente, 409 ao tentar receber uma `Cancelado`. Dados de teste apagados; reais intactos. **Achado corrigido:** `switch` sobre `FiltroStatusParcela?` gerava aviso CS8524 (enum não coberto para valores fora dos nomeados); trocado o `null =>` por `_ =>` no branch padrão. `dotnet test` 146/146, `dotnet build` 0 avisos.
   - Dependências: T3
-  - Arquivos: `DTOs/ParcelaRespostaDto.cs`, `DTOs/ParcelaFiltroDto.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs`, `Controllers/ContasReceberController.cs`, `Program.cs`
+  - Arquivos: `DTOs/ParcelaRespostaDto.cs`, `DTOs/ParcelaFiltroDto.cs`, `DTOs/FiltroStatusParcela.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs`, `Controllers/ContasReceberController.cs`, `Program.cs`
 
 - [ ] **T5: Confirmar pedido gera as parcelas** (M)
   - Descrição: `PATCH /pedidos/{id}/confirmar` passa a receber `{ numeroParcelas?, intervaloDias? }` (defaults 1 e 30) e, ao confirmar com sucesso, chama `ContasReceberService.GerarParcelas` (C1, C2, C3).
