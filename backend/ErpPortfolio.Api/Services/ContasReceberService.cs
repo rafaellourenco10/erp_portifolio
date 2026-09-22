@@ -1,9 +1,10 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 22/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
-//              no servidor) e marcar parcela como recebida.
+//              no servidor), marcar parcela como recebida e gerar as parcelas ao
+//              confirmar um pedido.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.parcelas_receber
@@ -12,10 +13,14 @@
 //                           ORDER BY vencimento, id, LIMIT/OFFSET) e contagem de parcelas
 //                           irmãs do mesmo pedido (subconsulta correlacionada)
 //                - UPDATE : marcar como recebida (status + data_recebimento)
+//                - INSERT : geração das parcelas (GerarParcelas)
 // Fontes.....: ErpPortfolioDbContext.ParcelasReceber / Pedidos (EF Core / Npgsql).
+//              GerarParcelas não chama SaveChanges: fica na mesma transação do
+//              PedidoService.ConfirmarAsync.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e marcar recebido).
+//   1.1.0 - 22/09/2026 - GerarParcelas (usado pelo PedidoService ao confirmar).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -99,5 +104,24 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
         return new ParcelaRespostaDto(
             parcela.Id, parcela.PedidoId, parcela.Pedido!.Cliente!.Nome, parcela.NumeroParcela, totalParcelas,
             parcela.Valor, parcela.Vencimento, parcela.Status, parcela.DataRecebimento, Atrasado: false);
+    }
+
+    public void GerarParcelas(Pedido pedido, int numeroParcelas, int intervaloDias)
+    {
+        var valores = ContasReceberCalculo.Dividir(pedido.ValorTotal, numeroParcelas);
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        for (var i = 0; i < numeroParcelas; i++)
+        {
+            contexto.ParcelasReceber.Add(new ParcelaReceber
+            {
+                PedidoId = pedido.Id,
+                NumeroParcela = i + 1,
+                Valor = valores[i],
+                // Parcela 1 vence em intervaloDias, nunca no mesmo dia da confirmação (C3).
+                Vencimento = hoje.AddDays((i + 1) * intervaloDias),
+                Status = StatusParcela.Pendente
+            });
+        }
     }
 }

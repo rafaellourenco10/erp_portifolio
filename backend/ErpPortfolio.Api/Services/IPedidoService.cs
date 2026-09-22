@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: IPedidoService.cs
-// Versão.....: 1.0.0
-// Data.......: 21/09/2026
+// Versão.....: 1.1.0
+// Data.......: 22/09/2026
 // Descrição..: Contrato do serviço de pedidos de venda (criação, consulta, listagem,
 //              edição do rascunho, confirmação e cancelamento).
 // -------------------------------------------------------------------------------------
@@ -11,6 +11,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo (criar e obter).
+//   1.1.0 - 22/09/2026 - ConfirmarAsync recebe numeroParcelas/intervaloDias (gera parcelas).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -34,11 +35,15 @@ public interface IPedidoService
     /// <exception cref="DadoInvalidoException">Cliente trocado por inexistente/inativo, produto novo inválido, quantidade inválida para a unidade ou total acima do limite.</exception>
     Task<PedidoRespostaDto?> AtualizarAsync(int id, PedidoCriacaoDto dados, CancellationToken cancelamento);
 
-    /// <summary>Rascunho -> Confirmado. Exige forma de pagamento, cliente ativo e produtos ativos (R6).</summary>
+    /// <summary>
+    /// Rascunho -> Confirmado. Exige forma de pagamento, cliente ativo, produtos ativos e saldo de
+    /// estoque suficiente (R6, E2); gera <paramref name="numeroParcelas"/> parcelas a receber, a
+    /// primeira vencendo em <paramref name="intervaloDias"/> dias (C1).
+    /// </summary>
     /// <returns>O pedido confirmado, ou null se não existir.</returns>
     /// <exception cref="ConflitoException">O pedido não está em Rascunho.</exception>
-    /// <exception cref="DadoInvalidoException">Falta a forma de pagamento, ou cliente/produto está inativo.</exception>
-    Task<PedidoRespostaDto?> ConfirmarAsync(int id, CancellationToken cancelamento);
+    /// <exception cref="DadoInvalidoException">Falta a forma de pagamento, cliente/produto está inativo, ou estoque insuficiente.</exception>
+    Task<PedidoRespostaDto?> ConfirmarAsync(int id, int numeroParcelas, int intervaloDias, CancellationToken cancelamento);
 
     /// <summary>Rascunho ou Confirmado -> Cancelado. Cancelar um pedido já cancelado também é sucesso (R7).</summary>
     /// <returns>false se o pedido não existir.</returns>

@@ -69,7 +69,7 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T3
   - Arquivos: `DTOs/ParcelaRespostaDto.cs`, `DTOs/ParcelaFiltroDto.cs`, `DTOs/FiltroStatusParcela.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs`, `Controllers/ContasReceberController.cs`, `Program.cs`
 
-- [ ] **T5: Confirmar pedido gera as parcelas** (M)
+- [x] **T5: Confirmar pedido gera as parcelas** (M) — *concluída em 22/09/2026*
   - Descrição: `PATCH /pedidos/{id}/confirmar` passa a receber `{ numeroParcelas?, intervaloDias? }` (defaults 1 e 30) e, ao confirmar com sucesso, chama `ContasReceberService.GerarParcelas` (C1, C2, C3).
   - Aceite:
     - Confirmar com 3 parcelas gera 3 parcelas cuja soma bate com `valorTotal`; vencimentos em `intervaloDias`, `2×intervaloDias`, `3×intervaloDias` dias.
@@ -77,8 +77,9 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
     - `numeroParcelas` fora de 1-12 ou `intervaloDias` fora de 1-180 = 400.
     - As validações de confirmar que já existiam (forma de pagamento, cliente/produto ativo, saldo de estoque) continuam valendo.
   - Verificar: E2E temporário (1, 3 e 12 parcelas; valor que não divide exato); `dotnet build` 0 avisos.
+  - Resultado: cliente/produto de teste isolados (SKU `67000005`) com 100 unidades em estoque. Confirmado: 3 parcelas (intervalo 15) com vencimentos em 22/09+15/30/45 dias e soma 100,00 exata; confirmar **sem corpo** usou o padrão (1 parcela, 30 dias); 12 parcelas de um pedido de R$ 200,00 somaram exatamente 200,00 (11× R$16,66 + R$16,74 na última); `numeroParcelas: 13` recusado com 400 no campo. Dados de teste apagados; reais intactos (pedidos=2, estoque_movimentacoes=2, como antes). `dotnet test` 146/146, `dotnet build` 0 avisos.
   - Dependências: T4
-  - Arquivos: `DTOs/PedidoConfirmarDto.cs`, `Controllers/PedidosController.cs`, `Services/PedidoService.cs`, `Services/ContasReceberService.cs` (método `GerarParcelas`)
+  - Arquivos: `DTOs/PedidoConfirmarDto.cs`, `Controllers/PedidosController.cs`, `Services/IPedidoService.cs`, `Services/PedidoService.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs` (método `GerarParcelas`)
 
 - [ ] **T6: Cancelar pedido cancela as parcelas pendentes** (S)
   - Descrição: `PedidoService.Cancelar` passa a chamar `ContasReceberService.CancelarPendentesAsync` quando o status antes do cancelamento era `Confirmado` (C6).

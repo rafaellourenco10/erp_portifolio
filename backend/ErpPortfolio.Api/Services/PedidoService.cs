@@ -1,11 +1,12 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.4.0
+// Versão.....: 1.5.0
 // Data.......: 22/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
 //              aceita preço nem total vindos do cliente. Confirmar baixa o estoque dos
-//              itens (E2) e cancelar um pedido que estava Confirmado devolve (E3).
+//              itens (E2) e gera as parcelas a receber (C1); cancelar um pedido que
+//              estava Confirmado devolve o estoque (E3) e cancela as parcelas pendentes (C6).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.pedidos, public.pedido_itens
@@ -20,9 +21,11 @@
 //              public.estoque_movimentacoes (indiretamente, via IEstoqueService)
 //                - INSERT : Saída por item ao confirmar; Entrada de estorno por item ao
 //                           cancelar um pedido que estava Confirmado
+//              public.parcelas_receber (indiretamente, via IContasReceberService)
+//                - INSERT : parcelas geradas ao confirmar
 // Fontes.....: ErpPortfolioDbContext.Pedidos / PedidoItens / Clientes / Produtos.
-//              IEstoqueService.BaixarAsync / Estornar (não chamam SaveChanges: ficam na
-//              mesma transação do SaveChangesAsync deste serviço).
+//              IEstoqueService.BaixarAsync / Estornar e IContasReceberService.GerarParcelas
+//              não chamam SaveChanges: ficam na mesma transação do SaveChangesAsync deste serviço.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo (criar e obter).
@@ -30,6 +33,7 @@
 //   1.2.0 - 21/09/2026 - Edição do rascunho (PUT) com atualização dos itens no lugar.
 //   1.3.0 - 21/09/2026 - Confirmar (R6) e cancelar (R7, idempotente).
 //   1.4.0 - 22/09/2026 - Confirmar baixa estoque (E2); cancelar de Confirmado estorna (E3).
+//   1.5.0 - 22/09/2026 - Confirmar gera parcelas a receber (C1).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -39,7 +43,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ErpPortfolio.Api.Services;
 
-public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoqueService) : IPedidoService
+public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoqueService, IContasReceberService contasReceberService) : IPedidoService
 {
     private const string CampoItens = "Itens";
 
@@ -171,7 +175,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         return await ObterPorIdAsync(id, cancelamento);
     }
 
-    public async Task<PedidoRespostaDto?> ConfirmarAsync(int id, CancellationToken cancelamento)
+    public async Task<PedidoRespostaDto?> ConfirmarAsync(int id, int numeroParcelas, int intervaloDias, CancellationToken cancelamento)
     {
         var pedido = await contexto.Pedidos
             .Include(p => p.Cliente)
@@ -200,6 +204,10 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         await estoqueService.BaixarAsync(pedido.Id, pedido.Itens, cancelamento);
 
         pedido.Status = StatusPedido.Confirmado;
+
+        // C1: gera as parcelas a receber (não chama SaveChanges; entra no mesmo SaveChangesAsync abaixo).
+        contasReceberService.GerarParcelas(pedido, numeroParcelas, intervaloDias);
+
         await contexto.SaveChangesAsync(cancelamento);
 
         return PedidoRespostaDto.DeEntidade(pedido);

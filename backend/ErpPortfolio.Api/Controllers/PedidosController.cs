@@ -1,13 +1,13 @@
 // =====================================================================================
 // Arquivo....: PedidosController.cs
-// Versão.....: 1.3.0
-// Data.......: 21/09/2026
+// Versão.....: 1.4.0
+// Data.......: 22/09/2026
 // Descrição..: Endpoints REST do módulo de Pedidos.
 //                GET    /api/pedidos        -> listagem paginada (filtros: busca, status)
 //                GET    /api/pedidos/{id}   -> consulta por id (com itens)
 //                POST   /api/pedidos        -> criação de um rascunho
 //                PUT    /api/pedidos/{id}   -> edição do rascunho
-//                PATCH  /api/pedidos/{id}/confirmar -> Rascunho -> Confirmado
+//                PATCH  /api/pedidos/{id}/confirmar -> Rascunho -> Confirmado (gera parcelas)
 //                PATCH  /api/pedidos/{id}/cancelar  -> Rascunho/Confirmado -> Cancelado
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (via IPedidoService)
@@ -21,6 +21,7 @@
 //   1.1.0 - 21/09/2026 - Listagem paginada.
 //   1.2.0 - 21/09/2026 - Edição do rascunho (PUT); transição inválida vira 409.
 //   1.3.0 - 21/09/2026 - Confirmar e cancelar (PATCH).
+//   1.4.0 - 22/09/2026 - Confirmar recebe numeroParcelas/intervaloDias (gera parcelas).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -96,17 +97,19 @@ public class PedidosController(IPedidoService pedidoService) : ControllerBase
         }
     }
 
-    /// <summary>Confirma um rascunho (fica travado). Exige forma de pagamento, cliente ativo e produtos ativos.</summary>
+    /// <summary>Confirma um rascunho (fica travado). Exige forma de pagamento, cliente ativo, produtos ativos e saldo de estoque; gera as parcelas a receber. Corpo opcional (padrão: 1 parcela, 30 dias).</summary>
     [HttpPatch("{id:int}/confirmar")]
     [ProducesResponseType<PedidoRespostaDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<PedidoRespostaDto>> Confirmar(int id, CancellationToken cancelamento)
+    public async Task<ActionResult<PedidoRespostaDto>> Confirmar(int id, PedidoConfirmarDto? dados, CancellationToken cancelamento)
     {
+        dados ??= new PedidoConfirmarDto();
+
         try
         {
-            var pedido = await pedidoService.ConfirmarAsync(id, cancelamento);
+            var pedido = await pedidoService.ConfirmarAsync(id, dados.NumeroParcelas, dados.IntervaloDias, cancelamento);
             return pedido is null ? NotFound() : Ok(pedido);
         }
         catch (ConflitoException ex)
