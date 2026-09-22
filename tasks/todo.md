@@ -176,7 +176,7 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T11, T12
   - Arquivos: `pages/Pedidos/PedidoPage.tsx`, `pages/Pedidos/ItensPedidoTabela.tsx`, `schemas/pedidoSchema.ts`
 
-- [ ] **T14: Página do pedido: editar rascunho, confirmar e cancelar** (M)
+- [x] **T14: Página do pedido: editar rascunho, confirmar e cancelar** (M) — *concluída em 21/09/2026*
   - Nota: a T13 já entregou abrir `/pedidos/:id`, editar o rascunho, somente leitura e "Pedido não encontrado"; aqui faltam **Confirmar** e **Cancelar** e o teste do fluxo completo.
   - Descrição: abrir `/pedidos/:id`, editar o rascunho, **Confirmar pedido** (salva pendências e confirma) e **Cancelar pedido**, com somente leitura nos demais status.
   - Aceite:
@@ -184,25 +184,27 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
     - Confirmado: sem botão de salvar, tudo desabilitado, ainda pode cancelar.
     - Cancelado: somente leitura. Id inexistente mostra mensagem "Pedido não encontrado".
   - Verificar: `tsc`, `oxlint`; Playwright do fluxo completo (critérios 10 e 11).
+  - Resultado: 30 verificações no navegador (Edge, Playwright), 0 falhas: pedido novo só tem Salvar rascunho; rascunho salvo tem Cancelar pedido, Salvar rascunho e Confirmar pedido; Confirmar abre janela (Voltar não envia nada); confirmar salva a edição pendente (PUT) e depois confirma (PATCH), servidor Confirmado com total R$ 1.145,00 igual ao da tela; Confirmado fica travado e só tem Cancelar pedido; cancelar Confirmado e cancelar Rascunho; erros do servidor no campo certo (sem forma de pagamento, cliente inativado, produto inativado) com o pedido seguindo Rascunho; pedido cancelado por fora + confirmar na tela = 409, a tela recarrega e mostra Cancelado; lista mostra os novos status; celular com os 3 botões inteiros e sem rolagem horizontal. Dados reais idênticos ao início.
   - Dependências: T13, T9
   - Arquivos: `pages/Pedidos/PedidoPage.tsx`, `pages/Pedidos/ItensPedidoTabela.tsx`
 
 ### Checkpoint 4: fluxo na tela
-- [ ] Fluxo criar, salvar, editar, confirmar e cancelar funciona no navegador
-- [ ] Total da tela = total do servidor nos casos 1 e 2
-- [ ] `tsc`, `oxlint`, `dotnet build`, `dotnet test` limpos; dados de teste apagados
+- [x] Fluxo criar, salvar, editar, confirmar e cancelar funciona no navegador (testes T13 e T14)
+- [x] Total da tela = total do servidor nos casos 1 e 2
+- [x] `tsc`, `oxlint`, `dotnet build` (0 avisos), `dotnet test` (105 aprovados) limpos; dados de teste apagados
 - [ ] Revisão do Rafael
 
 ---
 
 ## Fase 5: Fechamento
 
-- [ ] **T15: Celular e polimento** (S)
+- [x] **T15: Celular e polimento** (S) — *concluída em 21/09/2026*
   - Descrição: lista em cartões e página do pedido empilhada no celular; ajustes de espaçamento.
   - Aceite: 390 px sem rolagem horizontal na lista e na página; tabela de itens legível; nenhum erro de console além dos esperados (409).
   - Verificar: Playwright em 390 px e 1920 px, com capturas conferidas.
+  - Resultado: 20 verificações no navegador (Edge, Playwright), 0 falhas, sem erro no console. No celular (< 768 px) cada item vira um **cartão** (nome, SKU, quantidade, desconto, preço e subtotal juntos, lixeira, erro dentro do cartão); em tela larga segue a tabela. Conferido em 390, 768, 1024 e 1920 px: lista e página do pedido (novo, rascunho, confirmado e cancelado) sem rolagem horizontal; nenhum elemento fora da largura; valores enormes (R$ 9.999.999.999,99 × 2) não estouram o cartão. Espaço vertical entre campos empilhados corrigido. A lista de pedidos já estava certa desde a T11. Os testes T13 e T14 foram rodados de novo após a refatoração (0 falhas).
   - Dependências: T14
-  - Arquivos: `pages/Pedidos/PedidosListaPage.tsx`, `pages/Pedidos/PedidoPage.tsx`
+  - Arquivos: `pages/Pedidos/ItensPedidoTabela.tsx`, `pages/Pedidos/PedidoPage.tsx`, `pages/Pedidos/pedido.css`
 
 - [ ] **T16: README, graphify e verificação final** (S)
   - Descrição: documentar o módulo, regravar o grafo e conferir os 12 critérios da spec.

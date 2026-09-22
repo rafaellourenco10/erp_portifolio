@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: PedidoPage.tsx
- * Versão.....: 2.0.0
+ * Versão.....: 2.2.0
  * Data.......: 21/09/2026
  * Descrição..: Página do pedido (rotas /pedidos/novo e /pedidos/:id). Formulário com
  *              cliente (busca no servidor), forma de pagamento, itens (tabela editável;
@@ -10,22 +10,28 @@
  *              O cálculo em tela é só pré-visualização: ao salvar o rascunho, o pedido é
  *              recarregado do servidor e passa a valer o total dele. Erros 400 da API
  *              aparecem nos campos.
- *              Pedido salvo (/pedidos/:id): rascunho é editável; Confirmado e Cancelado
- *              abrem somente leitura. Os botões Confirmar e Cancelar pedido entram na T14.
+ *              Pedido salvo (/pedidos/:id): o rascunho é editável e tem Salvar rascunho,
+ *              Confirmar pedido (valida, pede confirmação, salva o que estiver pendente e
+ *              confirma) e Cancelar pedido. Confirmado abre somente leitura e ainda pode ser
+ *              cancelado; Cancelado é só consulta. Erros da API aparecem no campo certo.
  * ---------------------------------------------------------------------
- * Fontes.....: GET /api/pedidos/{id}, POST /api/pedidos, PUT /api/pedidos/{id}
- *              (via usePedido e useSalvarPedido)
+ * Fontes.....: GET /api/pedidos/{id}, POST /api/pedidos, PUT /api/pedidos/{id},
+ *              PATCH /api/pedidos/{id}/confirmar e /cancelar
+ *              (via usePedido, useSalvarPedido, useConfirmarPedido e useCancelarPedido)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo (provisória).
  *   1.1.0 - 21/09/2026 - Área de teste dos seletores de cliente e produto (T12).
  *   2.0.0 - 21/09/2026 - Formulário do pedido: novo, itens, total ao vivo e salvar rascunho (T13).
+ *   2.1.0 - 21/09/2026 - Confirmar pedido e Cancelar pedido, com confirmação em janela (T14).
+ *   2.2.0 - 21/09/2026 - Espaçamento das linhas de campos empilhadas no celular (T15).
  * =====================================================================
  */
 
-import { ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, CheckOutlined, StopOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, App, Button, Col, Flex, Form, InputNumber, Row, Select, Spin } from 'antd'
+import { useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
@@ -35,7 +41,7 @@ import { ItemFormulario } from '../../components/ItemFormulario'
 import { SelecaoCliente } from '../../components/SelecaoCliente'
 import { SelecaoProduto } from '../../components/SelecaoProduto'
 import { TagStatusPedido } from '../../components/TagStatusPedido'
-import { usePedido, useSalvarPedido } from '../../hooks/usePedidos'
+import { useCancelarPedido, useConfirmarPedido, usePedido, useSalvarPedido } from '../../hooks/usePedidos'
 import {
   MAXIMO_ITENS,
   itemDoProduto,
@@ -101,9 +107,12 @@ export function PedidoPage() {
 
 /** Formulário do pedido: vazio em /pedidos/novo; com os dados do servidor em /pedidos/:id. */
 function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const navegar = useNavigate()
   const salvarPedido = useSalvarPedido()
+  const confirmarPedido = useConfirmarPedido()
+  const cancelarPedido = useCancelarPedido()
+  const queryClient = useQueryClient()
   const somenteLeitura = pedido !== undefined && pedido.status !== 'Rascunho'
   // Muda a cada produto adicionado: recria o seletor, que volta vazio e pronto para outra busca.
   const [chaveSeletor, setChaveSeletor] = useState(0)
@@ -172,26 +181,73 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
         navegar(`/pedidos/${salvo.id}`, { replace: true })
       }
     } catch (erro) {
-      const erroApi = lerErroApi(erro)
-      let mostrouNoCampo = false
-
-      if (erroApi.errosPorCampo.clienteId) {
-        setError('clienteId', { message: erroApi.errosPorCampo.clienteId })
-        mostrouNoCampo = true
-      }
-      if (erroApi.errosPorCampo.formaPagamento) {
-        setError('formaPagamento', { message: erroApi.errosPorCampo.formaPagamento })
-        mostrouNoCampo = true
-      }
-      if (erroApi.errosPorCampo.itens) {
-        setError('itens', { message: erroApi.errosPorCampo.itens })
-        mostrouNoCampo = true
-      }
-
-      if (!mostrouNoCampo) {
-        message.error(Object.values(erroApi.errosPorCampo)[0] ?? erroApi.mensagem)
-      }
+      mostrarErroApi(erro)
     }
+  }
+
+  /** Erros 400 da API aparecem no campo certo; qualquer outro (409, rede...) vira uma mensagem. */
+  function mostrarErroApi(erro: unknown) {
+    const erroApi = lerErroApi(erro)
+    let mostrouNoCampo = false
+
+    // 409: o pedido mudou de situação por outro caminho (outra aba, outra pessoa): recarrega para a tela mostrar a verdadeira.
+    if (erroApi.status === 409) queryClient.invalidateQueries({ queryKey: ['pedidos'] })
+
+    if (erroApi.errosPorCampo.clienteId) {
+      setError('clienteId', { message: erroApi.errosPorCampo.clienteId })
+      mostrouNoCampo = true
+    }
+    if (erroApi.errosPorCampo.formaPagamento) {
+      setError('formaPagamento', { message: erroApi.errosPorCampo.formaPagamento })
+      mostrouNoCampo = true
+    }
+    if (erroApi.errosPorCampo.itens) {
+      setError('itens', { message: erroApi.errosPorCampo.itens })
+      mostrouNoCampo = true
+    }
+
+    if (!mostrouNoCampo) {
+      message.error(Object.values(erroApi.errosPorCampo)[0] ?? erroApi.mensagem)
+    }
+  }
+
+  /** Confirmar: valida a tela, pede confirmação, salva o que estiver pendente e então confirma. */
+  function pedirConfirmacao(valores: PedidoFormValores) {
+    if (!pedido) return
+    modal.confirm({
+      title: `Confirmar o pedido nº ${pedido.id}?`,
+      content: 'Depois de confirmado, o pedido não pode mais ser editado: só cancelado.',
+      okText: 'Confirmar pedido',
+      cancelText: 'Voltar',
+      onOk: async () => {
+        try {
+          await salvarPedido.mutateAsync({ id: pedido.id, dados: paraPayload(valores) })
+          await confirmarPedido.mutateAsync(pedido.id)
+          message.success(`Pedido nº ${pedido.id} confirmado com sucesso.`)
+        } catch (erro) {
+          mostrarErroApi(erro)
+        }
+      },
+    })
+  }
+
+  function pedirCancelamento() {
+    if (!pedido) return
+    modal.confirm({
+      title: `Cancelar o pedido nº ${pedido.id}?`,
+      content: 'O pedido continua na lista como Cancelado e não pode ser reaberto.',
+      okText: 'Cancelar pedido',
+      okButtonProps: { danger: true },
+      cancelText: 'Voltar',
+      onOk: async () => {
+        try {
+          await cancelarPedido.mutateAsync(pedido.id)
+          message.success(`Pedido nº ${pedido.id} cancelado.`)
+        } catch (erro) {
+          mostrarErroApi(erro)
+        }
+      },
+    })
   }
 
   const erroItens = errors.itens?.root?.message ?? errors.itens?.message
@@ -210,13 +266,17 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
           type="info"
           showIcon
           style={{ marginBottom: 24 }}
-          title={`Este pedido está ${pedido.status.toLowerCase()} e não pode ser editado.`}
+          title={
+            pedido.status === 'Confirmado'
+              ? 'Pedido confirmado: não pode ser editado, só cancelado.'
+              : 'Pedido cancelado: somente leitura.'
+          }
         />
       )}
 
       <section className="painel pedido-secao" aria-label="Dados do pedido">
         <h2 className="pedido-secao-titulo">Dados do pedido</h2>
-        <Row gutter={20}>
+        <Row gutter={[20, 16]}>
           <Col xs={24} md={14}>
             <ItemFormulario rotulo="Cliente" erro={errors.clienteId} obrigatorio>
               <Controller
@@ -289,7 +349,7 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
 
       <section className="painel pedido-secao" aria-label="Resumo do pedido">
         <h2 className="pedido-secao-titulo">Resumo</h2>
-        <Row gutter={20}>
+        <Row gutter={[20, 16]}>
           <Col xs={24} md={8}>
             <ItemFormulario rotulo="Desconto no pedido todo" erro={errors.descontoPercentual}>
               <Controller
@@ -340,7 +400,7 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
               )}
               <span className="texto-discreto">
                 {pedido
-                  ? `Gravado no servidor: ${formatarReal(pedido.valorTotal)}. Ao salvar, vale o valor calculado pelo servidor.`
+                  ? `Gravado no servidor: ${formatarReal(pedido.valorTotal)}.${somenteLeitura ? '' : ' Ao salvar, vale o valor calculado pelo servidor.'}`
                   : 'Valor de conferência: ao salvar, vale o total calculado pelo servidor.'}
               </span>
             </div>
@@ -348,18 +408,44 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
         </Row>
       </section>
 
-      {!somenteLeitura && (
+      {pedido?.status !== 'Cancelado' && (
         <div className="pedido-rodape">
-          <Button
-            type="primary"
-            size="large"
-            icon={<CheckOutlined />}
-            htmlType="submit"
-            form={ID_FORMULARIO}
-            loading={salvarPedido.isPending}
-          >
-            Salvar rascunho
-          </Button>
+          {pedido && (
+            <Button
+              danger
+              size="large"
+              icon={<StopOutlined />}
+              className="pedido-rodape-cancelar"
+              onClick={pedirCancelamento}
+              loading={cancelarPedido.isPending}
+            >
+              Cancelar pedido
+            </Button>
+          )}
+          {!somenteLeitura && (
+            <>
+              <Button
+                size="large"
+                icon={<CheckOutlined />}
+                htmlType="submit"
+                form={ID_FORMULARIO}
+                loading={salvarPedido.isPending}
+              >
+                Salvar rascunho
+              </Button>
+              {pedido && (
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => handleSubmit(pedirConfirmacao)()}
+                  loading={confirmarPedido.isPending}
+                >
+                  Confirmar pedido
+                </Button>
+              )}
+            </>
+          )}
         </div>
       )}
     </Form>
