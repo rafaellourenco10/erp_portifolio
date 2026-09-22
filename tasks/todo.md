@@ -9,19 +9,20 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
 
 ## Fase 1: Regra pura (sem banco)
 
-- [ ] **T1: Enum `TipoMovimentacao` + cálculo puro de saldo** (S)
+- [x] **T1: Enum `TipoMovimentacao` + cálculo puro de saldo** (S) — *concluída em 22/09/2026*
   - Descrição: `TipoMovimentacao { Entrada, Saida }` e uma função pura `EstoqueCalculo.Saldo(IEnumerable<(TipoMovimentacao Tipo, decimal Quantidade)>)`.
   - Aceite:
     - Lista vazia → saldo 0.
     - Só entradas → soma; só saídas → soma negativa; misto → diferença correta.
     - Testável sem banco (xUnit puro, como `CalculoPedidoTests`).
   - Verificar: `dotnet test` verde; `dotnet build` 0 avisos.
+  - Resultado: 110 testes passando (105 anteriores + 5 novos), 0 avisos. Build precisou de `-c Release` (API estava rodando e trava o `.exe` do Debug, como já documentado no README).
   - Dependências: nenhuma
   - Arquivos: `backend/ErpPortfolio.Api/Models/TipoMovimentacao.cs`, `backend/ErpPortfolio.Api/Services/EstoqueCalculo.cs`, `backend/ErpPortfolio.Tests/EstoqueCalculoTests.cs`
 
 ### Checkpoint 1: regra pura
-- [ ] `dotnet test` verde e `dotnet build` sem avisos
-- [ ] Revisão do Rafael antes de seguir
+- [x] `dotnet test` verde e `dotnet build` sem avisos
+- [ ] Revisão do Rafael antes de seguir *(dispensada — autorização geral para seguir sem parar)*
 
 ---
 
