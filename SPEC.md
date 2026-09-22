@@ -1,104 +1,84 @@
-# Spec: Módulo Pedidos (etapa 3)
+# Spec: Módulo Estoque (etapa 4)
 
-> Status: **implementada e testada em 21/09/2026** (T1 a T16 do plano, ver `tasks/todo.md`). Os 12 critérios de sucesso abaixo foram conferidos um a um contra o código atual. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
+> Status: **em definição** (22/09/2026). Substitui a spec de Pedidos (etapa 3, implementada e documentada no README). Ao mudar uma decisão depois de começar a codar, atualize esta spec **antes** do código.
 
 ## Objetivo
 
-Registrar **vendas** no Ambition ERP: um pedido liga um **cliente** a um ou mais **produtos** (itens), com quantidade, desconto e **total calculado pelo servidor**.
+Controlar o **saldo de estoque** de cada produto no Ambition ERP, através de um histórico de **movimentações** (entradas e saídas), com baixa automática ao confirmar um pedido e devolução automática ao cancelar um pedido confirmado.
 
-- **Quem usa:** o dono do ERP de portfólio (sem login por enquanto, então o pedido não guarda vendedor).
-- **Por que agora:** Clientes e Produtos já existem; Pedidos é o coração do ERP e pré-requisito de Contas a receber, Estoque e Dashboard.
-- **Sucesso:** dá para montar um pedido com vários itens, ver o total mudar na hora, confirmá-lo (fica travado) ou cancelá-lo, e o histórico de preços das vendas nunca muda sozinho.
+- **Quem usa:** o dono do ERP de portfólio (sem login, sem múltiplos depósitos).
+- **Por que agora:** Pedidos existe, mas confirmar uma venda hoje não mexe em estoque nenhum — não dá para saber o que ainda tem disponível.
+- **Sucesso:** cada produto mostra um saldo correto (soma das movimentações), dá para lançar uma entrada manual (compra), confirmar um pedido baixa o estoque dos itens automaticamente e recusa se faltar saldo, e cancelar um pedido confirmado devolve a quantidade.
 
 ### Dentro do escopo
-Lista de pedidos com filtros, tela de pedido (novo / rascunho / consulta), itens com quantidade decimal e desconto %, desconto no pedido todo, forma de pagamento (lista fixa, sem parcelas), confirmar e cancelar.
+Tabela de movimentações (entrada manual, saída automática por venda, entrada automática por estorno de cancelamento), tela de estoque por produto com saldo, tela/drawer de nova entrada manual, extrato de movimentações por produto, bloqueio de confirmação de pedido sem saldo suficiente.
 
 ### Fora do escopo (entram depois)
-Estoque, parcelas e contas a receber, nota fiscal, impressão/PDF, vendedor/usuário, edição de pedido confirmado, exclusão de pedido, filtro por período.
+Fornecedores, pedido de compra formal, múltiplos depósitos/armazéns, custo médio/CMV, inventário por contagem física, saída manual (perda/quebra/ajuste negativo), estoque mínimo/alerta de ruptura.
 
-## Decisões já tomadas (com o Rafael, 21/09/2026)
+## Decisões já tomadas (com o Rafael, 22/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Pedido confirmado | **Não edita, só cancela.** Se errou: cancela e cria outro. |
-| Quantidade | **Decimal, até 3 casas.** Produto em `UN` ou `CX` exige quantidade **inteira**; `KG`, `L`, `M` aceitam decimal. |
-| Desconto | **Por item e no pedido todo** (ambos em %). |
-| Pagamento | **Campo simples no pedido** (lista fixa, sem parcelas). Obrigatório só para **confirmar** (opcional no rascunho). |
-| Preço do item | **Congelado ao adicionar** ao rascunho; confirmar **não** atualiza preços. Para usar o preço novo, remove e adiciona o item de novo. |
-| Item repetido | **Recusado** na API (400); a tela soma a quantidade em vez de criar outra linha. |
-| Testes | **Projeto xUnit** (`backend/ErpPortfolio.Tests`) só para o cálculo e as transições de status, além dos testes ponta a ponta. |
-| Scripts ponta a ponta | Continuam **fora do repositório**; o README lista o que foi verificado. |
+| Modelo de dados | **Histórico de movimentações** (não só um saldo no produto). O saldo é sempre a soma (Entrada − Saída), nunca gravado direto. |
+| Estoque insuficiente ao confirmar | **Bloqueia** (400 no campo, como cliente/produto inativo em Pedidos — R6). Pedido continua rascunho. |
+| Cancelar pedido Confirmado | **Devolve automaticamente**: gera uma entrada de estorno por item. Cancelar um Rascunho não gera movimentação (nunca teve saída). |
+| Entrada manual | **Produto + quantidade + motivo (texto livre, opcional)**. Sem fornecedor por enquanto. |
+| Saída manual (perda/quebra) | **Fora do escopo** — só existe saída automática por venda confirmada. |
 
 ## Regras de negócio
 
 | # | Regra |
 |---|---|
-| R1 | Status: `Rascunho` → `Confirmado`; `Rascunho` ou `Confirmado` → `Cancelado`. `Cancelado` é final. |
-| R2 | Só o **rascunho** pode ser editado. Editar/confirmar fora do estado permitido retorna **409**. |
-| R3 | O **preço unitário é copiado** de `produtos.preco_venda` para o item quando o item é adicionado e **fica congelado**. O cliente da API **nunca envia** preço nem total. |
-| R4 | Um pedido tem **1 a 100 itens**; o mesmo produto **não pode repetir** no pedido (soma-se a quantidade). |
-| R5 | Cliente e produtos de **pedidos novos / itens novos** precisam estar **ativos**. Inativar depois não afeta pedidos já feitos. |
-| R6 | Confirmar exige: forma de pagamento preenchida, cliente ativo e produtos ativos. Senão **400** no campo. |
-| R7 | Cancelar um pedido já cancelado retorna 204 (idempotente, como "inativar"). Pedido **nunca é excluído**. |
-| R8 | Quantidade: `0,001` a `999.999,999`. Desconto do item e do pedido: `0` a `100`, no máximo 2 casas. |
-| R9 | Número do pedido = `id` sequencial. Data do pedido = data/hora de criação (UTC), não editável. |
-| R10 | O **total do pedido não pode passar de 9.999.999.999,99** (limite da coluna `numeric(12,2)`); acima disso a API retorna **400** no campo `Itens`, em vez de estourar no banco. *(Incluída em 21/09/2026, durante a T1: quantidade máxima × preço máximo passa de 10 quatrilhões.)* |
-
-### Cálculo (a regra que mais importa)
-
-```
-subtotal do item = arredonda2( quantidade × preço_unitário × (1 − desconto_item/100) )
-soma             = Σ subtotais dos itens
-total            = arredonda2( soma × (1 − desconto_pedido/100) )
-arredonda2       = 2 casas, metade para cima (MidpointRounding.AwayFromZero)
-```
-
-Casos de referência (usados nos testes do back **e** do front):
-
-| Caso | Entrada | Resultado |
-|---|---|---|
-| 1 | 2 × 350,00 com 10%; 1 × 200,00 com 0%; pedido 0% | subtotais 630,00 e 200,00; total **830,00** |
-| 2 | mesmo pedido com 5% no pedido | total **788,50** |
-| 3 | 3 × 33,33; 0% | subtotal **99,99** |
-| 4 | 1,5 KG × 10,00; 0% | subtotal **15,00** |
-| 5 | 1 × 0,05 com 50% | subtotal **0,03** (0,025 arredonda para cima) |
-| 6 | 1 × 100,00 com 100% | subtotal **0,00** |
+| E1 | Toda mudança de estoque gera um registro em `estoque_movimentacoes`; o saldo de um produto é `Σ Entrada − Σ Saída` das suas movimentações, calculado na hora (nunca gravado). |
+| E2 | Confirmar um pedido (`PATCH /pedidos/{id}/confirmar`) gera uma **Saída** por item, com a quantidade do item e referência ao pedido. Se **qualquer** item não tiver saldo suficiente, a confirmação inteira é recusada (**400**, campo `Itens`) e **nenhuma** movimentação é gravada — checagem e gravação na mesma transação. |
+| E3 | Cancelar um pedido que estava **Confirmado** gera uma **Entrada** de estorno por item (mesma quantidade, mesma referência ao pedido). Cancelar um pedido que estava em **Rascunho** não gera movimentação nenhuma. |
+| E4 | Entrada manual (`POST /api/estoque/entradas`) exige produto **ativo** e quantidade **> 0**; motivo é opcional (até 200 caracteres). |
+| E5 | Quantidade da movimentação segue a mesma faixa de Pedidos: `0,001` a `999.999,999`, até 3 casas decimais. |
+| E6 | Editar um rascunho (PUT) **não** mexe em estoque — só Confirmar consome e só Cancelar-de-Confirmado devolve. |
+| E7 | Um produto **inativo** pode ter saldo e aparecer no extrato normalmente; só a **entrada manual** exige produto ativo (E4). Baixa/estorno por pedido usa o produto do item, ativo ou não (mesma regra de Pedidos: inativar depois não trava o histórico). |
 
 ## Tech stack
 
-Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 (Docker, porta 5433) no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query + react-hook-form + Zod + React Router no front. **Nenhuma dependência nova**, salvo a decisão da pergunta 2 (projeto de testes xUnit).
+Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 (Docker, porta 5433) no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query + react-hook-form + Zod + React Router no front. Nenhuma dependência nova.
 
-## Modelo de dados (migration só **adiciona** tabelas)
+## Modelo de dados (migration só **adiciona** tabela)
 
-`pedidos`: `id` (identity), `cliente_id` (FK `clientes`, RESTRICT), `data_pedido` (timestamptz, `now()`), `status` (varchar(20)), `forma_pagamento` (varchar(20), nulo no rascunho), `desconto_percentual` (numeric(5,2), padrão 0), `valor_total` (numeric(12,2)).
+`estoque_movimentacoes`:
 
-`pedido_itens`: `id`, `pedido_id` (FK `pedidos`, CASCADE), `produto_id` (FK `produtos`, RESTRICT), `quantidade` (numeric(12,3)), `preco_unitario` (numeric(12,2)), `desconto_percentual` (numeric(5,2)).
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK, identity |
+| `produto_id` | integer | FK `produtos` (RESTRICT), índice `ix_estoque_movimentacoes_produto_id` |
+| `tipo` | varchar(20) | `Entrada` ou `Saida` (texto, como `status` em pedidos) |
+| `quantidade` | numeric(12,3) | `CHECK` > 0 (o tipo é que define entrada/saída; quantidade sempre positiva) |
+| `motivo` | varchar(200) | opcional; automático nas movimentações geradas por pedido (ex.: `"Venda pedido #123"`, `"Estorno cancelamento pedido #123"`) |
+| `pedido_id` | integer | FK `pedidos` (RESTRICT), **opcional** (nulo em entrada manual), índice `ix_estoque_movimentacoes_pedido_id` |
+| `data_movimentacao` | timestamptz | UTC, padrão `now()`, índice `ix_estoque_movimentacoes_data_movimentacao` |
 
-Índices/restrições: `ix_pedidos_cliente_id`, `ix_pedidos_data_pedido`, único `ux_pedido_itens_pedido_produto (pedido_id, produto_id)`, `CHECK` de quantidade > 0 e descontos entre 0 e 100. `valor_total` é gravado a cada salvamento por **um único método** de recálculo; o subtotal de cada item é derivado (não gravado).
+Saldo do produto = query agregada (`SUM` condicional por `tipo`), não é coluna própria — mesmo padrão do subtotal do item de pedido ("não é gravado, é calculado na hora").
 
-## API (`/api/pedidos`)
+## API
+
+Novo `EstoqueController` (`/api/estoque`):
 
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
-| GET | `/pedidos?busca=&status=&pagina=&tamanhoPagina=` | Lista paginada (mais recentes primeiro). `busca` = nº do pedido ou nome do cliente | 200, 400 |
-| GET | `/pedidos/{id}` | Pedido com itens | 200, 404 |
-| POST | `/pedidos` | Cria um **rascunho** com os itens | 201, 400 |
-| PUT | `/pedidos/{id}` | Substitui cliente, itens, desconto e pagamento (**só rascunho**) | 200, 400, 404, 409 |
-| PATCH | `/pedidos/{id}/confirmar` | Rascunho → Confirmado (R6) | 200, 400, 404, 409 |
-| PATCH | `/pedidos/{id}/cancelar` | → Cancelado (R7) | 204, 404 |
+| GET | `/estoque?busca=&pagina=&tamanhoPagina=` | Lista paginada de produtos com saldo atual (nome ou SKU) | 200, 400 |
+| GET | `/estoque/{produtoId}/movimentacoes?pagina=&tamanhoPagina=` | Extrato do produto, mais recente primeiro | 200, 404 |
+| POST | `/estoque/entradas` | Lança uma entrada manual (E4) | 201, 400, 404 |
 
-- Corpo do POST/PUT: `clienteId`, `formaPagamento?` (`Dinheiro`, `Pix`, `Boleto`, `Cartao`), `descontoPercentual`, `itens[] { produtoId, quantidade, descontoPercentual }`.
-- No PUT, item cujo produto **já estava** no pedido mantém o preço congelado; produto novo copia o preço atual (R3).
-- Resposta: cabeçalho + `clienteNome`, `subtotalItens`, `valorTotal` e itens com `produtoNome`, `sku`, `unidade`, `precoUnitario`, `subtotal`.
-- Erros: 400 no formato do `[ApiController]` (campos `ClienteId`, `Itens`, `FormaPagamento`); transição inválida = 409 (`ConflitoException`).
+`PedidosController` sem rota nova — `PATCH /pedidos/{id}/confirmar` e `/cancelar` passam a chamar `IEstoqueService` internamente (E2, E3); resposta de erro de estoque insuficiente usa o mesmo formato 400 já usado pelas outras validações de confirmar.
+
+- Corpo do POST `/estoque/entradas`: `{ produtoId, quantidade, motivo? }`.
+- Resposta da listagem: `{ produtoId, produtoNome, sku, unidade, saldo }` paginado (mesmo envelope `ResultadoPaginadoDto` dos outros módulos).
+- Resposta do extrato: `{ tipo, quantidade, motivo, pedidoId?, dataMovimentacao }` paginado.
 
 ## Telas
 
-- **`/pedidos`** (item **Pedidos** no menu, em Gestão Comercial): tabela com Nº, Cliente, Data, Itens, Total, Status e ação **Abrir**; filtro Filtrar (busca + status) e tags removíveis, como em Produtos; no celular vira cartões.
-- **`/pedidos/novo`** e **`/pedidos/:id`**: página (não painel lateral, por causa da tabela de itens). Cliente por seleção com **busca no servidor** (só ativos); tabela de itens editável (produto por seleção com busca no servidor, quantidade, preço só leitura, desconto %, subtotal); desconto do pedido, forma de pagamento e **resumo** (soma, desconto, total) recalculado na hora.
-- Rascunho: **Salvar rascunho**, **Confirmar pedido** (salva pendências e confirma) e **Cancelar pedido**. Confirmado/Cancelado: tudo somente leitura; confirmado ainda tem **Cancelar**.
-- Tag de status própria (Rascunho, Confirmado, Cancelado) no tema Ambition.
-- O cálculo da tela é só **pré-visualização**; vale sempre o que o servidor devolve ao salvar.
+- **`/estoque`** (item **Estoque** no menu, em Gestão Comercial): tabela com Produto, SKU, Unidade e **Saldo**; busca por nome/SKU (mesmo padrão de busca dos outros módulos, sem o painel Filtrar completo — não há status aqui); botão **Nova entrada** abre um drawer (produto por seleção com busca no servidor — reaproveita `SelecaoProduto`, quantidade, motivo opcional); ação **Ver movimentações** por linha abre um drawer com o extrato paginado daquele produto (tipo, quantidade, motivo/origem, data), mais recente primeiro.
+- Saldo negativo (não deveria acontecer dado E2, mas fica visível se acontecer por dado antigo) aparece em vermelho, mesmo padrão da margem negativa em Produtos.
+- Sem alteração visível na tela de Pedidos além do próprio efeito colateral: confirmar sem saldo mostra erro 400 no resumo do pedido (mesmo padrão dos outros erros de confirmar, ex. cliente inativo).
 
 ## Commands
 
@@ -108,88 +88,67 @@ dotnet build ErpPortfolio.slnx
 dotnet run --project backend/ErpPortfolio.Api --launch-profile http        # API em http://localhost:5065
 dotnet ef migrations add NomeDaMigration --project backend/ErpPortfolio.Api -o Data/Migrations
 dotnet ef database update --project backend/ErpPortfolio.Api
-#   (com a API rodando, o build trava o .exe: acrescente --configuration Release aos comandos dotnet ef)
 
 # Frontend (em frontend/erp-portfolio-web)
 npm run dev          # http://localhost:5173
-npx tsc -b           # tipos
-npx oxlint src       # lint
+npx tsc -b
+npx oxlint src
 npm run build
 
-# Testes automatizados (se a pergunta 2 for aprovada)
+# Testes automatizados
 dotnet test backend/ErpPortfolio.Tests
 ```
 
-## Project structure (só o que é novo)
+## Project structure (só o que é novo/alterado)
 
 ```
 backend/ErpPortfolio.Api/
-  Models/            Pedido.cs, PedidoItem.cs, StatusPedido.cs, FormaPagamento.cs
-  DTOs/              Pedido{Criacao,Atualizacao,Resposta,Resumo,Filtro}Dto.cs, PedidoItemDto.cs
-  Services/          IPedidoService.cs, PedidoService.cs, CalculoPedido.cs   # CalculoPedido = funções puras
-  Controllers/       PedidosController.cs
-  Data/Migrations/   <data>_CriacaoTabelasPedidos.cs
-backend/ErpPortfolio.Tests/      (opcional) CalculoPedidoTests.cs, TransicoesPedidoTests.cs
+  Models/            EstoqueMovimentacao.cs, TipoMovimentacao.cs
+  DTOs/               EstoqueEntradaDto.cs, EstoqueResumoDto.cs, EstoqueFiltroDto.cs, MovimentacaoRespostaDto.cs
+  Services/          IEstoqueService.cs, EstoqueService.cs
+  Controllers/       EstoqueController.cs
+  Data/Migrations/   <data>_CriacaoTabelaEstoqueMovimentacoes.cs
+  Services/PedidoService.cs        # alterado: Confirmar chama BaixarEstoque, Cancelar chama EstornarEstoque
+backend/ErpPortfolio.Tests/        EstoqueServiceTests.cs (saldo, baixa, estorno, bloqueio)
 frontend/erp-portfolio-web/src/
-  api/pedidosApi.ts   hooks/usePedidos.ts   types/pedido.ts   schemas/pedidoSchema.ts
-  utils/calculoPedido.ts          # mesma fórmula do back, com os mesmos casos de referência
-  components/TagStatusPedido.tsx
-  pages/Pedidos/PedidosListaPage.tsx, PedidoPage.tsx, ItensPedidoTabela.tsx
+  api/estoqueApi.ts   hooks/useEstoque.ts   types/estoque.ts   schemas/estoqueEntradaSchema.ts
+  pages/Estoque/EstoqueListaPage.tsx, EntradaEstoqueDrawer.tsx, MovimentacoesDrawer.tsx
 ```
 
 ## Code style
 
-Igual ao restante do projeto: **cabeçalho obrigatório** em todo arquivo C#/TS (nome, versão, data, descrição, banco/tabelas/fontes, histórico), nomes em português, `trim` antes de validar, mensagens de erro em português. Exemplo do padrão (o cálculo fica em funções puras, sem banco):
-
-```csharp
-public static class CalculoPedido
-{
-    public static decimal Subtotal(decimal quantidade, decimal precoUnitario, decimal descontoPercentual) =>
-        Arredondar(quantidade * precoUnitario * (1 - descontoPercentual / 100));
-
-    public static decimal Total(IEnumerable<decimal> subtotais, decimal descontoPedidoPercentual) =>
-        Arredondar(subtotais.Sum() * (1 - descontoPedidoPercentual / 100));
-
-    private static decimal Arredondar(decimal valor) => Math.Round(valor, 2, MidpointRounding.AwayFromZero);
-}
-```
+Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS (nome, versão, data, descrição, banco/tabelas/fontes, histórico), nomes em português, mensagens de erro em português.
 
 ## Testing strategy
 
-O projeto **ainda não tem testes automatizados**; a verificação vem sendo feita numa instância temporária da API (porta 5099) + scripts + Playwright, apagando os dados de teste. Para Pedidos:
-
-1. **Unitário (xUnit, se aprovado):** `CalculoPedido` com os 6 casos de referência e as transições de status (R1/R2). É a regra de dinheiro; merece um teste que rode sozinho.
-2. **API ponta a ponta (instância temporária):** criação, todos os 400 (cliente/produto inativo ou inexistente, item repetido, quantidade decimal em `UN`, desconto 101, sem itens), PUT só em rascunho, confirmar/cancelar e os 409, preço congelado após mudar o preço do produto, total confere com os casos de referência, busca e filtro de status, 404.
-3. **Tela (Playwright):** montar pedido, total ao vivo, salvar, confirmar (fica travado), cancelar, filtros, URL direta, celular sem rolagem horizontal.
-4. **Sempre:** `dotnet build` com 0 avisos, `tsc -b` e `oxlint` sem apontamentos; nenhum dado real alterado (produto, categoria e cliente existentes intactos).
+1. **Unitário (xUnit):** saldo calculado corretamente a partir de uma lista de movimentações (casos: só entradas, só saídas, misto, saldo zero); confirmar com saldo suficiente gera as saídas certas; confirmar com saldo insuficiente **não grava nada** e retorna erro; cancelar um Confirmado gera as entradas de estorno certas; cancelar um Rascunho não gera nada.
+2. **API ponta a ponta (instância temporária):** entrada manual (201), entrada em produto inativo (400), extrato paginado, confirmar pedido baixa saldo dos itens, confirmar sem saldo suficiente retorna 400 e o pedido continua rascunho (e a checagem foi feita sem gravar nada), cancelar confirmado devolve o saldo, cancelar rascunho não mexe em saldo, listagem de estoque com busca por nome/SKU.
+3. **Tela (Playwright):** lista de estoque com saldo, lançar entrada manual e ver o saldo mudar, abrir extrato e ver a movimentação, tentar confirmar um pedido sem saldo e ver o erro, confirmar com saldo e ver o saldo cair, cancelar confirmado e ver o saldo voltar, celular sem rolagem horizontal.
+4. **Sempre:** `dotnet build` com 0 avisos, `tsc -b` e `oxlint` sem apontamentos; nenhum dado real alterado (cliente, produto, categoria, pedido existentes intactos).
 
 ## Boundaries
 
-- **Sempre:** o servidor calcula preço e total; validar tudo na API (a tela é só conveniência); cabeçalho em cada arquivo; backup do banco antes de migration; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir.
-- **Perguntar antes:** dependência nova (xUnit, biblioteca de datas), mudar tabela existente (`clientes`, `produtos`, `categorias`), token de concorrência (`xmin`), estoque/parcelas/PDF, qualquer forma de editar pedido confirmado.
-- **Nunca:** aceitar preço ou total vindo do cliente, excluir pedido, editar pedido confirmado, commitar segredos, forçar push, rodar teste contra dados reais sem limpeza.
+- **Sempre:** toda mudança de saldo passa por uma movimentação (nunca um `UPDATE` direto de um campo saldo); checagem de saldo suficiente e gravação da saída na **mesma transação** (E2); cabeçalho em cada arquivo; backup do banco antes de migration; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir.
+- **Perguntar antes:** dependência nova, mudar tabela existente (`pedidos`, `produtos`, etc.), saída manual (perda/ajuste), estoque mínimo/alerta, múltiplos depósitos, qualquer forma de estoque negativo permitido.
+- **Nunca:** gravar saldo como campo direto no produto, deixar confirmar um pedido sem saldo suficiente, excluir uma movimentação (histórico é definitivo, como o pedido), commitar segredos, forçar push.
 
 ## Success criteria (testáveis)
 
-Conferidos um a um em 21/09/2026 contra o código final (T16), com `dotnet build -c Release` (0 avisos), `dotnet test` (105/105), `tsc -b` e `oxlint` limpos. Evidência: testes unitários (`backend/ErpPortfolio.Tests`), scripts de API ponta a ponta (`e2e-pedidos-t6..t9.ps1`, `e2e-pedidos-contrato.ps1`) e de tela (`ui-pedidos-t11..t15.mjs`), todos em `.claude/ferramentas-locais/`, rodados contra uma API e um banco temporários, com os dados reais conferidos idênticos ao final de cada rodada.
-
-1. ✅ Os 6 casos de referência dão exatamente os valores da tabela, no back **e** no front — `CalculoPedidoTests`, `check-calculo-front.mts` e `ParidadeCalculoFrontTests` (2.010 casos aleatórios).
-2. ✅ Criar pedido com 2 itens devolve 201, status `Rascunho`, preços copiados do produto e `valorTotal` correto — `e2e-pedidos-t6.ps1` ("1. POST caso 1").
-3. ✅ Mudar o preço do produto **não** altera o preço dos itens de pedidos existentes — `e2e-pedidos-t8.ps1` ("2. item que JÁ estava no pedido mantém o preço CONGELADO") e `e2e-pedidos-t9.ps1` ("6. preço do produto mudou... o pedido CONFIRMADO segue igual").
-4. ✅ `PUT` em pedido confirmado ou cancelado retorna 409 e nada muda — `e2e-pedidos-t8.ps1` ("6. PUT em pedido CONFIRMADO/CANCELADO -> 409").
-5. ✅ Confirmar sem forma de pagamento, com cliente inativo ou com produto inativo retorna 400 no campo correto — `e2e-pedidos-t9.ps1` ("3. ...") e na tela `ui-pedidos-t14.mjs` (C12, C14, C15).
-6. ✅ Confirmar duas vezes retorna 409; cancelar duas vezes retorna 204 — `e2e-pedidos-t9.ps1` ("2. confirmar duas vezes -> 409", "4. cancelar de novo -> 204").
-7. ✅ Quantidade `2,5` em produto `UN` é recusada (400); em produto `KG` é aceita — `e2e-pedidos-t6.ps1` ("4. ...") e na tela `ui-pedidos-t13.mjs` (N14, N15).
-8. ✅ Item repetido, 0 itens, mais de 100 itens, desconto acima de 100 e quantidade ≤ 0 retornam 400 — `e2e-pedidos-t6.ps1` ("6. ...").
-9. ✅ Cliente e produto inativados **depois** continuam aparecendo nos pedidos antigos — `e2e-pedidos-t9.ps1` ("6. cliente e produtos inativados continuam aparecendo no pedido").
-10. ✅ Na tela, o total muda ao editar quantidade/desconto e, ao salvar, é substituído pelo valor do servidor sem diferença — `ui-pedidos-t13.mjs` (N4, N9, N21-N30).
-11. ✅ Confirmado fica somente leitura (sem botão de salvar), mas ainda pode ser cancelado — `ui-pedidos-t14.mjs` (C8).
-12. ✅ Nenhum registro real (cliente, produto, categoria) é alterado pelos testes — checado ao final de toda rodada acima ("dados reais... IDÊNTICOS").
+1. Saldo de um produto sem nenhuma movimentação é **0**.
+2. Uma entrada manual de 10 unidades faz o saldo do produto virar **10**.
+3. Confirmar um pedido com 1 item de 3 unidades (saldo 10) baixa o saldo para **7**, e gera uma movimentação `Saida` de 3 referenciando o pedido.
+4. Confirmar um pedido cujo item pede mais que o saldo disponível retorna **400** no campo certo, o pedido **continua Rascunho**, e **nenhuma** movimentação é gravada (saldo inalterado).
+5. Cancelar um pedido **Confirmado** devolve o saldo (gera `Entrada` de estorno igual à saída original).
+6. Cancelar um pedido que ainda estava em **Rascunho** não gera nenhuma movimentação (saldo inalterado).
+7. Entrada manual em produto **inativo** retorna 400.
+8. O extrato de um produto lista as movimentações mais recentes primeiro, com tipo, quantidade, motivo/origem e data.
+9. A listagem `/estoque` acha um produto por nome ou por SKU e mostra o saldo correto.
+10. Nenhum registro real (cliente, produto, categoria, pedido) é alterado pelos testes.
 
 ## Open questions
 
-Nenhuma em aberto: as cinco dúvidas da primeira versão foram fechadas em 21/09/2026 (ver "Decisões já tomadas"). Limites conhecidos, aceitos de propósito:
+Nenhuma em aberto — as quatro dúvidas da primeira versão foram fechadas em 22/09/2026 (ver "Decisões já tomadas"). Limites conhecidos, aceitos de propósito:
 
-- **Sem controle de concorrência:** duas abas editando o mesmo rascunho valem "a última grava". Se virar problema, token `xmin` (pergunta antes, ver Boundaries).
-- **Cálculo duplicado** no back e no front: mitigado pelos mesmos 6 casos de referência nos dois lados.
-- **Seleção com busca no servidor** para cliente e produto (sem carregar tudo), porque esses cadastros crescem.
+- **Sem saída manual** (perda/quebra/ajuste): se precisar, é uma extensão natural do mesmo modelo (`TipoMovimentacao` já é um enum) — pergunta antes, ver Boundaries.
+- **Sem estoque mínimo/alerta de ruptura**: pode ser acrescentado depois como um campo em `produtos` + destaque na lista de Estoque.
+- **Sem múltiplos depósitos**: um saldo único por produto, suficiente pro escopo de portfólio.
