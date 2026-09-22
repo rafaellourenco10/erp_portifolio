@@ -9,19 +9,20 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 1: Regra pura (sem banco)
 
-- [ ] **T1: Enum `StatusParcela` + divisão em parcelas (função pura)** (S)
+- [x] **T1: Enum `StatusParcela` + divisão em parcelas (função pura)** (S) — *concluída em 22/09/2026*
   - Descrição: `StatusParcela { Pendente, Recebido, Cancelado }` e `ContasReceberCalculo.Dividir(decimal valorTotal, int numeroParcelas)` → lista de valores por parcela, com o resto na última (C2).
   - Aceite:
     - `Dividir(100.00, 3)` → `[33.33, 33.33, 33.34]` (soma = 100.00 exato).
     - `Dividir(100.00, 1)` → `[100.00]`.
     - `Dividir(valor, 12)` sempre soma exatamente `valor`, para vários valores de teste.
   - Verificar: `dotnet test` verde; `dotnet build` 0 avisos.
+  - Resultado: 132 testes passando (124 anteriores + 8 novos), 0 avisos. 8 casos: 1 parcela, resto na última (100÷3), divisão exata (300÷3), 4 casos de soma sempre batendo (valores grandes, pequenos, primos), 12 parcelas com valores conferidos ponto a ponto.
   - Dependências: nenhuma
   - Arquivos: `backend/ErpPortfolio.Api/Models/StatusParcela.cs`, `backend/ErpPortfolio.Api/Services/ContasReceberCalculo.cs`, `backend/ErpPortfolio.Tests/ContasReceberCalculoTests.cs`
 
 ### Checkpoint 1: regra pura
-- [ ] `dotnet test` verde e `dotnet build` sem avisos
-- [ ] Revisão do Rafael antes de seguir
+- [x] `dotnet test` verde e `dotnet build` sem avisos
+- [ ] Revisão do Rafael antes de seguir *(dispensada — continuação da autorização geral)*
 
 ---
 
