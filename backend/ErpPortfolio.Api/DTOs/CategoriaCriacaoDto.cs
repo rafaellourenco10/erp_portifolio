@@ -24,6 +24,6 @@ public class CategoriaCriacaoDto
     public string Nome
     {
         get;
-        set => field = value?.Trim() ?? string.Empty;
+        set => field = value?.Trim().ToUpperInvariant() ?? string.Empty;
     } = string.Empty;
 }

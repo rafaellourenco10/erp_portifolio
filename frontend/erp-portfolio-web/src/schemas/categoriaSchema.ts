@@ -18,7 +18,8 @@ export const categoriaSchema = z.object({
     .string()
     .trim()
     .min(2, 'O nome deve ter no mínimo 2 caracteres.')
-    .max(60, 'O nome deve ter no máximo 60 caracteres.'),
+    .max(60, 'O nome deve ter no máximo 60 caracteres.')
+    .transform((valor) => valor.toUpperCase()),
   ativo: z.boolean(),
 })
 

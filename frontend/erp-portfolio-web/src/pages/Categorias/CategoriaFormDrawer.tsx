@@ -131,7 +131,15 @@ export function CategoriaFormDrawer({ aberto, categoria, aoFechar }: CategoriaFo
           <Controller
             name="nome"
             control={control}
-            render={({ field }) => <Input {...field} maxLength={60} placeholder="Ex.: Periféricos" autoFocus />}
+            render={({ field }) => (
+              <Input
+                {...field}
+                maxLength={60}
+                placeholder="Ex.: PERIFÉRICOS"
+                autoFocus
+                onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+              />
+            )}
           />
         </ItemFormulario>
 
