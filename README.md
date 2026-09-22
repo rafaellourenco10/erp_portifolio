@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Clientes** completo (API + banco + tela) e a **etapa 2** o **módulo de Produtos**, ambos dentro da área **Gestão Comercial** do menu.
+O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2) e **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado.
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -9,7 +9,8 @@ O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Client
 | 1.1 | Tema visual Ambition ERP + filtros por UF e status | Concluída e testada (18/09/2026) |
 | 2 | Produtos (+ navegação por rotas no menu) | Concluída e testada (21/09/2026) |
 | 2.1 | Categorias (cadastro próprio, escolhido por seleção no produto) | Concluída e testada (21/09/2026) |
-| 3+ | Pedidos, Login | Planejadas |
+| 3 | Pedidos (cliente, itens, desconto, total calculado, confirmar/cancelar) | Concluída e testada (21/09/2026) |
+| 4+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -66,6 +67,20 @@ O projeto é evoluído por módulos. A **etapa 1** entrega o **módulo de Client
 - O produto que tinha categoria em texto livre **foi convertido pela migration**: cada texto vira uma categoria (sem duplicar por maiúsculas/minúsculas) e o produto continua ligado a ela
 
 ---
+
+## Funcionalidades (etapa 3 — Pedidos)
+
+- Pedido de venda: **cliente** (seleção com busca no servidor), **itens** (produto por seleção com busca no servidor, quantidade, desconto %), **desconto no pedido todo**, **forma de pagamento** e **total calculado pelo servidor**
+- Preço do produto é **copiado e congelado** no item ao adicionar; mudar o preço ou inativar o cliente/produto depois não altera pedidos já feitos
+- Status **Rascunho → Confirmado** ou **Cancelado**; só o rascunho é editável; confirmado ainda pode ser cancelado; cancelado é definitivo (pedido nunca é excluído)
+- **Confirmar pedido** salva o que estiver pendente na tela e então confirma; exige forma de pagamento e cliente/produtos ativos, senão erro 400 no campo certo
+- **Cancelar pedido** é idempotente (cancelar duas vezes também retorna sucesso) e tem confirmação em janela
+- O mesmo produto **não pode repetir** no pedido: adicioná-lo de novo soma a quantidade no item existente
+- Quantidade decimal (até 3 casas) para produtos em `KG`, `L` e `M`; `UN` e `CX` só aceitam inteiro
+- Limite de **1 a 100 itens** e total máximo de R$ 9.999.999.999,99 por pedido
+- O total é recalculado **na hora** enquanto o pedido é montado (aritmética inteira no front, para não errar arredondamento); ao salvar, vale sempre o valor devolvido pelo servidor
+- Lista com filtro por número ou nome do cliente e por status, no mesmo padrão **Filtrar** dos outros módulos
+- No celular, cada item do pedido vira um **cartão** (quantidade, desconto, preço e subtotal juntos); em tela larga é uma tabela
 
 ## Stack e versões
 
@@ -149,11 +164,15 @@ erp_portifolio/
 │       ├── Controllers/
 │       │   ├── ClientesController.cs        # endpoints REST de clientes
 │       │   ├── ProdutosController.cs        # endpoints REST de produtos
-│       │   └── CategoriasController.cs      # endpoints REST de categorias
+│       │   ├── CategoriasController.cs      # endpoints REST de categorias
+│       │   └── PedidosController.cs         # endpoints REST de pedidos
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
 │       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
-│       │   └── Categoria.cs                 # entidade
+│       │   ├── Categoria.cs                 # entidade
+│       │   ├── Pedido.cs / PedidoItem.cs    # entidades (itens ligados por FK, preco congelado)
+│       │   ├── StatusPedido.cs              # enum: Rascunho, Confirmado, Cancelado
+│       │   └── FormaPagamento.cs            # enum: Dinheiro, Pix, Boleto, Cartao
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
 │       │   ├── ClienteAtualizacaoDto.cs     # entrada do PUT (+ campo ativo opcional)
@@ -161,6 +180,11 @@ erp_portifolio/
 │       │   ├── ClienteFiltroDto.cs          # query string da listagem
 │       │   ├── Produto{Criacao,Atualizacao,Resposta,Filtro}Dto.cs   # mesmo desenho, para produtos
 │       │   ├── Categoria{Criacao,Atualizacao,Resposta,Filtro}Dto.cs # mesmo desenho, para categorias
+│       │   ├── PedidoCriacaoDto.cs          # entrada do POST/PUT (itens sem preço)
+│       │   ├── PedidoItemEntradaDto.cs      # item do POST/PUT: produtoId, quantidade, desconto
+│       │   ├── PedidoRespostaDto.cs         # saída com itens (preço, subtotal)
+│       │   ├── PedidoResumoDto.cs           # linha da listagem (sem itens)
+│       │   ├── PedidoFiltroDto.cs           # query string da listagem
 │       │   ├── ResultadoPaginadoDto.cs      # envelope genérico de paginação
 │       │   └── Validacoes/
 │       │       ├── DocumentoValidador.cs    # regra de CPF/CNPJ
@@ -173,6 +197,10 @@ erp_portifolio/
 │       │   ├── ProdutoService.cs            # regras de negócio + acesso a dados de produtos
 │       │   ├── ICategoriaService.cs
 │       │   ├── CategoriaService.cs          # regras de negócio + acesso a dados de categorias
+│       │   ├── IPedidoService.cs
+│       │   ├── PedidoService.cs             # criar/editar/confirmar/cancelar + recálculo do total
+│       │   ├── CalculoPedido.cs             # subtotal/total em decimal, funcao pura (sem banco)
+│       │   ├── TransicoesPedido.cs          # transicoes de status validas, funcao pura
 │       │   ├── ConflitoException.cs         # vira HTTP 409
 │       │   └── DadoInvalidoException.cs     # campo inválido que só o banco sabe (ex.: categoria inativa) -> HTTP 400
 │       ├── Data/
@@ -182,6 +210,8 @@ erp_portifolio/
 │       ├── appsettings.json
 │       ├── appsettings.Development.json     # connection string (sem senha real) + CORS
 │       └── ErpPortfolio.Api.http            # requisições prontas para testar a API
+│
+├── backend/ErpPortfolio.Tests/              # testes unitarios (xUnit): calculo, transicoes, DTOs, modelo, paridade com o front
 │
 └── frontend/
     └── erp-portfolio-web/
@@ -217,19 +247,32 @@ erp_portifolio/
             ├── pages/Categorias/
             │   ├── CategoriasListaPage.tsx  # busca, status, tabela, paginação, ações
             │   └── CategoriaFormDrawer.tsx  # painel lateral de inclusão/edição
+            ├── pages/Pedidos/
+            │   ├── PedidosListaPage.tsx     # filtro (número/cliente + status), tabela, paginação
+            │   ├── PedidoPage.tsx           # formulário: cliente, itens, desconto, resumo, ações
+            │   ├── ItensPedidoTabela.tsx    # tabela de itens (tela larga) / cartões (celular)
+            │   └── pedido.css               # estilos da página do pedido
             ├── schemas/
             │   ├── clienteSchema.ts         # schema Zod do formulário de cliente
             │   ├── produtoSchema.ts         # schema Zod do formulário de produto
-            │   └── categoriaSchema.ts       # schema Zod do formulário de categoria
+            │   ├── categoriaSchema.ts       # schema Zod do formulário de categoria
+            │   └── pedidoSchema.ts          # schema Zod do formulário de pedido + conversões form/API
             ├── types/
             │   ├── cliente.ts               # tipos (espelham os DTOs)
             │   ├── produto.ts
             │   ├── categoria.ts
+            │   ├── pedido.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
+            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx  # seleção com busca no servidor (usadas no pedido)
+            ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado
+            ├── hooks/useBuscaCadastros.ts    # busca com debounce para os seletores acima
+            ├── hooks/usePedidos.ts           # useQuery / useMutation de pedidos
+            ├── api/pedidosApi.ts             # chamadas da API de pedidos
             └── utils/
                 ├── documento.ts             # validação e máscara de CPF/CNPJ
                 ├── moeda.ts                 # formatação em reais e cálculo de margem
-                └── ufs.ts                   # 27 UFs com nome, busca sem acentos e ordenação
+                ├── ufs.ts                   # 27 UFs com nome, busca sem acentos e ordenação
+                └── calculoPedido.ts         # subtotal/total em aritmética inteira (BigInt), mesma fórmula do back
 ```
 
 ---
@@ -371,6 +414,19 @@ Categorias:
 | PUT | `/categorias/{id}` | Edita uma categoria; `ativo` é opcional (ausente = mantém) | 200, 400, 404, 409 |
 | PATCH | `/categorias/{id}/inativar` | Inativa uma categoria; repetir a chamada também retorna 204 | 204, 404 |
 
+Pedidos:
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/pedidos?busca=&status=&pagina=1&tamanhoPagina=10` | Lista paginada, mais recente primeiro; `busca` procura pelo número (com ou sem `#`) **ou** por trecho do nome do cliente | 200, 400 |
+| GET | `/pedidos/{id}` | Obtém um pedido com os itens | 200, 404 |
+| POST | `/pedidos` | Cria um **rascunho** com os itens (preço copiado do produto) | 201, 400 |
+| PUT | `/pedidos/{id}` | Substitui cliente, itens, desconto e forma de pagamento (**só em rascunho**) | 200, 400, 404, 409 |
+| PATCH | `/pedidos/{id}/confirmar` | Rascunho → Confirmado; exige forma de pagamento e cliente/produtos ativos | 200, 400, 404, 409 |
+| PATCH | `/pedidos/{id}/cancelar` | Rascunho ou Confirmado → Cancelado; cancelar duas vezes também retorna 204 | 204, 404 |
+
+Regras de validação de Pedido (API e tela): 1 a 100 itens, sem produto repetido (soma-se a quantidade na tela antes de enviar); quantidade de 0,001 a 999.999,999 (até 3 casas; `UN`/`CX` só inteiro); descontos (item e pedido) de 0 a 100 com até 2 casas; total até R$ 9.999.999.999,99 (acima disso, 400 no campo `Itens`); cliente e produtos precisam estar **ativos** ao criar o pedido ou adicionar/trocar um item; confirmar exige forma de pagamento preenchida e cliente/produtos ainda ativos. O preço de cada item é copiado do produto no momento em que é adicionado e nunca muda depois, mesmo que o preço do produto mude ou o cliente/produto seja inativado.
+
 ### Filtros da listagem
 
 | Parâmetro | Exemplo | Efeito |
@@ -427,6 +483,13 @@ Todos os erros seguem o padrão **ProblemDetails** (RFC 9110):
   "status": 409,
   "detail": "Já existe um cliente cadastrado com este CPF/CNPJ."
 }
+
+// 409 - transição de pedido inválida (ex.: confirmar um pedido já cancelado)
+{
+  "title": "Conflito",
+  "status": 409,
+  "detail": "Pedido cancelado não pode ser confirmado."
+}
 ```
 
 ### CORS
@@ -450,6 +513,16 @@ As mesmas regras são aplicadas no front (Zod, em `clienteSchema.ts`) e na API (
 | Ativo | — | Só na edição; na inclusão é sempre `true` |
 
 Parâmetros da listagem: `pagina` de 1 a 100.000, `tamanhoPagina` de 1 a 100, `nome` até 150 caracteres.
+
+### Como o total do pedido é calculado
+
+```
+subtotal_do_item = arredonda2( quantidade × preço × (1 − desconto_do_item/100) )
+soma              = Σ subtotais dos itens
+total             = arredonda2( soma × (1 − desconto_do_pedido/100) )
+```
+
+Arredondamento em 2 casas, sempre para cima na metade (`AwayFromZero`, ex.: 1,005 → 1,01). O servidor calcula em `decimal` (`CalculoPedido.cs`); a tela recalcula em **aritmética inteira** (`calculoPedido.ts`, com `BigInt`) só para mostrar o total enquanto o pedido é montado — o número decimal do JavaScript erraria casos como `1.005 * 100`. Os dois lados são comparados por um teste de paridade com 2.010 casos gerados aleatoriamente (`ParidadeCalculoFrontTests.cs`); ao salvar, vale sempre o valor devolvido pelo servidor.
 
 ### Como o CPF/CNPJ é validado
 
@@ -506,6 +579,33 @@ Tabela `public.categorias`:
 | `data_cadastro` | timestamptz | UTC, padrão `now()` |
 
 Migration: `20260921182807_CategoriasComoRegistro`. **Foi editada à mão**: o EF gerava a remoção da coluna `produtos.categoria` (texto) antes de criar a tabela nova, o que apagaria as categorias já cadastradas. Agora ela cria `categorias`, converte cada texto distinto (sem diferenciar maiúsculas/minúsculas e sem espaços nas pontas) em um registro, liga os produtos a ele e só então remove a coluna antiga; o `Down` devolve os nomes como texto. Foi testada num banco descartável (variações de maiúsculas, nulos e vazios, subida e volta) antes de ir para o banco de desenvolvimento.
+
+Tabela `public.pedidos`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_pedidos`, identity (generated always); também é o **número** do pedido |
+| `cliente_id` | integer | obrigatório, FK `fk_pedidos_clientes` → `clientes.id` (restrict), índice `ix_pedidos_cliente_id` |
+| `data_pedido` | timestamptz | UTC, padrão `now()`, índice `ix_pedidos_data_pedido` |
+| `status` | varchar(20) | `Rascunho`, `Confirmado` ou `Cancelado` (gravado como texto) |
+| `forma_pagamento` | varchar(20) | opcional (nulo até confirmar); `Dinheiro`, `Pix`, `Boleto` ou `Cartao` |
+| `desconto_percentual` | numeric(5,2) | obrigatório, `CHECK` entre 0 e 100 |
+| `valor_total` | numeric(12,2) | gravado por um único método de recálculo (nunca calculado na query) |
+
+Tabela `public.pedido_itens`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_pedido_itens`, identity (generated always) |
+| `pedido_id` | integer | FK `fk_pedido_itens_pedidos` → `pedidos.id` (**cascade**: apagar o pedido apaga os itens) |
+| `produto_id` | integer | FK `fk_pedido_itens_produtos` → `produtos.id` (restrict) |
+| `quantidade` | numeric(12,3) | `CHECK` > 0 |
+| `preco_unitario` | numeric(12,2) | **copiado do produto** ao adicionar o item; nunca muda depois |
+| `desconto_percentual` | numeric(5,2) | `CHECK` entre 0 e 100 |
+
+Índice único `ux_pedido_itens_pedido_produto (pedido_id, produto_id)`: impede o mesmo produto duas vezes no mesmo pedido no banco (reforço; a API já recusa antes). O subtotal do item **não é gravado** — é sempre `quantidade × preço × (1 − desconto/100)`, calculado na hora.
+
+Migration: `20260921193153_CriacaoTabelasPedidos` (só cria as duas tabelas nova; não altera `clientes`, `produtos` nem `categorias`).
 
 ---
 
@@ -570,6 +670,15 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | SKU somente numérico (2 a 30 dígitos) | No ERP o SKU é o número de série do produto. A API recusa letras e símbolos e o campo da tela descarta o que não for dígito (também ao colar). A coluna continua `varchar(30)`, então liberar letras no futuro não exige migration. |
 | Preço e custo com mais de 2 casas são **recusados**, não arredondados | A coluna é `numeric(12,2)`; sem a checagem o banco arredondaria em silêncio. |
 | Telas de Produtos e Categorias reaproveitam as classes de `clientes.css` e o `ItemFormulario` | Evita duplicar estilos e o item de formulário; quando houver um terceiro módulo, vale mover o CSS para um arquivo compartilhado. |
+| `CalculoPedido` e `TransicoesPedido` são classes estáticas puras (sem banco) | Testáveis por xUnit sem precisar de banco; o `PedidoService` só orquestra e chama essas funções. |
+| Preço do item **copiado e congelado**, não uma referência ao produto | Mudar o preço do produto ou inativá-lo depois não pode alterar pedidos já feitos; provado com o preço do produto mudando de 350 para 999 e o pedido salvo continuando em 350. |
+| `valor_total` gravado por um único método de recálculo (`PedidoService.Recalcular`) | Criar e editar passam pelo mesmo lugar; evita divergência entre a soma dos itens e o total gravado, e aplica o limite de R$ 9.999.999.999,99 num só ponto. |
+| Confirmar salva o rascunho pendente (PUT) antes de confirmar (PATCH) | Editar e confirmar na mesma ação evita perder uma alteração feita na tela só porque o usuário esqueceu de salvar antes. |
+| Cálculo do total em aritmética **inteira** no front (BigInt: milésimos, centavos e centésimos de percentual) | `Number` do JavaScript erra em casos como `1.005 * 100`; a tela precisa bater com o `decimal` do servidor até o centavo. |
+| Seleção de cliente/produto com busca **no servidor** (debounce de 300 ms, só ativos, 20 por consulta) | Carregar todos os clientes/produtos na tela do pedido não escalaria; o `labelInValue` do Ant Design mantém o nome do escolhido mesmo depois de a busca mudar. |
+| Índice único `(pedido_id, produto_id)` além da checagem no serviço | A checagem prévia dá a mensagem amigável; o índice cobre duas gravações simultâneas do mesmo produto no mesmo pedido. |
+| Item do pedido em tabela (telas largas) e em cartão empilhado (< 768 px) | A tabela de 6 colunas exigia rolagem interna e escondia preço/desconto/subtotal no celular; o cartão mostra tudo de uma vez. |
+| Pedido nunca é excluído, só cancelado (cancelar é idempotente) | Preserva o histórico de vendas; cancelar um pedido já cancelado retorna sucesso (204) porque o estado desejado já é o atual. |
 
 ---
 
@@ -661,6 +770,22 @@ Executados numa segunda instância da API (porta 5099) e num Vite temporário (p
 | Celular (390 px): gaveta do menu navega até Produtos, sem rolagem horizontal | ✅ |
 | Nenhum erro no console além do 409 esperado | ✅ |
 
+### Pedidos (21/09/2026)
+
+Backend testado com 105 testes unitários (xUnit, `backend/ErpPortfolio.Tests`) e ponta a ponta numa API temporária (porta 5099); a tela testada com Playwright (Edge) contra essa API e um Vite temporário (porta 5174). Dados de teste (clientes/produtos `ZZT…`, SKUs `660000xx`) apagados ao final; dados reais (cliente, produto, categorias) conferidos idênticos antes e depois de cada rodada.
+
+| Verificação | Resultado |
+|---|---|
+| Testes unitários: cálculo (subtotal, total, limite, arredondamento), transições de status, validação dos DTOs, modelo (FKs, CHECKs, índice único), paridade com o front (2.010 casos aleatórios) | ✅ 105/105 |
+| API ponta a ponta: criação, os 400 (cliente/produto inativo ou inexistente, item repetido, quantidade decimal em `UN`, desconto acima de 100, sem itens, total acima do limite), `PUT` só em rascunho, confirmar/cancelar e os 409, preço congelado após mudar o preço do produto, total batendo com os 6 casos de referência da spec, busca e filtro de status, 404 | ✅ |
+| Seletores de cliente e produto (T12): só ativos, busca com espera de 300 ms (uma consulta por busca, não uma por tecla), nome+documento / SKU+preço+unidade nas opções, produto já no pedido desabilitado, o escolhido mantém o nome mesmo com a busca zerada (`labelInValue`) | ✅ |
+| Página do pedido — novo, itens e total (T13): casos de referência (R$ 830,00 e R$ 788,50) montados na tela, produto repetido soma a quantidade, quantidade decimal por unidade, remover item, quantidade vazia e total acima do limite bloqueiam o envio, salvar cria o rascunho com o total do servidor, preço congelado ao reabrir, erro 400 do servidor no campo certo | ✅ |
+| Confirmar e cancelar (T14): janela de confirmação, confirmar salva o pendente e então confirma, erros de confirmação (sem forma de pagamento, cliente/produto inativado) no campo certo com o pedido seguindo Rascunho, cancelar rascunho e confirmado, 409 (pedido mudou por fora) recarrega a tela | ✅ |
+| Celular (T15): itens em cartão abaixo de 768 px com tudo visível, sem rolagem horizontal em 390/768/1024/1920 px na lista e na página do pedido, valores muito grandes não estouram o cartão | ✅ |
+| Nenhum erro no console além dos 400/404/409 esperados | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (105 aprovados), `tsc -b` sem erros e `oxlint` sem apontamentos.
+
 ---
 
 ## Padrões do projeto
@@ -745,10 +870,12 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 
 - Campos do mockup de cliente ainda não implementados: **PF/PJ**, **Inscrição Estadual**, **Nome Fantasia** e **Observações** (exige migration)
 - Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
-- Dashboard com indicadores (depende de Pedidos)
+- Dashboard com indicadores, agora que Pedidos existe
 - Filtro por **categoria** na lista de Produtos e atalho "Nova categoria" dentro do seletor do formulário
-- Módulo de **Pedidos** (com itens, desconto e condição de pagamento), seguido de contas a receber e estoque
-- Mover `clientes.css` (classes usadas também por Produtos e Categorias) para um arquivo compartilhado
+- Filtro por **cliente** e por **faixa de data** na lista de Pedidos
+- Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
+- Contas a receber e controle de estoque, a partir dos pedidos confirmados
+- Mover `clientes.css` (classes usadas também por Produtos, Categorias e Pedidos) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**
-- Testes automatizados (unitários para validação de CPF/CNPJ e de integração para a API)
+- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos já tem os 105 testes unitários e os scripts de ponta a ponta)

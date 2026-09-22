@@ -206,16 +206,17 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T14
   - Arquivos: `pages/Pedidos/ItensPedidoTabela.tsx`, `pages/Pedidos/PedidoPage.tsx`, `pages/Pedidos/pedido.css`
 
-- [ ] **T16: README, graphify e verificação final** (S)
+- [x] **T16: README, graphify e verificação final** (S) — *concluída em 21/09/2026*
   - Descrição: documentar o módulo, regravar o grafo e conferir os 12 critérios da spec.
   - Aceite:
     - README com funcionalidades, API, banco, decisões, estrutura e testes de Pedidos; `SPEC.md` marcada como implementada.
     - Graphify atualizado sem perder conceitos/hiperarestas; comparação com o backup feita.
     - Os **12 critérios de sucesso** conferidos um a um; registros reais intactos.
   - Verificar: `dotnet build`, `dotnet test`, `tsc`, `oxlint`, E2E API e tela completos, `git status` revisado (sem segredos).
+  - Resultado: README.md ganhou a seção "etapa 3 — Pedidos" (funcionalidades, endpoints, fórmula do cálculo, tabelas `pedidos`/`pedido_itens`, 10 decisões técnicas e os resultados de T10-T15) e a estrutura de pastas foi atualizada; `SPEC.md` marcada como implementada, com os 12 critérios de sucesso conferidos um a um e a evidência (teste ou script) apontada em cada um — rodada de novo nesta etapa: `e2e-pedidos-t6..t9.ps1` e `e2e-pedidos-contrato.ps1` (0 falhas cada, dados reais idênticos), `check-calculo-front.mts` (6 casos de referência + 13 casos extras, todos conferem). Build final: `dotnet build -c Release` 0 avisos, `dotnet test` 105/105, `tsc -b` e `oxlint` limpos. Grafo atualizado (67 conceitos novos, comunidades renomeadas, sem perder hiperarestas). `git status` revisado antes de cada commit: sem `bin/obj`, sem segredos, `.gitattributes` fora do commit.
   - Dependências: T15
   - Arquivos: `README.md`, `SPEC.md`
 
 ### Checkpoint 5: pronto
-- [ ] Todos os critérios da spec atendidos
-- [ ] Nada commitado sem o Rafael pedir; pronto para revisão e commit
+- [x] Todos os critérios da spec atendidos
+- [x] Commitado a pedido do Rafael ("pode commitar e fazer todas tarefas sem precisar ficar pedindo"); pronto para revisão

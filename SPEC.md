@@ -1,6 +1,6 @@
 # Spec: Módulo Pedidos (etapa 3)
 
-> Status: **aprovada pelo Rafael em 21/09/2026**. Nada foi implementado ainda. Ao mudar uma decisão, atualize esta spec **antes** do código.
+> Status: **implementada e testada em 21/09/2026** (T1 a T16 do plano, ver `tasks/todo.md`). Os 12 critérios de sucesso abaixo foram conferidos um a um contra o código atual. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
 
 ## Objetivo
 
@@ -171,18 +171,20 @@ O projeto **ainda não tem testes automatizados**; a verificação vem sendo fei
 
 ## Success criteria (testáveis)
 
-1. Os 6 casos de referência dão exatamente os valores da tabela, no back **e** no front.
-2. Criar pedido com 2 itens devolve 201, status `Rascunho`, preços copiados do produto e `valorTotal` correto.
-3. Mudar o preço do produto **não** altera o preço dos itens de pedidos existentes.
-4. `PUT` em pedido confirmado ou cancelado retorna 409 e nada muda.
-5. Confirmar sem forma de pagamento, com cliente inativo ou com produto inativo retorna 400 no campo correto.
-6. Confirmar duas vezes retorna 409; cancelar duas vezes retorna 204.
-7. Quantidade `2,5` em produto `UN` é recusada (400); em produto `KG` é aceita.
-8. Item repetido, 0 itens, mais de 100 itens, desconto acima de 100 e quantidade ≤ 0 retornam 400.
-9. Cliente e produto inativados **depois** continuam aparecendo nos pedidos antigos.
-10. Na tela, o total muda ao editar quantidade/desconto e, ao salvar, é substituído pelo valor do servidor sem diferença.
-11. Confirmado fica somente leitura (sem botão de salvar), mas ainda pode ser cancelado.
-12. Nenhum registro real (cliente, produto, categoria) é alterado pelos testes.
+Conferidos um a um em 21/09/2026 contra o código final (T16), com `dotnet build -c Release` (0 avisos), `dotnet test` (105/105), `tsc -b` e `oxlint` limpos. Evidência: testes unitários (`backend/ErpPortfolio.Tests`), scripts de API ponta a ponta (`e2e-pedidos-t6..t9.ps1`, `e2e-pedidos-contrato.ps1`) e de tela (`ui-pedidos-t11..t15.mjs`), todos em `.claude/ferramentas-locais/`, rodados contra uma API e um banco temporários, com os dados reais conferidos idênticos ao final de cada rodada.
+
+1. ✅ Os 6 casos de referência dão exatamente os valores da tabela, no back **e** no front — `CalculoPedidoTests`, `check-calculo-front.mts` e `ParidadeCalculoFrontTests` (2.010 casos aleatórios).
+2. ✅ Criar pedido com 2 itens devolve 201, status `Rascunho`, preços copiados do produto e `valorTotal` correto — `e2e-pedidos-t6.ps1` ("1. POST caso 1").
+3. ✅ Mudar o preço do produto **não** altera o preço dos itens de pedidos existentes — `e2e-pedidos-t8.ps1` ("2. item que JÁ estava no pedido mantém o preço CONGELADO") e `e2e-pedidos-t9.ps1` ("6. preço do produto mudou... o pedido CONFIRMADO segue igual").
+4. ✅ `PUT` em pedido confirmado ou cancelado retorna 409 e nada muda — `e2e-pedidos-t8.ps1` ("6. PUT em pedido CONFIRMADO/CANCELADO -> 409").
+5. ✅ Confirmar sem forma de pagamento, com cliente inativo ou com produto inativo retorna 400 no campo correto — `e2e-pedidos-t9.ps1` ("3. ...") e na tela `ui-pedidos-t14.mjs` (C12, C14, C15).
+6. ✅ Confirmar duas vezes retorna 409; cancelar duas vezes retorna 204 — `e2e-pedidos-t9.ps1` ("2. confirmar duas vezes -> 409", "4. cancelar de novo -> 204").
+7. ✅ Quantidade `2,5` em produto `UN` é recusada (400); em produto `KG` é aceita — `e2e-pedidos-t6.ps1` ("4. ...") e na tela `ui-pedidos-t13.mjs` (N14, N15).
+8. ✅ Item repetido, 0 itens, mais de 100 itens, desconto acima de 100 e quantidade ≤ 0 retornam 400 — `e2e-pedidos-t6.ps1` ("6. ...").
+9. ✅ Cliente e produto inativados **depois** continuam aparecendo nos pedidos antigos — `e2e-pedidos-t9.ps1` ("6. cliente e produtos inativados continuam aparecendo no pedido").
+10. ✅ Na tela, o total muda ao editar quantidade/desconto e, ao salvar, é substituído pelo valor do servidor sem diferença — `ui-pedidos-t13.mjs` (N4, N9, N21-N30).
+11. ✅ Confirmado fica somente leitura (sem botão de salvar), mas ainda pode ser cancelado — `ui-pedidos-t14.mjs` (C8).
+12. ✅ Nenhum registro real (cliente, produto, categoria) é alterado pelos testes — checado ao final de toda rodada acima ("dados reais... IDÊNTICOS").
 
 ## Open questions
 
