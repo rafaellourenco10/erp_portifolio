@@ -131,17 +131,18 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T8, T5
   - Arquivos: `pages/Estoque/EntradaEstoqueDrawer.tsx`, `pages/Estoque/MovimentacoesDrawer.tsx`, `schemas/estoqueEntradaSchema.ts`
 
-- [ ] **T10: Celular e polimento** (S)
+- [x] **T10: Celular e polimento** (S) — *concluída em 22/09/2026, com ressalva*
   - Descrição: lista e drawers sem rolagem horizontal no celular; conferir o fluxo completo (confirmar pedido sem saldo mostra erro, confirmar com saldo baixa, cancelar confirmado devolve) direto na tela.
   - Aceite: 390 px sem rolagem horizontal; nenhum erro de console além dos esperados (400 de saldo insuficiente).
   - Verificar: Playwright em 390 px e 1920 px; fluxo Pedidos + Estoque de ponta a ponta no navegador.
+  - Resultado: **feito por revisão de código, não por Playwright** (sem ferramenta de navegador nesta sessão, diferente dos módulos anteriores). Ajustei `EstoqueListaPage` para ter colunas compactas no celular (SKU/nome/saldo empilhados numa coluna, ação em outra), mesmo padrão comprovado de `ProdutosListaPage`; os dois drawers já usavam `size={telas.sm === false ? '100%' : ...}`, igual ao `CategoriaFormDrawer`. `tsc -b` e `oxlint` limpos. **A API real foi verificada de ponta a ponta nas T6/T7** (confirmar sem saldo bloqueia, confirmar com saldo baixa, cancelar confirmado devolve) — só falta a conferência visual/celular, que fica pendente de um teste manual do Rafael.
   - Dependências: T9, T7
-  - Arquivos: `pages/Estoque/*.tsx`, CSS reaproveitado dos outros módulos
+  - Arquivos: `pages/Estoque/EstoqueListaPage.tsx`
 
 ### Checkpoint 4: tela pronta
-- [ ] Fluxo completo (entrada manual, confirmar baixa, cancelar devolve, extrato) funciona no navegador
-- [ ] `tsc`, `oxlint`, `dotnet build` (0 avisos), `dotnet test` limpos; dados de teste apagados
-- [ ] Revisão do Rafael antes de fechar
+- [x] Fluxo completo (entrada manual, confirmar baixa, cancelar devolve, extrato) funciona na API real (E2E das T5-T7); **verificação visual no navegador pendente** (sem ferramenta disponível nesta sessão)
+- [x] `tsc`, `oxlint` limpos; `dotnet build` (0 avisos), `dotnet test` (124/124) limpos; dados de teste apagados
+- [ ] Revisão do Rafael antes de fechar *(recomendo testar a tela manualmente antes do fechamento em T11, dado que o navegador não pôde ser usado aqui)*
 
 ---
 

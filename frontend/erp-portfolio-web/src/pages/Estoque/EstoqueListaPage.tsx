@@ -1,18 +1,20 @@
 /**
  * =====================================================================
  * Arquivo....: EstoqueListaPage.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 22/09/2026
  * Descrição..: Tela de estoque: busca por nome ou SKU do produto, tabela
  *              com o saldo atual (paginação no servidor), botão para
  *              lançar uma entrada manual e ação para ver o extrato de
- *              movimentações de um produto.
+ *              movimentações de um produto. No celular, SKU/nome/saldo
+ *              ficam numa única coluna (como em Produtos).
  * ---------------------------------------------------------------------
  * Fontes.....: GET /api/estoque?busca=&pagina=&tamanhoPagina=
  *              (via useListaEstoque)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
+ *   1.1.0 - 22/09/2026 - Colunas compactas no celular (T10).
  * =====================================================================
  */
 
@@ -29,12 +31,9 @@ import { MovimentacoesDrawer } from './MovimentacoesDrawer'
 // A tela reaproveita as classes .painel, .pagina-titulo, .celula-nome etc. do módulo de Clientes.
 import '../Clientes/clientes.css'
 
-function ColunaSaldo({ saldo }: { saldo: number }) {
-  return (
-    <span className="numeros-tabulares">
-      {saldo < 0 ? <Typography.Text type="danger">{formatarQuantidade(saldo)}</Typography.Text> : formatarQuantidade(saldo)}
-    </span>
-  )
+function ColunaSaldo({ saldo, unidade }: { saldo: number; unidade?: string }) {
+  const texto = unidade ? `${formatarQuantidade(saldo)} ${unidade}` : formatarQuantidade(saldo)
+  return <span className="numeros-tabulares">{saldo < 0 ? <Typography.Text type="danger">{texto}</Typography.Text> : texto}</span>
 }
 
 export function EstoqueListaPage() {
@@ -46,6 +45,39 @@ export function EstoqueListaPage() {
   const [produtoDoExtrato, setProdutoDoExtrato] = useState<EstoqueResumo | null>(null)
 
   const { data, isFetching, isError, error } = useListaEstoque(filtro)
+
+  const colunaAcoes: NonNullable<TableProps<EstoqueResumo>['columns']>[number] = {
+    title: 'Ações',
+    key: 'acoes',
+    width: 72,
+    align: 'center',
+    render: (_, produto) => (
+      <Tooltip title="Ver movimentações">
+        <Button
+          type="text"
+          icon={<HistoryOutlined />}
+          aria-label={`Ver movimentações de ${produto.produtoNome}`}
+          onClick={() => setProdutoDoExtrato(produto)}
+        />
+      </Tooltip>
+    ),
+  }
+
+  // No celular, SKU, nome, unidade e saldo ficam empilhados numa única coluna (como em Produtos).
+  const colunasCelular: TableProps<EstoqueResumo>['columns'] = [
+    {
+      title: 'Produto',
+      key: 'produto',
+      render: (_, produto) => (
+        <div className="celula-compacta">
+          <span className="celula-nome">{produto.produtoNome}</span>
+          <span className="pilula-documento numeros-tabulares">{produto.sku}</span>
+          <ColunaSaldo saldo={produto.saldo} unidade={produto.unidade} />
+        </div>
+      ),
+    },
+    colunaAcoes,
+  ]
 
   const colunas: TableProps<EstoqueResumo>['columns'] = [
     {
@@ -73,22 +105,7 @@ export function EstoqueListaPage() {
       align: 'right',
       render: (_, produto) => <ColunaSaldo saldo={produto.saldo} />,
     },
-    {
-      title: 'Ações',
-      key: 'acoes',
-      width: 72,
-      align: 'center',
-      render: (_, produto) => (
-        <Tooltip title="Ver movimentações">
-          <Button
-            type="text"
-            icon={<HistoryOutlined />}
-            aria-label={`Ver movimentações de ${produto.produtoNome}`}
-            onClick={() => setProdutoDoExtrato(produto)}
-          />
-        </Tooltip>
-      ),
-    },
+    colunaAcoes,
   ]
 
   return (
@@ -127,7 +144,7 @@ export function EstoqueListaPage() {
       <section className="painel painel-tabela" aria-label="Lista de estoque">
         <Table<EstoqueResumo>
           rowKey="produtoId"
-          columns={colunas}
+          columns={ehCelular ? colunasCelular : colunas}
           dataSource={data?.itens}
           loading={isFetching}
           locale={{
