@@ -1,6 +1,6 @@
 # Spec: Módulo Contas a Receber (etapa 5)
 
-> Status: **em definição** (22/09/2026). Substitui a spec de Estoque (etapa 4, implementada e documentada no README). Ao mudar uma decisão depois de começar a codar, atualize esta spec **antes** do código.
+> Status: **implementada e testada em 22/09/2026** (T1 a T9 do plano, ver `tasks/todo.md`). Os 9 critérios de sucesso abaixo foram conferidos um a um contra o código atual. A tela foi verificada por revisão de código (tipos, lint, build), **sem verificação visual/Playwright** — sem ferramenta de navegador disponível nesta sessão. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
 
 ## Objetivo
 
@@ -134,15 +134,17 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS (nom
 
 ## Success criteria (testáveis)
 
-1. Confirmar um pedido de R$ 100,00 com 3 parcelas gera parcelas de R$ 33,33, R$ 33,33 e **R$ 33,34** (resto na última) — soma exatamente R$ 100,00.
-2. Confirmar sem informar `numeroParcelas`/`intervaloDias` usa os padrões: **1 parcela**, vencimento em **30 dias**.
-3. Vencimento da parcela 2 de um pedido com intervalo de 15 dias é **hoje + 30 dias** (2 × 15).
-4. Marcar uma parcela `Pendente` como recebida grava `dataRecebimento` e muda o status para `Recebido`; marcar de novo não gera erro nem duplica a data.
-5. Marcar uma parcela `Cancelado` como recebida retorna **409**.
-6. Cancelar um pedido `Confirmado` com 3 parcelas (1 já `Recebido`, 2 `Pendentes`) cancela as 2 `Pendentes` e **não mexe** na `Recebido`.
-7. Uma parcela `Pendente` com vencimento ontem aparece com `atrasado: true`; a mesma parcela com vencimento amanhã aparece com `atrasado: false`.
-8. A listagem `/contas-receber` acha por nome do cliente ou número do pedido, e o filtro por status (incluindo `Atrasado`) funciona.
-9. Nenhum registro real (cliente, produto, categoria, pedido, estoque) é alterado pelos testes.
+Conferidos um a um em 22/09/2026 contra o código final (T9), com `dotnet build -c Release` (0 avisos), `dotnet test` (146/146), `tsc -b` e `oxlint` limpos. Evidência: testes unitários (`ContasReceberCalculoTests`, `ModeloParcelaReceberTests`) e verificação manual contra a API real numa instância temporária (porta 5099), com dados de teste isolados (`ZZT…`, SKUs `6700000x`) e os dados reais conferidos idênticos ao final de cada rodada.
+
+1. ✅ Confirmar um pedido de R$ 100,00 com 3 parcelas gera parcelas de R$ 33,33, R$ 33,33 e **R$ 33,34** (resto na última) — soma exatamente R$ 100,00 — `ContasReceberCalculoTests` e pedido de R$ 300,00 ÷ 3 confirmado na API real (T5/T6).
+2. ✅ Confirmar sem informar `numeroParcelas`/`intervaloDias` usa os padrões: **1 parcela**, vencimento em **30 dias** — confirmado sem corpo na API real, vencimento em `hoje + 30 dias` (T5).
+3. ✅ Vencimento da parcela 2 de um pedido com intervalo de 15 dias é **hoje + 30 dias** (2 × 15) — testado exatamente esse cenário (intervalo 15, parcela 2 venceu em +30 dias) na T5.
+4. ✅ Marcar uma parcela `Pendente` como recebida grava `dataRecebimento` e muda o status para `Recebido`; marcar de novo não gera erro nem duplica a data — testado na T4.
+5. ✅ Marcar uma parcela `Cancelado` como recebida retorna **409** — testado na T4.
+6. ✅ Cancelar um pedido `Confirmado` com 3 parcelas (1 já `Recebido`, 2 `Pendentes`) cancela as 2 `Pendentes` e **não mexe** na `Recebido` — testado exatamente esse cenário na T6.
+7. ✅ Uma parcela `Pendente` com vencimento ontem aparece com `atrasado: true`; a mesma parcela com vencimento amanhã aparece com `atrasado: false` — testado na T4 (parcela vencida há 5 dias = `true`; parcelas futuras = `false`).
+8. ✅ A listagem `/contas-receber` acha por nome do cliente ou número do pedido, e o filtro por status (incluindo `Atrasado`) funciona — testado na T4.
+9. ✅ Nenhum registro real (cliente, produto, categoria, pedido, estoque) é alterado pelos testes — contagens conferidas idênticas ao final de cada rodada (T3-T6).
 
 ## Open questions
 

@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, e **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos.
+O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, e **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada.
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -10,8 +10,9 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 | 2 | Produtos (+ navegação por rotas no menu) | Concluída e testada (21/09/2026) |
 | 2.1 | Categorias (cadastro próprio, escolhido por seleção no produto) | Concluída e testada (21/09/2026) |
 | 3 | Pedidos (cliente, itens, desconto, total calculado, confirmar/cancelar) | Concluída e testada (21/09/2026) |
-| 4 | Estoque (movimentações, entrada manual, baixa/estorno automáticos) | Back-end testado de ponta a ponta; tela não verificada visualmente (22/09/2026) |
-| 5+ | Login | Planejada |
+| 4 | Estoque (movimentações, entrada manual, baixa/estorno automáticos) | Back-end testado de ponta a ponta; tela confirmada pelo Rafael (22/09/2026) |
+| 5 | Contas a Receber (parcelas, vencimento, status de recebimento) | Back-end testado de ponta a ponta; tela não verificada visualmente (22/09/2026) |
+| 6+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -97,6 +98,18 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 - Saldo negativo (não deveria acontecer, dado o bloqueio acima) aparece em vermelho na lista, mesmo padrão da margem negativa em Produtos
 - Fora do escopo por enquanto: fornecedores, pedido de compra, saída manual (perda/ajuste), múltiplos depósitos, estoque mínimo/alerta
 
+---
+
+## Funcionalidades (etapa 5 — Contas a Receber)
+
+- **Confirmar um pedido gera as parcelas a receber** automaticamente: o número de parcelas (1 a 12) e o intervalo em dias entre vencimentos são escolhidos na hora de confirmar, num modal próprio
+- Valor dividido **igualmente entre as parcelas**, com o resto (se a divisão não for exata) na última — a soma sempre bate com o total do pedido
+- Vencimento da parcela `N` = data da confirmação + `N × intervalo` dias (a primeira nunca vence no mesmo dia)
+- Tela **Contas a Receber** (Gestão Comercial): tabela com cliente, pedido, parcela (`X/Y`), valor, vencimento e status; busca por cliente ou nº do pedido; filtro por status
+- Status: **Pendente**, **Recebido** (ação "Marcar como recebido", idempotente) ou **Cancelado**; **Atrasado** não é um status gravado — é uma parcela Pendente com vencimento no passado, calculado no servidor
+- **Cancelar um pedido que estava Confirmado cancela as parcelas ainda Pendentes** automaticamente; parcelas já Recebidas continuam como estão (histórico preservado)
+- Fora do escopo por enquanto: recebimento parcial, juros/multa por atraso, edição de parcela já gerada, contas a pagar
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -181,7 +194,8 @@ erp_portifolio/
 │       │   ├── ProdutosController.cs        # endpoints REST de produtos
 │       │   ├── CategoriasController.cs      # endpoints REST de categorias
 │       │   ├── PedidosController.cs         # endpoints REST de pedidos
-│       │   └── EstoqueController.cs         # endpoints REST de estoque
+│       │   ├── EstoqueController.cs         # endpoints REST de estoque
+│       │   └── ContasReceberController.cs   # endpoints REST de contas a receber
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
 │       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
@@ -190,7 +204,9 @@ erp_portifolio/
 │       │   ├── StatusPedido.cs              # enum: Rascunho, Confirmado, Cancelado
 │       │   ├── FormaPagamento.cs            # enum: Dinheiro, Pix, Boleto, Cartao
 │       │   ├── EstoqueMovimentacao.cs       # entidade (FK produto e pedido opcional)
-│       │   └── TipoMovimentacao.cs          # enum: Entrada, Saida
+│       │   ├── TipoMovimentacao.cs          # enum: Entrada, Saida
+│       │   ├── ParcelaReceber.cs            # entidade (FK pedido, vencimento como DateOnly)
+│       │   └── StatusParcela.cs             # enum: Pendente, Recebido, Cancelado
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
 │       │   ├── ClienteAtualizacaoDto.cs     # entrada do PUT (+ campo ativo opcional)
@@ -208,6 +224,10 @@ erp_portifolio/
 │       │   ├── EstoqueResumoDto.cs          # linha da listagem (produto + saldo)
 │       │   ├── EstoqueFiltroDto.cs          # query string da listagem/extrato
 │       │   ├── MovimentacaoRespostaDto.cs   # linha do extrato de um produto
+│       │   ├── PedidoConfirmarDto.cs        # entrada do PATCH /confirmar: numeroParcelas, intervaloDias
+│       │   ├── ParcelaRespostaDto.cs        # linha da listagem de contas a receber
+│       │   ├── ParcelaFiltroDto.cs          # query string da listagem
+│       │   ├── FiltroStatusParcela.cs       # enum do filtro (inclui "Atrasado", calculado)
 │       │   └── Validacoes/
 │       │       ├── DocumentoValidador.cs    # regra de CPF/CNPJ
 │       │       ├── CpfCnpjAttribute.cs      # atributo [CpfCnpj]
@@ -227,7 +247,10 @@ erp_portifolio/
 │       │   ├── DadoInvalidoException.cs     # campo inválido que só o banco sabe (ex.: categoria inativa) -> HTTP 400
 │       │   ├── IEstoqueService.cs
 │       │   ├── EstoqueService.cs            # saldo, extrato, entrada manual, baixa/estorno (usados pelo PedidoService)
-│       │   └── EstoqueCalculo.cs            # saldo = Σ Entrada − Σ Saída, funcao pura (sem banco)
+│       │   ├── EstoqueCalculo.cs            # saldo = Σ Entrada − Σ Saída, funcao pura (sem banco)
+│       │   ├── IContasReceberService.cs
+│       │   ├── ContasReceberService.cs      # consulta, receber, gerar/cancelar parcelas (usados pelo PedidoService)
+│       │   └── ContasReceberCalculo.cs      # divisao em N parcelas (resto na ultima), funcao pura (sem banco)
 │       ├── Data/
 │       │   ├── ErpPortfolioDbContext.cs     # mapeamento EF Core (snake_case)
 │       │   └── Migrations/                  # migrations geradas pelo EF Core
@@ -252,18 +275,21 @@ erp_portifolio/
             ├── components/
             │   ├── ItemFormulario.tsx       # item de formulário (rótulo, obrigatório, erro) compartilhado
             │   ├── LogoAmbition.tsx/.css    # logo
-            │   └── TagStatus.tsx/.css       # tag Ativo/Inativo
+            │   ├── TagStatus.tsx/.css       # tag Ativo/Inativo
+            │   └── TagStatusParcela.tsx     # tag Pendente/Atrasado/Recebido/Cancelado
             ├── api/
             │   ├── axiosClient.ts           # instância do Axios + leitura de ProblemDetails
             │   ├── clientesApi.ts           # chamadas da API de clientes
             │   ├── produtosApi.ts           # chamadas da API de produtos
             │   ├── categoriasApi.ts         # chamadas da API de categorias
-            │   └── estoqueApi.ts            # chamadas da API de estoque
+            │   ├── estoqueApi.ts            # chamadas da API de estoque
+            │   └── contasReceberApi.ts      # chamadas da API de contas a receber
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
             │   ├── useProdutos.ts
             │   ├── useCategorias.ts         # inclui as categorias ativas do seletor de produtos
-            │   └── useEstoque.ts            # lista com saldo, extrato por produto, entrada manual
+            │   ├── useEstoque.ts            # lista com saldo, extrato por produto, entrada manual
+            │   └── useContasReceber.ts      # lista paginada e marcar parcela como recebida
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
             │   ├── ClienteFormDrawer.tsx    # painel lateral de inclusão/edição
@@ -283,6 +309,8 @@ erp_portifolio/
             │   ├── EstoqueListaPage.tsx     # busca, tabela com saldo, paginação, ações
             │   ├── EntradaEstoqueDrawer.tsx # painel de nova entrada manual (produto, quantidade, motivo)
             │   └── MovimentacoesDrawer.tsx  # painel de extrato paginado de um produto
+            ├── pages/ContasReceber/
+            │   └── ContasReceberListaPage.tsx  # busca, filtro de status, tabela, marcar como recebido
             ├── schemas/
             │   ├── clienteSchema.ts         # schema Zod do formulário de cliente
             │   ├── produtoSchema.ts         # schema Zod do formulário de produto
@@ -293,8 +321,9 @@ erp_portifolio/
             │   ├── cliente.ts               # tipos (espelham os DTOs)
             │   ├── produto.ts
             │   ├── categoria.ts
-            │   ├── pedido.ts
+            │   ├── pedido.ts                # inclui PedidoConfirmarEntrada (numeroParcelas, intervaloDias)
             │   ├── estoque.ts
+            │   ├── contaReceber.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
             ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx  # seleção com busca no servidor (usadas no pedido)
             ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado
@@ -471,6 +500,17 @@ Estoque:
 `PATCH /pedidos/{id}/confirmar` e `/cancelar` não ganharam rota nova: por dentro, confirmar chama a baixa de estoque (uma saída por item, checando saldo de **todos** os itens antes de gravar qualquer coisa) e cancelar um pedido que estava Confirmado chama o estorno (uma entrada por item). Estoque insuficiente ao confirmar retorna 400 no campo `Itens`, no mesmo formato dos outros erros de confirmar, e o pedido continua Rascunho.
 
 Regras de validação de Estoque (API): quantidade de 0,001 a 999.999,999 (até 3 casas), igual a Pedidos; motivo opcional até 200 caracteres; entrada manual exige produto **ativo** (senão 400 no campo `ProdutoId`); saldo é sempre `Σ Entrada − Σ Saída` das movimentações do produto, nunca uma coluna gravada.
+
+Contas a Receber:
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/contas-receber?busca=&status=&pagina=1&tamanhoPagina=10` | Lista paginada, vencimento mais próximo primeiro; `busca` = nº do pedido ou nome do cliente; `status` = `Pendente`/`Recebido`/`Cancelado`/**`Atrasado`** (calculado) | 200, 400 |
+| PATCH | `/contas-receber/{id}/receber` | Marca a parcela como recebida; repetir é idempotente | 200, 404, 409 |
+
+`PATCH /pedidos/{id}/confirmar` passou a aceitar corpo **opcional** `{ numeroParcelas, intervaloDias }` (padrão `{1, 30}`): ao confirmar com sucesso, gera essa quantidade de parcelas cuja soma bate exatamente com `valorTotal` (resto na última) e vencimento em `N × intervaloDias` dias. `PATCH /pedidos/{id}/cancelar` continua sem corpo, mas cancela por dentro as parcelas **Pendentes** do pedido quando ele estava Confirmado; parcelas já Recebidas não mudam.
+
+Regras de validação de Contas a Receber (API): `numeroParcelas` de 1 a 12; `intervaloDias` de 1 a 180; receber uma parcela `Cancelado` retorna 409.
 
 ### Filtros da listagem
 
@@ -666,6 +706,20 @@ Tabela `public.estoque_movimentacoes`:
 
 O saldo de um produto **não é gravado**: é sempre `Σ Entrada − Σ Saída` das suas movimentações, calculado na consulta (subconsulta agregada por `produto_id`). Migration: `20260922120855_CriacaoTabelaEstoqueMovimentacoes` (só cria essa tabela; não altera `pedidos`, `produtos`, `clientes` nem `categorias`).
 
+Tabela `public.parcelas_receber`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_parcelas_receber`, identity (generated always) |
+| `pedido_id` | integer | FK `fk_parcelas_receber_pedidos` → `pedidos.id` (restrict) |
+| `numero_parcela` | integer | 1-based, `CHECK` > 0 |
+| `valor` | numeric(12,2) | `CHECK` > 0 |
+| `vencimento` | date | sem hora (é uma data de calendário) |
+| `status` | varchar(20) | `Pendente`, `Recebido` ou `Cancelado` (gravado como texto); "Atrasado" não é gravado |
+| `data_recebimento` | timestamptz | nulo até ser marcada como recebida |
+
+Índice único `ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)` e índice `ix_parcelas_receber_vencimento`. Migration: `20260922190422_CriacaoTabelaParcelasReceber` (só cria essa tabela; não altera `pedidos`, `produtos`, `clientes`, `categorias` nem `estoque_movimentacoes`).
+
 ---
 
 ## Dados de teste
@@ -743,6 +797,13 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Baixa e estorno de estoque **não chamam `SaveChanges` sozinhos**; ficam na mesma transação do `SaveChangesAsync` que o `PedidoService` já fazia | Confirmar/cancelar o pedido e mexer no estoque acontecem atomicamente, sem transação explícita adicional. |
 | Cancelar só estorna se o pedido **estava Confirmado** antes de cancelar | Um rascunho nunca baixou estoque, então cancelá-lo não deve gerar uma entrada de estorno indevida. |
 | Entrada manual **sem** cadastro de fornecedor | Fora do escopo por enquanto; o campo motivo (texto livre) cobre a rastreabilidade básica de uma compra. |
+| Parcelas geradas **só ao confirmar** (não antes, não depois) | Confirmar é o único momento em que a venda "acontece" de verdade; gerar antes seria prematuro, gerar depois exigiria uma tela extra. |
+| Resto da divisão em parcelas sempre na **última** | Garante que a soma bate exatamente com `valorTotal`, sem sobra nem falta de centavos. |
+| "Atrasado" **calculado no servidor**, nunca no navegador | O relógio/fuso do navegador não é confiável para uma regra de negócio; o servidor já faz isso com `valorTotal` e saldo de estoque, aqui é o mesmo raciocínio. |
+| `vencimento` como `date` (não `timestamptz`) | É uma data de calendário; comparar com timestamp exigiria cuidado extra de fuso horário para decidir se "venceu hoje". |
+| Geração/cancelamento de parcelas **não chamam `SaveChanges` sozinhos** | Mesmo padrão do Estoque: ficam na mesma transação do `SaveChangesAsync` que `PedidoService` já fazia ao confirmar/cancelar. |
+| Cancelar só cancela parcelas **Pendentes**, nunca as **Recebidas** | Preserva o histórico de recebimento real, mesmo que o pedido seja cancelado depois. |
+| Modal de confirmar do pedido virou um **formulário controlado** (não mais `Modal.confirm` imperativo) | Precisa capturar 2 campos (parcelas, intervalo) antes de confirmar; em erro, o modal fica aberto para corrigir sem reabrir. |
 
 ---
 
@@ -867,7 +928,26 @@ Back-end testado com 5 testes unitários novos de cálculo de saldo, 14 de model
 
 Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (124 aprovados), `tsc -b` sem erros e `oxlint` sem apontamentos, `npm run build` sem erros.
 
-**Limitação desta rodada:** sem ferramenta de navegador/Playwright disponível na sessão em que o módulo foi construído, a tela (lista, drawer de entrada, drawer de extrato, layout no celular) **não foi verificada visualmente** — só o back-end foi testado de ponta a ponta contra a API real. O código da tela segue os mesmos padrões (componentes, responsividade) já comprovados nos módulos anteriores, mas recomenda-se um teste manual antes de considerar a etapa 4 totalmente fechada.
+**Limitação desta rodada:** sem ferramenta de navegador/Playwright disponível na sessão em que o módulo foi construído, a tela (lista, drawer de entrada, drawer de extrato, layout no celular) **não foi verificada visualmente** pela IA — só o back-end foi testado de ponta a ponta contra a API real. **Atualização:** o Rafael testou a tela manualmente logo em seguida e confirmou que está funcionando (lista com saldo real, navegação pelo menu).
+
+### Contas a Receber (22/09/2026)
+
+Back-end testado com 8 testes unitários novos de divisão em parcelas, 14 de modelo (mapeamento EF), e ponta a ponta numa API temporária (porta 5099), com cliente/produtos/pedidos de teste (`ZZT…`, SKUs `6700000x`) apagados ao final; dados reais conferidos idênticos antes e depois.
+
+| Verificação | Resultado |
+|---|---|
+| Testes unitários: divisão em parcelas (1 parcela, resto na última, divisão exata, 12 parcelas, valores diversos), mapeamento EF (colunas, FK, índices, CHECK) | ✅ 146/146 (total do projeto) |
+| Migration num banco descartável: insert válido, `CHECK` de valor, índice único de parcela duplicada, FK de pedido inexistente, `Down` removendo só a tabela nova | ✅ |
+| Migration no banco de desenvolvimento (com backup antes): contagens das outras tabelas idênticas antes e depois | ✅ |
+| Consulta: `totalParcelas` correto, `atrasado` calculado certo (só `Pendente` com vencimento passado), busca por cliente e por nº do pedido, filtros de status | ✅ |
+| Marcar como recebida: grava `dataRecebimento`; marcar de novo é idempotente (mesma data); marcar uma `Cancelado` = 409; parcela inexistente = 404 | ✅ |
+| Confirmar pedido: 3 parcelas com soma exata e vencimentos em `N × intervalo` dias; confirmar sem informar nada usa o padrão (1 parcela, 30 dias); 12 parcelas de um valor não divisível somam exatamente o total; `numeroParcelas` fora de 1-12 = 400 | ✅ |
+| Cancelar pedido: pedido com 1 parcela recebida + 2 pendentes — cancelar deixa a recebida intacta e cancela as 2 pendentes; cancelar um rascunho nunca confirmado não gera parcela nenhuma | ✅ |
+| Nenhum registro real (cliente, produto, categoria, pedido, estoque) alterado pelos testes | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (146 aprovados), `tsc -b` sem erros e `oxlint` sem apontamentos, `npm run build` sem erros.
+
+**Limitação desta rodada:** mesma situação de Estoque — sem ferramenta de navegador/Playwright nesta sessão, a tela (lista de contas a receber, modal de confirmar com parcelas, layout no celular) **não foi verificada visualmente**. O back-end foi testado de ponta a ponta contra a API real, e o código da tela segue os mesmos padrões já usados (e já confirmados funcionando) nos módulos anteriores. Recomenda-se um teste manual: confirmar um pedido escolhendo parcelas, ver a lista em `/contas-receber`, marcar uma parcela como recebida e cancelar um pedido confirmado para ver as parcelas pendentes cancelarem.
 
 ---
 
@@ -957,10 +1037,10 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Filtro por **categoria** na lista de Produtos e atalho "Nova categoria" dentro do seletor do formulário
 - Filtro por **cliente** e por **faixa de data** na lista de Pedidos
 - Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
-- Contas a receber, a partir dos pedidos confirmados
-- Verificação visual/Playwright da tela de Estoque (lista, drawers, celular) — não feita na sessão que construiu o módulo
+- Verificação visual/Playwright da tela de Contas a Receber (lista, modal de confirmar, celular) — não feita na sessão que construiu o módulo
 - Saída manual de estoque (perda/quebra/ajuste); fornecedores e pedido de compra; estoque mínimo/alerta de ruptura
-- Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos e Estoque) para um arquivo compartilhado
+- Recebimento parcial de parcela, juros/multa por atraso, edição de parcela já gerada; contas a pagar
+- Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**
-- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos e Estoque já têm testes unitários e scripts de ponta a ponta)
+- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos, Estoque e Contas a Receber já têm testes unitários e scripts de ponta a ponta)

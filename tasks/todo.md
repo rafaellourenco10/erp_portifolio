@@ -139,16 +139,17 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 5: Fechamento
 
-- [ ] **T10: README, graphify e verificação final** (S)
+- [x] **T10: README, graphify e verificação final** (S) — *concluída em 22/09/2026*
   - Descrição: documentar o módulo, regravar o grafo e conferir os 9 critérios da spec.
   - Aceite:
     - README com a seção "etapa 5 — Contas a Receber"; `SPEC.md` marcada como implementada; roadmap atualizado (Login passa a etapa 6).
     - Graphify atualizado (AST-only).
     - Os **9 critérios de sucesso** conferidos um a um; registros reais intactos.
   - Verificar: `dotnet build`, `dotnet test`, `tsc`, `oxlint`, E2E completo, `git status` revisado (sem segredos).
+  - Resultado: README ganhou a seção "etapa 5 — Contas a Receber" (funcionalidades, endpoints, tabela `parcelas_receber`, 8 decisões técnicas novas, estrutura de pastas atualizada, seção "Testes realizados" com a ressalva de UI), roadmap com Contas a Receber na etapa 5 e Login movido pra etapa 6, status de Estoque atualizado (Rafael confirmou a tela funcionando), "Próximas etapas" revisada. `SPEC.md` marcada como implementada, 9 critérios conferidos com evidência apontada. Graphify atualizado (AST-only, `python -m graphify update .`, 82 arquivos, backup automático em `graphify-out/2026-09-22/`). Verificação final: `dotnet build -c Release` 0 avisos, `dotnet test` 146/146, `tsc -b` e `oxlint` limpos, `git status` revisado (só `README.md`/`SPEC.md`, sem segredos). **Ressalva que carrega pra fora desta tarefa:** a tela de Contas a Receber não foi testada visualmente nesta sessão (sem ferramenta de navegador) — registrado no README, no SPEC e no todo.md; recomendo teste manual do Rafael, como já foi feito com Estoque.
   - Dependências: T9
   - Arquivos: `README.md`, `SPEC.md`
 
 ### Checkpoint 5: pronto
-- [ ] Todos os critérios da spec atendidos
-- [ ] Commitado
+- [x] Todos os critérios da spec atendidos (com a ressalva de UI documentada acima)
+- [x] Commitado (autorização geral do Rafael para seguir e commitar sem precisar pedir a cada tarefa)
