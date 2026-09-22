@@ -28,12 +28,13 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
 
 ## Fase 2: Banco
 
-- [ ] **T2: Entidade `EstoqueMovimentacao` e mapeamento EF** (S)
+- [x] **T2: Entidade `EstoqueMovimentacao` e mapeamento EF** (S) — *concluída em 22/09/2026*
   - Descrição: entidade e mapeamento no `ErpPortfolioDbContext` (snake_case, FK `produto_id` RESTRICT, FK `pedido_id` RESTRICT opcional, `CHECK quantidade > 0`, tipo como texto).
   - Aceite:
     - Índices `ix_estoque_movimentacoes_produto_id`, `ix_estoque_movimentacoes_pedido_id`, `ix_estoque_movimentacoes_data_movimentacao`.
     - `pedido_id` aceita nulo (entrada manual não referencia pedido).
   - Verificar: `dotnet build` 0 avisos; teste de modelo em memória (como `ModeloPedidoTests`) confere tabela, FKs, índices e CHECK.
+  - Resultado: 124 testes passando (110 anteriores + 14 novos de `ModeloEstoqueTests`), 0 avisos. FK `pedido_id` também RESTRICT (não cascade), já que o histórico de movimentações nunca é apagado.
   - Dependências: T1
   - Arquivos: `Models/EstoqueMovimentacao.cs`, `Data/ErpPortfolioDbContext.cs`, `backend/ErpPortfolio.Tests/ModeloEstoqueTests.cs`
 

@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.3.0
-// Data.......: 21/09/2026
+// Versão.....: 1.4.0
+// Data.......: 22/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
 // -------------------------------------------------------------------------------------
@@ -31,6 +31,14 @@
 //                - UK  : ix_produtos_sku (sku)
 //                - IDX : ix_produtos_nome (nome), ix_produtos_categoria_id (categoria_id)
 //                - FK  : fk_produtos_categorias (categoria_id -> categorias.id, restrict)
+//              public.estoque_movimentacoes
+//                - PK  : pk_estoque_movimentacoes (id, identity)
+//                - IDX : ix_estoque_movimentacoes_produto_id (produto_id),
+//                        ix_estoque_movimentacoes_pedido_id (pedido_id),
+//                        ix_estoque_movimentacoes_data_movimentacao (data_movimentacao)
+//                - FK  : fk_estoque_movimentacoes_produtos (produto_id -> produtos.id, restrict),
+//                        fk_estoque_movimentacoes_pedidos (pedido_id -> pedidos.id, restrict)
+//                - CK  : ck_estoque_movimentacoes_quantidade
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -39,6 +47,7 @@
 //   1.1.0 - 21/09/2026 - Mapeamento de Produto (tabela produtos).
 //   1.2.0 - 21/09/2026 - Mapeamento de Categoria e FK produtos.categoria_id.
 //   1.3.0 - 21/09/2026 - Mapeamento de Pedido e PedidoItem (tabelas pedidos e pedido_itens).
+//   1.4.0 - 22/09/2026 - Mapeamento de EstoqueMovimentacao (tabela estoque_movimentacoes).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -58,8 +67,75 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
     public DbSet<PedidoItem> PedidoItens => Set<PedidoItem>();
 
+    public DbSet<EstoqueMovimentacao> EstoqueMovimentacoes => Set<EstoqueMovimentacao>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<EstoqueMovimentacao>(entidade =>
+        {
+            entidade.ToTable("estoque_movimentacoes", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_estoque_movimentacoes_quantidade", "quantidade > 0");
+            });
+
+            entidade.HasKey(m => m.Id).HasName("pk_estoque_movimentacoes");
+
+            entidade.Property(m => m.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(m => m.ProdutoId)
+                .HasColumnName("produto_id");
+
+            // Restrict: o histórico de movimentações nunca é apagado, então o produto também não pode ser.
+            entidade.HasOne(m => m.Produto)
+                .WithMany()
+                .HasForeignKey(m => m.ProdutoId)
+                .HasConstraintName("fk_estoque_movimentacoes_produtos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Enum gravado como texto ("Entrada"/"Saida"), legível no banco.
+            entidade.Property(m => m.Tipo)
+                .HasColumnName("tipo")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidade.Property(m => m.Quantidade)
+                .HasColumnName("quantidade")
+                .HasColumnType("numeric(12,3)")
+                .IsRequired();
+
+            entidade.Property(m => m.Motivo)
+                .HasColumnName("motivo")
+                .HasMaxLength(200);
+
+            entidade.Property(m => m.PedidoId)
+                .HasColumnName("pedido_id");
+
+            // Restrict: pedido nunca é excluído, então não há necessidade de cascade aqui.
+            entidade.HasOne(m => m.Pedido)
+                .WithMany()
+                .HasForeignKey(m => m.PedidoId)
+                .HasConstraintName("fk_estoque_movimentacoes_pedidos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(m => m.DataMovimentacao)
+                .HasColumnName("data_movimentacao")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
+                .IsRequired();
+
+            entidade.HasIndex(m => m.ProdutoId)
+                .HasDatabaseName("ix_estoque_movimentacoes_produto_id");
+
+            entidade.HasIndex(m => m.PedidoId)
+                .HasDatabaseName("ix_estoque_movimentacoes_pedido_id");
+
+            entidade.HasIndex(m => m.DataMovimentacao)
+                .HasDatabaseName("ix_estoque_movimentacoes_data_movimentacao");
+        });
+
         modelBuilder.Entity<Pedido>(entidade =>
         {
             entidade.ToTable("pedidos", tabela =>
