@@ -1,12 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.4.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.5.0
+ * Data.......: 22/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
- *              por rota (/clientes, /produtos, /categorias, /pedidos) com o React Router.
+ *              por rota (/clientes, /produtos, /categorias, /pedidos, /estoque)
+ *              com o React Router.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
@@ -17,11 +18,13 @@
  *   1.3.0 - 21/09/2026 - Rota e item de menu de Categorias.
  *   1.4.0 - 21/09/2026 - Item de menu e rotas de Pedidos (/pedidos, /pedidos/novo,
  *                        /pedidos/:id); o menu e o breadcrumb valem também nas subpáginas.
+ *   1.5.0 - 22/09/2026 - Rota e item de menu de Estoque.
  * =====================================================================
  */
 
 import {
   AppstoreOutlined,
+  DatabaseOutlined,
   MenuFoldOutlined,
   MenuOutlined,
   MenuUnfoldOutlined,
@@ -36,6 +39,7 @@ import './App.css'
 import { LogoAmbition } from './components/LogoAmbition'
 import { CategoriasListaPage } from './pages/Categorias/CategoriasListaPage'
 import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
+import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
 import { PedidoPage } from './pages/Pedidos/PedidoPage'
 import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
@@ -46,6 +50,7 @@ const itensMenu = [
   { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
   { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
   { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos' },
+  { key: '/estoque', icon: <DatabaseOutlined />, label: 'Estoque' },
 ] satisfies MenuProps['items']
 
 /** Título da subpágina de um módulo (a última parte do breadcrumb), ou undefined na página principal. */
@@ -128,6 +133,7 @@ export default function App() {
             <Route path="/pedidos" element={<PedidosListaPage />} />
             <Route path="/pedidos/novo" element={<PedidoPage />} />
             <Route path="/pedidos/:id" element={<PedidoPage />} />
+            <Route path="/estoque" element={<EstoqueListaPage />} />
             <Route path="*" element={<Navigate to="/clientes" replace />} />
           </Routes>
         </Layout.Content>

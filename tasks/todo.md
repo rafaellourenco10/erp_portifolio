@@ -110,22 +110,24 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
 
 ## Fase 4: Tela
 
-- [ ] **T8: Base do front + lista de estoque** (M)
+- [x] **T8: Base do front + lista de estoque** (M) — *concluída em 22/09/2026*
   - Descrição: espelho do contrato da API (`types/estoque.ts`, `api/estoqueApi.ts`, `hooks/useEstoque.ts`), item **Estoque** no menu, rota `/estoque`, tabela com Produto, SKU, Unidade, Saldo e busca por nome/SKU.
   - Aceite:
     - Saldo negativo (não deveria acontecer, mas se acontecer) aparece em vermelho, como a margem negativa em Produtos.
     - Paginação no servidor, mesmo padrão dos outros módulos.
   - Verificar: `npx tsc -b`, `npx oxlint src`; abrir a tela com movimentações criadas pela API e conferir busca e saldo.
+  - Resultado: implementada junto com a T9 (a lista só faz sentido com os drawers funcionando). Ver resultado consolidado na T9.
   - Dependências: T4 (contrato)
-  - Arquivos: `types/estoque.ts`, `api/estoqueApi.ts`, `hooks/useEstoque.ts`, `pages/Estoque/EstoqueListaPage.tsx`, `App.tsx`
+  - Arquivos: `types/estoque.ts`, `api/estoqueApi.ts`, `hooks/useEstoque.ts`, `pages/Estoque/EstoqueListaPage.tsx`, `App.tsx`, `utils/moeda.ts` (formatarQuantidade)
 
-- [ ] **T9: Drawer de nova entrada + drawer de extrato** (M)
+- [x] **T9: Drawer de nova entrada + drawer de extrato** (M) — *concluída em 22/09/2026*
   - Descrição: botão **Nova entrada** abre drawer (seleção de produto reaproveitando `SelecaoProduto`, quantidade, motivo opcional); ação **Ver movimentações** por linha abre drawer com o extrato paginado (tipo, quantidade, motivo, data).
   - Aceite:
     - Lançar uma entrada atualiza o saldo na lista sem recarregar a página (invalidação de cache do TanStack Query).
     - Erros 400 da API (produto inativo, quantidade inválida) aparecem no campo certo.
     - Extrato mostra `Saida`/`Entrada` com cor ou ícone diferente, mais recente primeiro.
   - Verificar: `npx tsc -b`, `npx oxlint src`; Playwright: lançar entrada e ver saldo mudar, abrir extrato e ver a movimentação.
+  - Resultado: `npx tsc -b` limpo, `npx oxlint src` limpo (1 aviso de `set-state-in-effect` no reset de página do extrato ao trocar de produto, corrigido ajustando o estado durante a renderização em vez de `useEffect`, padrão recomendado pelo React), `npm run build` limpo (só o aviso já conhecido de chunk > 500kB). **Limitação desta sessão:** sem ferramenta de navegador/Playwright disponível, não foi possível repetir a verificação visual (390px, fluxo clicado) feita nos módulos anteriores — só os gates estáticos (tipos, lint, build) foram conferidos. Recomendo um teste manual rápido na tela antes de considerar o módulo fechado.
   - Dependências: T8, T5
   - Arquivos: `pages/Estoque/EntradaEstoqueDrawer.tsx`, `pages/Estoque/MovimentacoesDrawer.tsx`, `schemas/estoqueEntradaSchema.ts`
 
