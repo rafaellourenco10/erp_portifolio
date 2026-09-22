@@ -122,17 +122,18 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T7, T5
   - Arquivos: `pages/Pedidos/PedidoPage.tsx`, `hooks/usePedidos.ts`, `api/pedidosApi.ts`, `types/pedido.ts`
 
-- [ ] **T9: Celular e polimento** (S)
+- [x] **T9: Celular e polimento** (S) — *concluída em 22/09/2026, com ressalva*
   - Descrição: lista de Contas a Receber sem rolagem horizontal no celular; modal de confirmar utilizável em tela pequena.
   - Aceite: 390 px sem rolagem horizontal; nenhum erro de console além dos esperados.
   - Verificar: revisão de código (sem Playwright, se a limitação de ferramenta persistir nesta sessão) seguindo os padrões já usados (colunas compactas de Estoque/Produtos).
+  - Resultado: **feito por revisão de código, não por Playwright** (mesma limitação já registrada nos módulos anteriores). `ContasReceberListaPage` ganhou `colunasCelular` (cliente/pedido/parcela/valor/vencimento/status numa coluna, ação em outra), mesmo padrão de `ProdutosListaPage`/`EstoqueListaPage`. O modal de confirmar usa `Flex wrap` nos dois campos, então empilha sozinho em telas estreitas (Ant `Modal` já é responsivo por padrão). `tsc -b`, `oxlint` e `npm run build` limpos. **O fluxo completo foi verificado na API real nas T5-T6** (confirmar com parcelas, cancelar cancela pendentes); falta a conferência visual/celular, pendente de teste manual.
   - Dependências: T8
-  - Arquivos: `pages/ContasReceber/ContasReceberListaPage.tsx`, `pages/Pedidos/PedidoPage.tsx`
+  - Arquivos: `pages/ContasReceber/ContasReceberListaPage.tsx`
 
 ### Checkpoint 4: tela pronta
-- [ ] Fluxo completo (confirmar com parcelas, ver na lista, marcar recebido, cancelar cancela pendentes) funciona na API real
-- [ ] `tsc`, `oxlint`, `dotnet build` (0 avisos), `dotnet test` limpos; dados de teste apagados
-- [ ] Revisão do Rafael antes de fechar
+- [x] Fluxo completo (confirmar com parcelas, ver na lista, marcar recebido, cancelar cancela pendentes) funciona na API real (E2E das T4-T6); **verificação visual no navegador pendente** (sem ferramenta disponível nesta sessão)
+- [x] `tsc`, `oxlint` limpos; `dotnet build` (0 avisos), `dotnet test` (146/146) limpos; dados de teste apagados
+- [ ] Revisão do Rafael antes de fechar *(recomendo testar a tela manualmente, como já foi feito com Estoque)*
 
 ---
 

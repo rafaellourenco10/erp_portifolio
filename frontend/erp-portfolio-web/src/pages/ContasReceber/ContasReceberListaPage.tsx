@@ -1,11 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: ContasReceberListaPage.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 22/09/2026
  * Descrição..: Tela de contas a receber: busca por cliente ou número do pedido,
  *              filtro de status (incluindo "Atrasado", calculado), tabela com
- *              paginação no servidor e ação de marcar parcela como recebida.
+ *              paginação no servidor e ação de marcar parcela como recebida. No
+ *              celular, cliente/pedido/parcela/valor/vencimento/status ficam
+ *              numa única coluna (como em Produtos e Estoque).
  * ---------------------------------------------------------------------
  * Fontes.....: GET   /api/contas-receber?busca=&status=&pagina=&tamanhoPagina=
  *              PATCH /api/contas-receber/{id}/receber
@@ -13,6 +15,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
+ *   1.1.0 - 22/09/2026 - Colunas compactas no celular (T9).
  * =====================================================================
  */
 
@@ -64,6 +67,55 @@ export function ContasReceberListaPage() {
     }
   }
 
+  const colunaAcoes: NonNullable<TableProps<Parcela>['columns']>[number] = {
+    title: 'Ações',
+    key: 'acoes',
+    width: 72,
+    align: 'center',
+    render: (_, parcela) => (
+      <Popconfirm
+        title="Marcar como recebido"
+        description={`Confirmar o recebimento da parcela ${parcela.numeroParcela}/${parcela.totalParcelas} (${formatarReal(parcela.valor)})?`}
+        okText="Marcar recebido"
+        cancelText="Cancelar"
+        onConfirm={() => receber(parcela)}
+        disabled={parcela.status !== 'Pendente'}
+      >
+        <Tooltip title={parcela.status === 'Pendente' ? 'Marcar como recebido' : 'Só parcelas pendentes podem ser recebidas'}>
+          <Button
+            type="text"
+            icon={<CheckOutlined />}
+            aria-label={`Marcar como recebido a parcela ${parcela.numeroParcela} do pedido ${parcela.pedidoId}`}
+            disabled={parcela.status !== 'Pendente'}
+          />
+        </Tooltip>
+      </Popconfirm>
+    ),
+  }
+
+  // No celular, cliente/pedido/parcela/valor/vencimento/status ficam empilhados numa única coluna.
+  const colunasCelular: TableProps<Parcela>['columns'] = [
+    {
+      title: 'Parcela',
+      key: 'resumo',
+      render: (_, parcela) => (
+        <div className="celula-compacta">
+          <span className="celula-nome">{parcela.clienteNome}</span>
+          <span className="texto-discreto numeros-tabulares">
+            Pedido #{parcela.pedidoId} · Parcela {parcela.numeroParcela}/{parcela.totalParcelas}
+          </span>
+          <Flex align="center" gap={8} wrap>
+            <span className="numeros-tabulares">
+              {formatarReal(parcela.valor)} · vence {formatarData(parcela.vencimento)}
+            </span>
+            <TagStatusParcela status={parcela.status} atrasado={parcela.atrasado} />
+          </Flex>
+        </div>
+      ),
+    },
+    colunaAcoes,
+  ]
+
   const colunas: TableProps<Parcela>['columns'] = [
     {
       title: 'Cliente',
@@ -111,31 +163,7 @@ export function ContasReceberListaPage() {
       align: 'center',
       render: (_, parcela) => <TagStatusParcela status={parcela.status} atrasado={parcela.atrasado} />,
     },
-    {
-      title: 'Ações',
-      key: 'acoes',
-      width: 72,
-      align: 'center',
-      render: (_, parcela) => (
-        <Popconfirm
-          title="Marcar como recebido"
-          description={`Confirmar o recebimento da parcela ${parcela.numeroParcela}/${parcela.totalParcelas} (${formatarReal(parcela.valor)})?`}
-          okText="Marcar recebido"
-          cancelText="Cancelar"
-          onConfirm={() => receber(parcela)}
-          disabled={parcela.status !== 'Pendente'}
-        >
-          <Tooltip title={parcela.status === 'Pendente' ? 'Marcar como recebido' : 'Só parcelas pendentes podem ser recebidas'}>
-            <Button
-              type="text"
-              icon={<CheckOutlined />}
-              aria-label={`Marcar como recebido a parcela ${parcela.numeroParcela} do pedido ${parcela.pedidoId}`}
-              disabled={parcela.status !== 'Pendente'}
-            />
-          </Tooltip>
-        </Popconfirm>
-      ),
-    },
+    colunaAcoes,
   ]
 
   return (
@@ -183,7 +211,7 @@ export function ContasReceberListaPage() {
       <section className="painel painel-tabela" aria-label="Lista de contas a receber">
         <Table<Parcela>
           rowKey="id"
-          columns={colunas}
+          columns={ehCelular ? colunasCelular : colunas}
           dataSource={data?.itens}
           loading={isFetching}
           rowClassName={(parcela) => (parcela.status === 'Cancelado' ? 'linha-inativa' : '')}
