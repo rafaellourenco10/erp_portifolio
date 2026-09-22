@@ -28,13 +28,14 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 2: Banco
 
-- [ ] **T2: Entidade `ParcelaReceber` e mapeamento EF** (S)
+- [x] **T2: Entidade `ParcelaReceber` e mapeamento EF** (S) — *concluída em 22/09/2026*
   - Descrição: entidade e mapeamento no `ErpPortfolioDbContext` (snake_case, FK `pedido_id` RESTRICT, `CHECK valor > 0` e `numero_parcela > 0`, `vencimento` como `date`/`DateOnly`, status como texto).
   - Aceite:
     - Índice único `ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)`.
     - Índice `ix_parcelas_receber_vencimento`.
     - `data_recebimento` aceita nulo.
   - Verificar: `dotnet build` 0 avisos; teste de modelo em memória (como `ModeloEstoqueTests`) confere tabela, FK, índices e CHECK.
+  - Resultado: 146 testes passando (132 anteriores + 14 novos), 0 avisos. `Vencimento` mapeado como `DateOnly`/`date`, sem hora.
   - Dependências: T1
   - Arquivos: `Models/ParcelaReceber.cs`, `Data/ErpPortfolioDbContext.cs`, `backend/ErpPortfolio.Tests/ModeloParcelaReceberTests.cs`
 

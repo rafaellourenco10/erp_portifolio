@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.4.0
+// Versão.....: 1.5.0
 // Data.......: 22/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -39,6 +39,12 @@
 //                - FK  : fk_estoque_movimentacoes_produtos (produto_id -> produtos.id, restrict),
 //                        fk_estoque_movimentacoes_pedidos (pedido_id -> pedidos.id, restrict)
 //                - CK  : ck_estoque_movimentacoes_quantidade
+//              public.parcelas_receber
+//                - PK  : pk_parcelas_receber (id, identity)
+//                - UK  : ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)
+//                - IDX : ix_parcelas_receber_vencimento (vencimento)
+//                - FK  : fk_parcelas_receber_pedidos (pedido_id -> pedidos.id, restrict)
+//                - CK  : ck_parcelas_receber_valor, ck_parcelas_receber_numero_parcela
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -48,6 +54,7 @@
 //   1.2.0 - 21/09/2026 - Mapeamento de Categoria e FK produtos.categoria_id.
 //   1.3.0 - 21/09/2026 - Mapeamento de Pedido e PedidoItem (tabelas pedidos e pedido_itens).
 //   1.4.0 - 22/09/2026 - Mapeamento de EstoqueMovimentacao (tabela estoque_movimentacoes).
+//   1.5.0 - 22/09/2026 - Mapeamento de ParcelaReceber (tabela parcelas_receber).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -69,8 +76,67 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
     public DbSet<EstoqueMovimentacao> EstoqueMovimentacoes => Set<EstoqueMovimentacao>();
 
+    public DbSet<ParcelaReceber> ParcelasReceber => Set<ParcelaReceber>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ParcelaReceber>(entidade =>
+        {
+            entidade.ToTable("parcelas_receber", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_parcelas_receber_valor", "valor > 0");
+                tabela.HasCheckConstraint("ck_parcelas_receber_numero_parcela", "numero_parcela > 0");
+            });
+
+            entidade.HasKey(p => p.Id).HasName("pk_parcelas_receber");
+
+            entidade.Property(p => p.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(p => p.PedidoId)
+                .HasColumnName("pedido_id");
+
+            // Restrict: o histórico de parcelas nunca é apagado, então o pedido também não pode ser.
+            entidade.HasOne(p => p.Pedido)
+                .WithMany()
+                .HasForeignKey(p => p.PedidoId)
+                .HasConstraintName("fk_parcelas_receber_pedidos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(p => p.NumeroParcela)
+                .HasColumnName("numero_parcela")
+                .IsRequired();
+
+            entidade.Property(p => p.Valor)
+                .HasColumnName("valor")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(p => p.Vencimento)
+                .HasColumnName("vencimento")
+                .HasColumnType("date")
+                .IsRequired();
+
+            // Enum gravado como texto ("Pendente"/"Recebido"/"Cancelado"), legível no banco.
+            entidade.Property(p => p.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidade.Property(p => p.DataRecebimento)
+                .HasColumnName("data_recebimento")
+                .HasColumnType("timestamp with time zone");
+
+            entidade.HasIndex(p => new { p.PedidoId, p.NumeroParcela })
+                .IsUnique()
+                .HasDatabaseName("ux_parcelas_receber_pedido_numero");
+
+            entidade.HasIndex(p => p.Vencimento)
+                .HasDatabaseName("ix_parcelas_receber_vencimento");
+        });
+
         modelBuilder.Entity<EstoqueMovimentacao>(entidade =>
         {
             entidade.ToTable("estoque_movimentacoes", tabela =>
