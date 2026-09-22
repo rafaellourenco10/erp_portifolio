@@ -111,15 +111,16 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T4 (contrato)
   - Arquivos: `types/contaReceber.ts`, `api/contasReceberApi.ts`, `hooks/useContasReceber.ts`, `components/TagStatusParcela.tsx`, `components/TagStatus.css`, `pages/ContasReceber/ContasReceberListaPage.tsx`, `App.tsx`
 
-- [ ] **T8: Modal de confirmar pedido com parcelas** (M)
+- [x] **T8: Modal de confirmar pedido com parcelas** (M) — *concluída em 22/09/2026*
   - Descrição: substitui o `Modal.confirm` de "Confirmar pedido" por um formulário pequeno (Número de parcelas, Intervalo em dias) que envia `{ numeroParcelas, intervaloDias }` no `PATCH /confirmar`.
   - Aceite:
     - Padrão 1 parcela / 30 dias, campos editáveis (1-12 / 1-180).
     - Confirmar cria as parcelas certas (visível em Contas a Receber depois).
     - Cancelar o modal não confirma nada.
   - Verificar: `npx tsc -b`, `npx oxlint src`; conferir contra a API real que o número de parcelas enviado bate com o que aparece em `/contas-receber`.
+  - Resultado: `pedirConfirmacao` agora só valida e abre um `Modal` controlado (estado `confirmando`) com dois `InputNumber` (parcelas 1-12, intervalo 1-180 dias); `confirmar()` salva o rascunho pendente e chama `confirmarPedido` com o corpo. Em erro, o modal **fica aberto** (melhoria sobre o `modal.confirm` antigo — dá pra corrigir sem reabrir). O payload já bate com o `PedidoConfirmarDto` testado na API real nas T5/T6 (mesmo formato `{numeroParcelas, intervaloDias}`). `tsc -b`, `oxlint` e `npm run build` limpos. Mesma ressalva de falta de verificação visual desta sessão.
   - Dependências: T7, T5
-  - Arquivos: `pages/Pedidos/PedidoPage.tsx`, `hooks/usePedidos.ts` (useConfirmarPedido aceita corpo), `api/pedidosApi.ts`
+  - Arquivos: `pages/Pedidos/PedidoPage.tsx`, `hooks/usePedidos.ts`, `api/pedidosApi.ts`, `types/pedido.ts`
 
 - [ ] **T9: Celular e polimento** (S)
   - Descrição: lista de Contas a Receber sem rolagem horizontal no celular; modal de confirmar utilizável em tela pequena.

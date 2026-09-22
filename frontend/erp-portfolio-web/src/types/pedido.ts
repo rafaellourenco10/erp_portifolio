@@ -85,6 +85,12 @@ export interface PedidoEntrada {
   itens: PedidoItemEntrada[]
 }
 
+/** Corpo do PATCH /confirmar: número de parcelas e intervalo entre elas, para as contas a receber. */
+export interface PedidoConfirmarEntrada {
+  numeroParcelas: number
+  intervaloDias: number
+}
+
 export interface PedidoFiltro {
   /** Número do pedido (ex.: 12 ou #12) ou trecho do nome do cliente. */
   busca?: string

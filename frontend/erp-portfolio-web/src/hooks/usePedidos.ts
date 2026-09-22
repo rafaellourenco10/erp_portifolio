@@ -17,7 +17,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { pedidosApi } from '../api/pedidosApi'
-import type { PedidoEntrada, PedidoFiltro } from '../types/pedido'
+import type { PedidoConfirmarEntrada, PedidoEntrada, PedidoFiltro } from '../types/pedido'
 
 const CHAVE_PEDIDOS = ['pedidos'] as const
 
@@ -61,11 +61,16 @@ export function useSalvarPedido() {
   })
 }
 
+interface ConfirmarPedidoParametros {
+  id: number
+  dados: PedidoConfirmarEntrada
+}
+
 export function useConfirmarPedido() {
   const invalidar = useInvalidarPedidos()
 
   return useMutation({
-    mutationFn: (id: number) => pedidosApi.confirmar(id),
+    mutationFn: ({ id, dados }: ConfirmarPedidoParametros) => pedidosApi.confirmar(id, dados),
     onSuccess: invalidar,
   })
 }

@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: pedidosApi.ts
- * Versão.....: 1.0.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 22/09/2026
  * Descrição..: Chamadas HTTP do módulo de Pedidos.
  * ---------------------------------------------------------------------
  * Fontes.....: API Ambition ERP (PedidosController)
@@ -15,11 +15,12 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 22/09/2026 - confirmar envia numeroParcelas/intervaloDias (contas a receber).
  * =====================================================================
  */
 
 import type { ResultadoPaginado } from '../types/paginacao'
-import type { Pedido, PedidoEntrada, PedidoFiltro, PedidoResumo } from '../types/pedido'
+import type { Pedido, PedidoConfirmarEntrada, PedidoEntrada, PedidoFiltro, PedidoResumo } from '../types/pedido'
 import { axiosClient } from './axiosClient'
 
 export const pedidosApi = {
@@ -43,8 +44,8 @@ export const pedidosApi = {
     return resposta.data
   },
 
-  async confirmar(id: number): Promise<Pedido> {
-    const resposta = await axiosClient.patch<Pedido>(`/pedidos/${id}/confirmar`)
+  async confirmar(id: number, dados: PedidoConfirmarEntrada): Promise<Pedido> {
+    const resposta = await axiosClient.patch<Pedido>(`/pedidos/${id}/confirmar`, dados)
     return resposta.data
   },
 

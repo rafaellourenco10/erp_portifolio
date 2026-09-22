@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: PedidoPage.tsx
- * Versão.....: 2.2.0
- * Data.......: 21/09/2026
+ * Versão.....: 2.3.0
+ * Data.......: 22/09/2026
  * Descrição..: Página do pedido (rotas /pedidos/novo e /pedidos/:id). Formulário com
  *              cliente (busca no servidor), forma de pagamento, itens (tabela editável;
  *              adicionar um produto que já está no pedido SOMA a quantidade), desconto do
@@ -11,9 +11,10 @@
  *              recarregado do servidor e passa a valer o total dele. Erros 400 da API
  *              aparecem nos campos.
  *              Pedido salvo (/pedidos/:id): o rascunho é editável e tem Salvar rascunho,
- *              Confirmar pedido (valida, pede confirmação, salva o que estiver pendente e
- *              confirma) e Cancelar pedido. Confirmado abre somente leitura e ainda pode ser
- *              cancelado; Cancelado é só consulta. Erros da API aparecem no campo certo.
+ *              Confirmar pedido (valida, abre um modal para escolher número de parcelas e
+ *              intervalo em dias, salva o que estiver pendente e confirma) e Cancelar
+ *              pedido. Confirmado abre somente leitura e ainda pode ser cancelado;
+ *              Cancelado é só consulta. Erros da API aparecem no campo certo.
  * ---------------------------------------------------------------------
  * Fontes.....: GET /api/pedidos/{id}, POST /api/pedidos, PUT /api/pedidos/{id},
  *              PATCH /api/pedidos/{id}/confirmar e /cancelar
@@ -25,12 +26,14 @@
  *   2.0.0 - 21/09/2026 - Formulário do pedido: novo, itens, total ao vivo e salvar rascunho (T13).
  *   2.1.0 - 21/09/2026 - Confirmar pedido e Cancelar pedido, com confirmação em janela (T14).
  *   2.2.0 - 21/09/2026 - Espaçamento das linhas de campos empilhadas no celular (T15).
+ *   2.3.0 - 22/09/2026 - Confirmar abre um modal com número de parcelas e intervalo em
+ *                        dias (contas a receber), no lugar do Modal.confirm simples.
  * =====================================================================
  */
 
 import { ArrowLeftOutlined, CheckCircleOutlined, CheckOutlined, StopOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Alert, App, Button, Col, Flex, Form, InputNumber, Row, Select, Spin } from 'antd'
+import { Alert, App, Button, Col, Flex, Form, InputNumber, Modal, Row, Select, Spin } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { useEffect, useMemo, useState } from 'react'
@@ -116,6 +119,11 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
   const somenteLeitura = pedido !== undefined && pedido.status !== 'Rascunho'
   // Muda a cada produto adicionado: recria o seletor, que volta vazio e pronto para outra busca.
   const [chaveSeletor, setChaveSeletor] = useState(0)
+
+  // Valores validados do formulário, guardados enquanto o modal de confirmar (parcelas) está aberto.
+  const [confirmando, setConfirmando] = useState<PedidoFormValores | null>(null)
+  const [numeroParcelas, setNumeroParcelas] = useState(1)
+  const [intervaloDias, setIntervaloDias] = useState(30)
 
   const {
     control,
@@ -211,24 +219,25 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
     }
   }
 
-  /** Confirmar: valida a tela, pede confirmação, salva o que estiver pendente e então confirma. */
+  /** Confirmar: valida a tela e abre o modal de parcelas (número de parcelas e intervalo). */
   function pedirConfirmacao(valores: PedidoFormValores) {
     if (!pedido) return
-    modal.confirm({
-      title: `Confirmar o pedido nº ${pedido.id}?`,
-      content: 'Depois de confirmado, o pedido não pode mais ser editado: só cancelado.',
-      okText: 'Confirmar pedido',
-      cancelText: 'Voltar',
-      onOk: async () => {
-        try {
-          await salvarPedido.mutateAsync({ id: pedido.id, dados: paraPayload(valores) })
-          await confirmarPedido.mutateAsync(pedido.id)
-          message.success(`Pedido nº ${pedido.id} confirmado com sucesso.`)
-        } catch (erro) {
-          mostrarErroApi(erro)
-        }
-      },
-    })
+    setNumeroParcelas(1)
+    setIntervaloDias(30)
+    setConfirmando(valores)
+  }
+
+  /** Fecha o modal de parcelas, salva o que estiver pendente e então confirma. */
+  async function confirmar() {
+    if (!pedido || !confirmando) return
+    try {
+      await salvarPedido.mutateAsync({ id: pedido.id, dados: paraPayload(confirmando) })
+      await confirmarPedido.mutateAsync({ id: pedido.id, dados: { numeroParcelas, intervaloDias } })
+      message.success(`Pedido nº ${pedido.id} confirmado com sucesso.`)
+      setConfirmando(null)
+    } catch (erro) {
+      mostrarErroApi(erro)
+    }
   }
 
   function pedirCancelamento() {
@@ -253,6 +262,7 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
   const erroItens = errors.itens?.root?.message ?? errors.itens?.message
 
   return (
+    <>
     <Form
       id={ID_FORMULARIO}
       layout="vertical"
@@ -449,5 +459,44 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
         </div>
       )}
     </Form>
+
+    <Modal
+      open={confirmando !== null}
+      title={`Confirmar o pedido nº ${pedido?.id}?`}
+      okText="Confirmar pedido"
+      cancelText="Voltar"
+      onOk={confirmar}
+      onCancel={() => setConfirmando(null)}
+      confirmLoading={salvarPedido.isPending || confirmarPedido.isPending}
+    >
+      <p>Depois de confirmado, o pedido não pode mais ser editado: só cancelado. Escolha em quantas parcelas a venda será recebida.</p>
+      <Flex gap={16} wrap>
+        <ItemFormulario rotulo="Número de parcelas" obrigatorio>
+          <InputNumber
+            className="campo-cheio numeros-tabulares"
+            aria-label="Número de parcelas"
+            min={1}
+            max={12}
+            precision={0}
+            controls={false}
+            value={numeroParcelas}
+            onChange={(valor) => setNumeroParcelas(valor ?? 1)}
+          />
+        </ItemFormulario>
+        <ItemFormulario rotulo="Intervalo entre parcelas (dias)" obrigatorio>
+          <InputNumber
+            className="campo-cheio numeros-tabulares"
+            aria-label="Intervalo entre parcelas em dias"
+            min={1}
+            max={180}
+            precision={0}
+            controls={false}
+            value={intervaloDias}
+            onChange={(valor) => setIntervaloDias(valor ?? 30)}
+          />
+        </ItemFormulario>
+      </Flex>
+    </Modal>
+    </>
   )
 }
