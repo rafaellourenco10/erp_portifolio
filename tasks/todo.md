@@ -38,18 +38,19 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T1
   - Arquivos: `Models/EstoqueMovimentacao.cs`, `Data/ErpPortfolioDbContext.cs`, `backend/ErpPortfolio.Tests/ModeloEstoqueTests.cs`
 
-- [ ] **T3: Migration `CriacaoTabelaEstoqueMovimentacoes`** (S)
+- [x] **T3: Migration `CriacaoTabelaEstoqueMovimentacoes`** (S) — *concluída em 22/09/2026*
   - Descrição: gerar a migration, testar num banco descartável (subida e volta) e aplicar no de desenvolvimento **com backup**.
   - Aceite:
     - A migration **só cria** `estoque_movimentacoes`; nada em `pedidos`, `produtos`, `clientes`, `categorias` muda (esquema comparado antes e depois).
     - `Down` remove só a tabela nova.
   - Verificar: script SQL aplicado e revertido num banco descartável; `dotnet ef database update` no dev; `\d estoque_movimentacoes` conferido; esquema das outras tabelas idêntico.
+  - Resultado: migration com só 1 `CreateTable` + 3 `CreateIndex` (Down: 1 `DropTable`). Banco descartável (`erp_portfolio_db_teste_migration`, restaurado do backup completo para ter o histórico de migrations): 19 verificações OK (insert válido, quantidade 0 recusada pelo CHECK, produto inexistente recusado pela FK, Down removendo só a tabela nova). Backup em `.claude/ferramentas-locais/backup_pre_estoque_20260922.dump` (fora do Git). Dev: aplicada, contagens de clientes/produtos/categorias/pedidos idênticas antes e depois (1/1/2/1), `estoque_movimentacoes` criada vazia.
   - Dependências: T2
-  - Arquivos: `Data/Migrations/<data>_CriacaoTabelaEstoqueMovimentacoes.cs`, `.Designer.cs`, `ErpPortfolioDbContextModelSnapshot.cs`
+  - Arquivos: `Data/Migrations/20260922120855_CriacaoTabelaEstoqueMovimentacoes.cs`, `.Designer.cs`, `ErpPortfolioDbContextModelSnapshot.cs`
 
 ### Checkpoint 2: banco
-- [ ] Tabela criada, esquema das tabelas antigas idêntico, backup feito
-- [ ] Revisão do Rafael antes de seguir
+- [x] Tabela criada, esquema das tabelas antigas idêntico, backup feito
+- [ ] Revisão do Rafael antes de seguir *(dispensada — autorização geral para seguir sem parar)*
 
 ---
 
