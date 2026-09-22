@@ -1,42 +1,42 @@
-# Spec: Módulo Estoque (etapa 4)
+# Spec: Módulo Contas a Receber (etapa 5)
 
-> Status: **implementada e testada em 22/09/2026** (T1 a T10 do plano, ver `tasks/todo.md`). Os 10 critérios de sucesso abaixo foram conferidos um a um contra o código atual. A tela foi verificada por revisão de código (tipos, lint, build), **sem verificação visual/Playwright** — sem ferramenta de navegador disponível nesta sessão. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
+> Status: **em definição** (22/09/2026). Substitui a spec de Estoque (etapa 4, implementada e documentada no README). Ao mudar uma decisão depois de começar a codar, atualize esta spec **antes** do código.
 
 ## Objetivo
 
-Controlar o **saldo de estoque** de cada produto no Ambition ERP, através de um histórico de **movimentações** (entradas e saídas), com baixa automática ao confirmar um pedido e devolução automática ao cancelar um pedido confirmado.
+Fechar o ciclo financeiro de uma venda: ao confirmar um pedido, gerar as **parcelas a receber** (vencimento e valor), controlar o status de cada uma (pendente, recebida, atrasada) e permitir marcar o recebimento.
 
-- **Quem usa:** o dono do ERP de portfólio (sem login, sem múltiplos depósitos).
-- **Por que agora:** Pedidos existe, mas confirmar uma venda hoje não mexe em estoque nenhum — não dá para saber o que ainda tem disponível.
-- **Sucesso:** cada produto mostra um saldo correto (soma das movimentações), dá para lançar uma entrada manual (compra), confirmar um pedido baixa o estoque dos itens automaticamente e recusa se faltar saldo, e cancelar um pedido confirmado devolve a quantidade.
+- **Quem usa:** o dono do ERP de portfólio (sem login).
+- **Por que agora:** Pedidos e Estoque existem; falta saber **quanto e quando** vai entrar de dinheiro das vendas já confirmadas.
+- **Sucesso:** confirmar um pedido gera as parcelas certas (valor e vencimento), a lista mostra o que está pendente/atrasado/recebido, e marcar uma parcela como recebida reflete na tela.
 
 ### Dentro do escopo
-Tabela de movimentações (entrada manual, saída automática por venda, entrada automática por estorno de cancelamento), tela de estoque por produto com saldo, tela/drawer de nova entrada manual, extrato de movimentações por produto, bloqueio de confirmação de pedido sem saldo suficiente.
+Geração automática de parcelas ao confirmar um pedido (quantidade e intervalo escolhidos no momento de confirmar), tela de listagem com filtro por status (incluindo "Atrasado", calculado), ação de marcar parcela como recebida, cancelamento automático das parcelas pendentes quando o pedido confirmado é cancelado.
 
 ### Fora do escopo (entram depois)
-Fornecedores, pedido de compra formal, múltiplos depósitos/armazéns, custo médio/CMV, inventário por contagem física, saída manual (perda/quebra/ajuste negativo), estoque mínimo/alerta de ruptura.
+Recebimento parcial de uma parcela, juros/multa por atraso, boleto/nota fiscal de verdade, edição do valor/vencimento de uma parcela já gerada, contas a pagar, relatório financeiro/fluxo de caixa.
 
 ## Decisões já tomadas (com o Rafael, 22/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Modelo de dados | **Histórico de movimentações** (não só um saldo no produto). O saldo é sempre a soma (Entrada − Saída), nunca gravado direto. |
-| Estoque insuficiente ao confirmar | **Bloqueia** (400 no campo, como cliente/produto inativo em Pedidos — R6). Pedido continua rascunho. |
-| Cancelar pedido Confirmado | **Devolve automaticamente**: gera uma entrada de estorno por item. Cancelar um Rascunho não gera movimentação (nunca teve saída). |
-| Entrada manual | **Produto + quantidade + motivo (texto livre, opcional)**. Sem fornecedor por enquanto. |
-| Saída manual (perda/quebra) | **Fora do escopo** — só existe saída automática por venda confirmada. |
+| Geração das parcelas | **Automática ao confirmar** o pedido — o número de parcelas e o intervalo em dias são escolhidos nesse momento (não antes, não depois). |
+| Parcelamento | **N parcelas iguais** (1 a 12) **+ intervalo em dias** entre vencimentos; o valor do pedido é dividido igualmente, com o **resto na última parcela**. |
+| Pedido cancelado | Cancelar um pedido **Confirmado** cancela as parcelas que ainda estão **Pendentes**; parcelas já **Recebidas** continuam como estão (histórico). |
+| Marcar recebido | Botão **"Marcar como recebido"**, tudo ou nada (sem recebimento parcial); grava a data/hora do recebimento. |
 
 ## Regras de negócio
 
 | # | Regra |
 |---|---|
-| E1 | Toda mudança de estoque gera um registro em `estoque_movimentacoes`; o saldo de um produto é `Σ Entrada − Σ Saída` das suas movimentações, calculado na hora (nunca gravado). |
-| E2 | Confirmar um pedido (`PATCH /pedidos/{id}/confirmar`) gera uma **Saída** por item, com a quantidade do item e referência ao pedido. Se **qualquer** item não tiver saldo suficiente, a confirmação inteira é recusada (**400**, campo `Itens`) e **nenhuma** movimentação é gravada — checagem e gravação na mesma transação. |
-| E3 | Cancelar um pedido que estava **Confirmado** gera uma **Entrada** de estorno por item (mesma quantidade, mesma referência ao pedido). Cancelar um pedido que estava em **Rascunho** não gera movimentação nenhuma. |
-| E4 | Entrada manual (`POST /api/estoque/entradas`) exige produto **ativo** e quantidade **> 0**; motivo é opcional (até 200 caracteres). |
-| E5 | Quantidade da movimentação segue a mesma faixa de Pedidos: `0,001` a `999.999,999`, até 3 casas decimais. |
-| E6 | Editar um rascunho (PUT) **não** mexe em estoque — só Confirmar consome e só Cancelar-de-Confirmado devolve. |
-| E7 | Um produto **inativo** pode ter saldo e aparecer no extrato normalmente; só a **entrada manual** exige produto ativo (E4). Baixa/estorno por pedido usa o produto do item, ativo ou não (mesma regra de Pedidos: inativar depois não trava o histórico). |
+| C1 | Confirmar um pedido (`PATCH /pedidos/{id}/confirmar`) recebe `numeroParcelas` (1 a 12, padrão 1) e `intervaloDias` (1 a 180, padrão 30). Ao confirmar com sucesso, gera exatamente `numeroParcelas` parcelas cuja soma bate **exatamente** com `valorTotal` do pedido. |
+| C2 | Valor de cada uma das primeiras `numeroParcelas − 1` parcelas = `valorTotal / numeroParcelas`, arredondado para baixo em 2 casas; a **última parcela leva o resto** (garante que a soma bate com o total, mesmo com divisão não exata). |
+| C3 | Vencimento da parcela `N` (1-based) = data de confirmação (hoje, UTC) **+ `N × intervaloDias` dias**. A parcela 1 vence em `intervaloDias` dias, nunca no mesmo dia da confirmação (evita nascer "atrasada"). |
+| C4 | Status de uma parcela: `Pendente` → `Recebido` (ação manual, grava `dataRecebimento`) ou `Pendente` → `Cancelado` (quando o pedido é cancelado). Ambos são finais. |
+| C5 | **"Atrasado" não é um status gravado**: é uma parcela `Pendente` com `vencimento` no passado, calculado na consulta (nunca precisa de um job para "atualizar status"). |
+| C6 | Cancelar um pedido que estava `Confirmado` cancela **todas as parcelas `Pendentes`** desse pedido (idempotente, como o próprio cancelamento do pedido). Parcelas `Recebidas` não mudam. |
+| C7 | Marcar uma parcela como recebida é **idempotente**: marcar de novo uma já `Recebido` não gera erro e não duplica a data. Parcela `Cancelado` não pode ser recebida (409). |
+| C8 | Uma parcela **nunca é excluída** — histórico definitivo, como o pedido e as movimentações de estoque. |
 
 ## Tech stack
 
@@ -44,41 +44,39 @@ Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 
 
 ## Modelo de dados (migration só **adiciona** tabela)
 
-`estoque_movimentacoes`:
+`parcelas_receber`:
 
 | Coluna | Tipo | Observação |
 |---|---|---|
 | `id` | integer | PK, identity |
-| `produto_id` | integer | FK `produtos` (RESTRICT), índice `ix_estoque_movimentacoes_produto_id` |
-| `tipo` | varchar(20) | `Entrada` ou `Saida` (texto, como `status` em pedidos) |
-| `quantidade` | numeric(12,3) | `CHECK` > 0 (o tipo é que define entrada/saída; quantidade sempre positiva) |
-| `motivo` | varchar(200) | opcional; automático nas movimentações geradas por pedido (ex.: `"Venda pedido #123"`, `"Estorno cancelamento pedido #123"`) |
-| `pedido_id` | integer | FK `pedidos` (RESTRICT), **opcional** (nulo em entrada manual), índice `ix_estoque_movimentacoes_pedido_id` |
-| `data_movimentacao` | timestamptz | UTC, padrão `now()`, índice `ix_estoque_movimentacoes_data_movimentacao` |
+| `pedido_id` | integer | FK `pedidos` (RESTRICT — histórico nunca é apagado), índice `ix_parcelas_receber_pedido_id` |
+| `numero_parcela` | integer | 1-based; `CHECK` > 0 |
+| `valor` | numeric(12,2) | `CHECK` > 0 |
+| `vencimento` | date | sem hora (é uma data de calendário, não um instante) |
+| `status` | varchar(20) | `Pendente`, `Recebido` ou `Cancelado` (texto, como `status` em pedidos) |
+| `data_recebimento` | timestamptz | nulo até ser marcada como recebida |
 
-Saldo do produto = query agregada (`SUM` condicional por `tipo`), não é coluna própria — mesmo padrão do subtotal do item de pedido ("não é gravado, é calculado na hora").
+Índice único `ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)`; índice `ix_parcelas_receber_vencimento` (para ordenar/filtrar por vencimento e achar atrasadas).
 
 ## API
 
-Novo `EstoqueController` (`/api/estoque`):
+Novo `ContasReceberController` (`/api/contas-receber`):
 
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
-| GET | `/estoque?busca=&pagina=&tamanhoPagina=` | Lista paginada de produtos com saldo atual (nome ou SKU) | 200, 400 |
-| GET | `/estoque/{produtoId}/movimentacoes?pagina=&tamanhoPagina=` | Extrato do produto, mais recente primeiro | 200, 404 |
-| POST | `/estoque/entradas` | Lança uma entrada manual (E4) | 201, 400, 404 |
+| GET | `/contas-receber?busca=&status=&pagina=&tamanhoPagina=` | Lista paginada, vencimento mais próximo primeiro. `busca` = nº do pedido ou nome do cliente. `status` = `Pendente`/`Recebido`/`Cancelado`/**`Atrasado`** (filtro calculado: `Pendente` + `vencimento` no passado) | 200, 400 |
+| PATCH | `/contas-receber/{id}/receber` | Marca a parcela como recebida (C7) | 200, 404, 409 |
 
-`PedidosController` sem rota nova — `PATCH /pedidos/{id}/confirmar` e `/cancelar` passam a chamar `IEstoqueService` internamente (E2, E3); resposta de erro de estoque insuficiente usa o mesmo formato 400 já usado pelas outras validações de confirmar.
+`PedidosController` sem rota nova — `PATCH /pedidos/{id}/confirmar` ganha corpo opcional `{ numeroParcelas?, intervaloDias? }` (defaults 1 e 30) e passa a gerar as parcelas (C1); `PATCH /pedidos/{id}/cancelar` continua sem corpo, mas passa a cancelar as parcelas pendentes por dentro (C6).
 
-- Corpo do POST `/estoque/entradas`: `{ produtoId, quantidade, motivo? }`.
-- Resposta da listagem: `{ produtoId, produtoNome, sku, unidade, saldo }` paginado (mesmo envelope `ResultadoPaginadoDto` dos outros módulos).
-- Resposta do extrato: `{ tipo, quantidade, motivo, pedidoId?, dataMovimentacao }` paginado.
+- Resposta da listagem: `{ id, pedidoId, clienteNome, numeroParcela, totalParcelas, valor, vencimento, status, dataRecebimento, atrasado }` — `atrasado` é calculado no servidor (nunca confiar no relógio do navegador).
+- Erros: `numeroParcelas`/`intervaloDias` fora da faixa = 400 no campo (`[ApiController]`); receber uma parcela `Cancelado` = 409 (`ConflitoException`).
 
 ## Telas
 
-- **`/estoque`** (item **Estoque** no menu, em Gestão Comercial): tabela com Produto, SKU, Unidade e **Saldo**; busca por nome/SKU (mesmo padrão de busca dos outros módulos, sem o painel Filtrar completo — não há status aqui); botão **Nova entrada** abre um drawer (produto por seleção com busca no servidor — reaproveita `SelecaoProduto`, quantidade, motivo opcional); ação **Ver movimentações** por linha abre um drawer com o extrato paginado daquele produto (tipo, quantidade, motivo/origem, data), mais recente primeiro.
-- Saldo negativo (não deveria acontecer dado E2, mas fica visível se acontecer por dado antigo) aparece em vermelho, mesmo padrão da margem negativa em Produtos.
-- Sem alteração visível na tela de Pedidos além do próprio efeito colateral: confirmar sem saldo mostra erro 400 no resumo do pedido (mesmo padrão dos outros erros de confirmar, ex. cliente inativo).
+- **`/contas-receber`** (item **Contas a Receber** no menu, em Gestão Comercial): tabela com Cliente, Pedido nº, Parcela (`X/Y`), Valor, Vencimento, Status (tag: Pendente cinza, **Atrasado vermelho**, Recebido verde, Cancelado cinza riscado) e ação **Marcar como recebido**; filtro por status (Segmented: Todas / Pendentes / Atrasadas / Recebidas / Canceladas) e busca por cliente/nº do pedido.
+- **Confirmar pedido** (tela do pedido, `PedidoPage`): a janela de confirmação hoje é um `Modal.confirm` simples; passa a ter um formulário pequeno com **Número de parcelas** (1 a 12, padrão 1) e **Intervalo entre parcelas (dias)** (padrão 30), enviados no `PATCH /confirmar`.
+- Vencimento formatado em `pt-BR` (`dd/mm/aaaa`, sem hora, já que a coluna é `date`).
 
 ## Commands
 
@@ -86,8 +84,8 @@ Novo `EstoqueController` (`/api/estoque`):
 # Backend (na raiz)
 dotnet build ErpPortfolio.slnx
 dotnet run --project backend/ErpPortfolio.Api --launch-profile http        # API em http://localhost:5065
-dotnet ef migrations add NomeDaMigration --project backend/ErpPortfolio.Api -o Data/Migrations
-dotnet ef database update --project backend/ErpPortfolio.Api
+dotnet ef migrations add NomeDaMigration --project backend/ErpPortfolio.Api --configuration Release -o Data/Migrations
+dotnet ef database update --project backend/ErpPortfolio.Api --configuration Release
 
 # Frontend (em frontend/erp-portfolio-web)
 npm run dev          # http://localhost:5173
@@ -103,16 +101,18 @@ dotnet test backend/ErpPortfolio.Tests
 
 ```
 backend/ErpPortfolio.Api/
-  Models/            EstoqueMovimentacao.cs, TipoMovimentacao.cs
-  DTOs/               EstoqueEntradaDto.cs, EstoqueResumoDto.cs, EstoqueFiltroDto.cs, MovimentacaoRespostaDto.cs
-  Services/          IEstoqueService.cs, EstoqueService.cs
-  Controllers/       EstoqueController.cs
-  Data/Migrations/   <data>_CriacaoTabelaEstoqueMovimentacoes.cs
-  Services/PedidoService.cs        # alterado: Confirmar chama BaixarEstoque, Cancelar chama EstornarEstoque
-backend/ErpPortfolio.Tests/        EstoqueServiceTests.cs (saldo, baixa, estorno, bloqueio)
+  Models/            ParcelaReceber.cs, StatusParcela.cs
+  DTOs/              ParcelaRespostaDto.cs, ParcelaFiltroDto.cs, PedidoConfirmarDto.cs (numeroParcelas, intervaloDias)
+  Services/          IContasReceberService.cs, ContasReceberService.cs
+  Controllers/       ContasReceberController.cs
+  Controllers/PedidosController.cs  # alterado: Confirmar recebe corpo
+  Services/PedidoService.cs         # alterado: Confirmar gera parcelas, Cancelar cancela pendentes
+  Data/Migrations/   <data>_CriacaoTabelaParcelasReceber.cs
+backend/ErpPortfolio.Tests/         ContasReceberCalculoTests.cs (divisão em parcelas, resto na última)
 frontend/erp-portfolio-web/src/
-  api/estoqueApi.ts   hooks/useEstoque.ts   types/estoque.ts   schemas/estoqueEntradaSchema.ts
-  pages/Estoque/EstoqueListaPage.tsx, EntradaEstoqueDrawer.tsx, MovimentacoesDrawer.tsx
+  api/contasReceberApi.ts   hooks/useContasReceber.ts   types/contaReceber.ts
+  pages/ContasReceber/ContasReceberListaPage.tsx
+  pages/Pedidos/PedidoPage.tsx        # alterado: modal de confirmação vira formulário (parcelas, intervalo)
 ```
 
 ## Code style
@@ -121,36 +121,33 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS (nom
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** saldo calculado corretamente a partir de uma lista de movimentações (casos: só entradas, só saídas, misto, saldo zero); confirmar com saldo suficiente gera as saídas certas; confirmar com saldo insuficiente **não grava nada** e retorna erro; cancelar um Confirmado gera as entradas de estorno certas; cancelar um Rascunho não gera nada.
-2. **API ponta a ponta (instância temporária):** entrada manual (201), entrada em produto inativo (400), extrato paginado, confirmar pedido baixa saldo dos itens, confirmar sem saldo suficiente retorna 400 e o pedido continua rascunho (e a checagem foi feita sem gravar nada), cancelar confirmado devolve o saldo, cancelar rascunho não mexe em saldo, listagem de estoque com busca por nome/SKU.
-3. **Tela (Playwright):** lista de estoque com saldo, lançar entrada manual e ver o saldo mudar, abrir extrato e ver a movimentação, tentar confirmar um pedido sem saldo e ver o erro, confirmar com saldo e ver o saldo cair, cancelar confirmado e ver o saldo voltar, celular sem rolagem horizontal.
-4. **Sempre:** `dotnet build` com 0 avisos, `tsc -b` e `oxlint` sem apontamentos; nenhum dado real alterado (cliente, produto, categoria, pedido existentes intactos).
+1. **Unitário (xUnit):** divisão do valor em N parcelas (1, 2, 3, 12 parcelas; valores que não dividem exato — resto na última; soma sempre bate com o total); cálculo do vencimento por parcela.
+2. **API ponta a ponta (instância temporária):** confirmar com 1/3/12 parcelas gera as parcelas certas (valor e vencimento); confirmar sem informar parcelas usa os padrões (1, 30 dias); marcar como recebida (idempotente); marcar uma `Cancelado` como recebida = 409; cancelar o pedido cancela as parcelas `Pendentes` e não mexe nas `Recebidas`; filtro `Atrasado` acha parcela `Pendente` com vencimento passado; busca por cliente/nº do pedido.
+3. **Tela (revisão de código, sem Playwright nesta sessão se a limitação persistir):** formulário de confirmar com parcelas, lista com status/filtro, marcar como recebido atualizando a tela sem F5.
+4. **Sempre:** `dotnet build` com 0 avisos, `tsc -b` e `oxlint` sem apontamentos; nenhum dado real alterado (cliente, produto, categoria, pedido, estoque existentes intactos).
 
 ## Boundaries
 
-- **Sempre:** toda mudança de saldo passa por uma movimentação (nunca um `UPDATE` direto de um campo saldo); checagem de saldo suficiente e gravação da saída na **mesma transação** (E2); cabeçalho em cada arquivo; backup do banco antes de migration; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir.
-- **Perguntar antes:** dependência nova, mudar tabela existente (`pedidos`, `produtos`, etc.), saída manual (perda/ajuste), estoque mínimo/alerta, múltiplos depósitos, qualquer forma de estoque negativo permitido.
-- **Nunca:** gravar saldo como campo direto no produto, deixar confirmar um pedido sem saldo suficiente, excluir uma movimentação (histórico é definitivo, como o pedido), commitar segredos, forçar push.
+- **Sempre:** soma das parcelas de um pedido bate exatamente com `valorTotal`; toda geração/cancelamento de parcela fica na mesma transação do `SaveChangesAsync` de `PedidoService` (como Estoque); cabeçalho em cada arquivo; backup do banco antes de migration; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir (ou já autorizado, como neste módulo).
+- **Perguntar antes:** dependência nova, mudar tabela existente (`pedidos`, `produtos`, `estoque_movimentacoes`), recebimento parcial, juros/multa, editar valor/vencimento de parcela já gerada.
+- **Nunca:** excluir uma parcela, deixar a soma das parcelas divergir do total do pedido, marcar como recebida uma parcela cancelada, commitar segredos, forçar push.
 
 ## Success criteria (testáveis)
 
-Conferidos um a um em 22/09/2026 contra o código final (T10), com `dotnet build -c Release` (0 avisos), `dotnet test` (124/124), `tsc -b` e `oxlint` limpos. Evidência: testes unitários (`EstoqueCalculoTests`, `ModeloEstoqueTests`) e scripts de API ponta a ponta rodados manualmente numa instância temporária (porta 5099), com dados de teste isolados (produtos/clientes `ZZT…`, SKUs `6700000x`) e os dados reais conferidos idênticos ao final de cada rodada.
-
-1. ✅ Saldo de um produto sem nenhuma movimentação é **0** — `GET /estoque` com produto sem movimentação (T4).
-2. ✅ Uma entrada manual de 10 unidades faz o saldo do produto virar **10** — `POST /estoque/entradas` (T5).
-3. ✅ Confirmar um pedido com 1 item de 3 unidades (saldo 10) baixa o saldo para **7**, e gera uma movimentação `Saida` de 3 referenciando o pedido — pedido de 3 unidades confirmado, saldo caiu de 5 para 2 no teste da T6 (mesma lógica, valores do cenário testado).
-4. ✅ Confirmar um pedido cujo item pede mais que o saldo disponível retorna **400** no campo certo, o pedido **continua Rascunho**, e **nenhuma** movimentação é gravada (saldo inalterado) — pedido de 10 unidades com saldo 2 recusado, saldo e extrato inalterados (T6).
-5. ✅ Cancelar um pedido **Confirmado** devolve o saldo (gera `Entrada` de estorno igual à saída original) — saldo voltou de 6 para 10 ao cancelar (T7).
-6. ✅ Cancelar um pedido que ainda estava em **Rascunho** não gera nenhuma movimentação (saldo inalterado) — saldo e extrato (3 linhas) inalterados (T7).
-7. ✅ Entrada manual em produto **inativo** retorna 400 — 400 no campo `ProdutoId` (T5).
-8. ✅ O extrato de um produto lista as movimentações mais recentes primeiro, com tipo, quantidade, motivo/origem e data — conferido em T4, T6 e T7.
-9. ✅ A listagem `/estoque` acha um produto por nome ou por SKU e mostra o saldo correto — busca por SKU testada em T4.
-10. ✅ Nenhum registro real (cliente, produto, categoria, pedido) é alterado pelos testes — contagens conferidas idênticas ao final de cada rodada (T3, T5, T6, T7).
+1. Confirmar um pedido de R$ 100,00 com 3 parcelas gera parcelas de R$ 33,33, R$ 33,33 e **R$ 33,34** (resto na última) — soma exatamente R$ 100,00.
+2. Confirmar sem informar `numeroParcelas`/`intervaloDias` usa os padrões: **1 parcela**, vencimento em **30 dias**.
+3. Vencimento da parcela 2 de um pedido com intervalo de 15 dias é **hoje + 30 dias** (2 × 15).
+4. Marcar uma parcela `Pendente` como recebida grava `dataRecebimento` e muda o status para `Recebido`; marcar de novo não gera erro nem duplica a data.
+5. Marcar uma parcela `Cancelado` como recebida retorna **409**.
+6. Cancelar um pedido `Confirmado` com 3 parcelas (1 já `Recebido`, 2 `Pendentes`) cancela as 2 `Pendentes` e **não mexe** na `Recebido`.
+7. Uma parcela `Pendente` com vencimento ontem aparece com `atrasado: true`; a mesma parcela com vencimento amanhã aparece com `atrasado: false`.
+8. A listagem `/contas-receber` acha por nome do cliente ou número do pedido, e o filtro por status (incluindo `Atrasado`) funciona.
+9. Nenhum registro real (cliente, produto, categoria, pedido, estoque) é alterado pelos testes.
 
 ## Open questions
 
 Nenhuma em aberto — as quatro dúvidas da primeira versão foram fechadas em 22/09/2026 (ver "Decisões já tomadas"). Limites conhecidos, aceitos de propósito:
 
-- **Sem saída manual** (perda/quebra/ajuste): se precisar, é uma extensão natural do mesmo modelo (`TipoMovimentacao` já é um enum) — pergunta antes, ver Boundaries.
-- **Sem estoque mínimo/alerta de ruptura**: pode ser acrescentado depois como um campo em `produtos` + destaque na lista de Estoque.
-- **Sem múltiplos depósitos**: um saldo único por produto, suficiente pro escopo de portfólio.
+- **Sem recebimento parcial**: uma parcela é tudo ou nada; se precisar, é uma extensão do modelo (`valor_recebido` separado de `valor`) — pergunta antes, ver Boundaries.
+- **Sem juros/multa por atraso**: "Atrasado" é só um rótulo visual/filtro, não altera o valor da parcela.
+- **Sem edição de parcela já gerada**: se o número de parcelas escolhido ao confirmar estava errado, hoje não tem como corrigir (limite aceito, como pedido confirmado que só cancela).
