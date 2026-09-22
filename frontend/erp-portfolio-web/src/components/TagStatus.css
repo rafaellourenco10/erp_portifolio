@@ -49,3 +49,8 @@
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.3);
 }
+
+/* Parcela cancelada (TagStatusParcela): cinza riscado, para diferenciar de "Atrasado" (vermelho). */
+.tag-status-riscado {
+  text-decoration: line-through;
+}

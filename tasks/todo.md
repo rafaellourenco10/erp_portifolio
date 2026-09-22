@@ -101,14 +101,15 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 4: Tela
 
-- [ ] **T7: Base do front + lista de contas a receber** (M)
+- [x] **T7: Base do front + lista de contas a receber** (M) — *concluída em 22/09/2026*
   - Descrição: espelho do contrato da API (`types/contaReceber.ts`, `api/contasReceberApi.ts`, `hooks/useContasReceber.ts`), item **Contas a Receber** no menu, rota `/contas-receber`, tabela com Cliente, Pedido, Parcela, Valor, Vencimento, Status e ação **Marcar como recebido**.
   - Aceite:
     - Tag de status: Pendente cinza, Atrasado vermelho, Recebido verde, Cancelado riscado.
     - Filtro por status (Segmented) e busca por cliente/nº do pedido; paginação no servidor.
   - Verificar: `npx tsc -b`, `npx oxlint src`; abrir a tela com parcelas geradas pela API e conferir filtros.
+  - Resultado: `TagStatusParcela` novo (reaproveita as cores de `TagStatus.css`, com uma classe nova `.tag-status-riscado` para Cancelado); data de vencimento formatada sem passar por `Date` (evita erro de fuso numa data sem hora). `tsc -b`, `oxlint` e `npm run build` limpos. **Sem verificação visual nesta sessão** (mesma limitação do módulo Estoque — sem ferramenta de navegador); recomendo teste manual.
   - Dependências: T4 (contrato)
-  - Arquivos: `types/contaReceber.ts`, `api/contasReceberApi.ts`, `hooks/useContasReceber.ts`, `pages/ContasReceber/ContasReceberListaPage.tsx`, `App.tsx`
+  - Arquivos: `types/contaReceber.ts`, `api/contasReceberApi.ts`, `hooks/useContasReceber.ts`, `components/TagStatusParcela.tsx`, `components/TagStatus.css`, `pages/ContasReceber/ContasReceberListaPage.tsx`, `App.tsx`
 
 - [ ] **T8: Modal de confirmar pedido com parcelas** (M)
   - Descrição: substitui o `Modal.confirm` de "Confirmar pedido" por um formulário pequeno (Número de parcelas, Intervalo em dias) que envia `{ numeroParcelas, intervaloDias }` no `PATCH /confirmar`.
