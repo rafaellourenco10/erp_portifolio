@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.4.0
-// Data.......: 21/09/2026
+// Versão.....: 1.5.0
+// Data.......: 22/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
 // -------------------------------------------------------------------------------------
@@ -19,6 +19,7 @@
 //   1.2.0 - 21/09/2026 - Registro do IProdutoService e descrição do Swagger com Produtos.
 //   1.3.0 - 21/09/2026 - Registro do ICategoriaService e Categorias na descrição do Swagger.
 //   1.4.0 - 21/09/2026 - Registro do IPedidoService e Pedidos na descrição do Swagger.
+//   1.5.0 - 22/09/2026 - Registro do IEstoqueService e Estoque na descrição do Swagger.
 // =====================================================================================
 
 using System.Reflection;
@@ -38,6 +39,7 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 builder.Services.AddScoped<IProdutoService, ProdutoService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
+builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -49,7 +51,7 @@ builder.Services.AddSwaggerGen(opcoes =>
     {
         Title = "Ambition ERP API",
         Version = "v1",
-        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias e Pedidos."
+        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Pedidos e Estoque."
     });
 
     var arquivoXml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");

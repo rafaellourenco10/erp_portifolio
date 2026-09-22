@@ -56,13 +56,14 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
 
 ## Fase 3: API
 
-- [ ] **T4: DTOs + consulta (listar com saldo, extrato por produto)** (M)
+- [x] **T4: DTOs + consulta (listar com saldo, extrato por produto)** (M) — *concluída em 22/09/2026*
   - Descrição: `GET /api/estoque?busca=&pagina=&tamanhoPagina=` (produtos com saldo, agregação por `produto_id`) e `GET /api/estoque/{produtoId}/movimentacoes?pagina=&tamanhoPagina=` (extrato, mais recente primeiro).
   - Aceite:
     - `busca` acha por nome **ou** SKU do produto (mesmo padrão de Produtos).
     - Produto sem nenhuma movimentação aparece com saldo **0** (não some da lista).
     - `produtoId` inexistente no extrato retorna 404.
   - Verificar: E2E temporário; `dotnet build` 0 avisos.
+  - Resultado: instância temporária (porta 5099) contra o banco de dev. **Achado corrigido:** a subconsulta de saldo não podia ficar num método de instância separado (`InvalidOperationException` do EF — "client projection contains a reference to a constant expression... through instance method"); movida para inline dentro do `Select`. Verificado: produto sem movimentação = saldo 0; inserir uma `Entrada` de teste (SQL direto) fez o saldo e o extrato baterem; busca por SKU encontrou o produto; produto inexistente no extrato = 404. Dado de teste apagado, `estoque_movimentacoes` volta a 0 linhas. `dotnet test` 124/124, `dotnet build` 0 avisos.
   - Dependências: T3
   - Arquivos: `DTOs/EstoqueResumoDto.cs`, `DTOs/EstoqueFiltroDto.cs`, `DTOs/MovimentacaoRespostaDto.cs`, `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`, `Controllers/EstoqueController.cs`, `Program.cs`
 
