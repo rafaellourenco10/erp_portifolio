@@ -39,18 +39,19 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T1
   - Arquivos: `Models/ParcelaReceber.cs`, `Data/ErpPortfolioDbContext.cs`, `backend/ErpPortfolio.Tests/ModeloParcelaReceberTests.cs`
 
-- [ ] **T3: Migration `CriacaoTabelaParcelasReceber`** (S)
+- [x] **T3: Migration `CriacaoTabelaParcelasReceber`** (S) — *concluída em 22/09/2026*
   - Descrição: gerar a migration, testar num banco descartável (subida e volta) e aplicar no de desenvolvimento **com backup**.
   - Aceite:
     - A migration **só cria** `parcelas_receber`; nada em `pedidos`, `produtos`, `clientes`, `categorias`, `estoque_movimentacoes` muda.
     - `Down` remove só a tabela nova.
   - Verificar: script aplicado e revertido num banco descartável; `dotnet ef database update` no dev; `\d parcelas_receber` conferido; esquema das outras tabelas idêntico.
+  - Resultado: migration com só 1 `CreateTable` + 2 `CreateIndex` (Down: 1 `DropTable`). Banco descartável (restaurado do backup completo): insert válido, `CHECK` de valor 0 recusado, índice único recusando parcela duplicada, FK recusando pedido inexistente, `Down` removendo só a tabela nova. Backup em `.claude/ferramentas-locais/backup_pre_contas_receber_20260922.dump`. Dev: aplicada, contagens de clientes/produtos/categorias idênticas (1/1/2); pedidos (2) e estoque_movimentacoes (2) refletem uso real do Rafael entre sessões, não dados de teste; `parcelas_receber` criada vazia.
   - Dependências: T2
-  - Arquivos: `Data/Migrations/<data>_CriacaoTabelaParcelasReceber.cs`, `.Designer.cs`, `ErpPortfolioDbContextModelSnapshot.cs`
+  - Arquivos: `Data/Migrations/20260922190422_CriacaoTabelaParcelasReceber.cs`, `.Designer.cs`, `ErpPortfolioDbContextModelSnapshot.cs`
 
 ### Checkpoint 2: banco
-- [ ] Tabela criada, esquema das tabelas antigas idêntico, backup feito
-- [ ] Revisão do Rafael antes de seguir
+- [x] Tabela criada, esquema das tabelas antigas idêntico, backup feito
+- [ ] Revisão do Rafael antes de seguir *(dispensada — continuação da autorização geral)*
 
 ---
 
