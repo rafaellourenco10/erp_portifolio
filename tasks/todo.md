@@ -67,15 +67,16 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T3
   - Arquivos: `DTOs/EstoqueResumoDto.cs`, `DTOs/EstoqueFiltroDto.cs`, `DTOs/MovimentacaoRespostaDto.cs`, `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`, `Controllers/EstoqueController.cs`, `Program.cs`
 
-- [ ] **T5: Entrada manual** (S)
+- [x] **T5: Entrada manual** (S) — *concluída em 22/09/2026*
   - Descrição: `POST /api/estoque/entradas` — `{ produtoId, quantidade, motivo? }`, cria uma movimentação `Entrada`.
   - Aceite:
     - 201 com a movimentação criada; saldo do produto sobe na consulta seguinte (T4).
     - Produto inexistente → 404; produto **inativo** → 400 (E4); quantidade ≤ 0 ou fora de `0,001–999.999,999` → 400 (E5).
     - `motivo` opcional, até 200 caracteres.
   - Verificar: E2E temporário; `dotnet test`; `dotnet build` 0 avisos.
+  - Resultado: 7 verificações na instância temporária (porta 5099) com um produto próprio de teste (SKU `67000001`, id apagado ao final): entrada válida com motivo (201, saldo 20), entrada sem motivo (201, `motivo: null`), produto inexistente (404), quantidade 0 (400), quantidade com 4 casas (400), produto inativado depois (400 no campo `ProdutoId`). Dados de teste apagados; contagem real de produtos (1) e `estoque_movimentacoes` (0) confirmadas. `dotnet test` 124/124.
   - Dependências: T4
-  - Arquivos: `DTOs/EstoqueEntradaDto.cs`, `Services/EstoqueService.cs`, `Controllers/EstoqueController.cs`
+  - Arquivos: `DTOs/EstoqueEntradaDto.cs`, `Services/EstoqueService.cs`, `Services/IEstoqueService.cs`, `Controllers/EstoqueController.cs`
 
 - [ ] **T6: Confirmar pedido baixa o estoque** (M)
   - Descrição: `PedidoService.Confirmar` passa a checar saldo de todos os itens e gravar uma `Saida` por item, na mesma transação (E2).

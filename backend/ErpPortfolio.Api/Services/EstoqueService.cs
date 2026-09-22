@@ -1,21 +1,24 @@
 // =====================================================================================
 // Arquivo....: EstoqueService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 22/09/2026
-// Descrição..: Consulta de estoque: listagem de produtos com saldo atual e extrato de
-//              movimentações por produto. O saldo nunca é gravado: é sempre
-//              Σ Entrada − Σ Saída, calculado na consulta (SPEC.md, E1).
+// Descrição..: Consulta de estoque (listagem com saldo, extrato por produto) e entrada
+//              manual. O saldo nunca é gravado: é sempre Σ Entrada − Σ Saída, calculado
+//              na consulta (SPEC.md, E1).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.produtos
 //                - SELECT : listagem (ILIKE em nome ou sku, ORDER BY nome, id, LIMIT/OFFSET)
+//                           e validação do produto na entrada manual (existe e está ativo)
 //              public.estoque_movimentacoes
 //                - SELECT : saldo agregado por produto (subconsulta correlacionada) e
 //                           extrato paginado de um produto (ORDER BY data_movimentacao DESC)
+//                - INSERT : entrada manual (E4)
 // Fontes.....: ErpPortfolioDbContext.Produtos / EstoqueMovimentacoes (EF Core / Npgsql).
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e extrato).
+//   1.1.0 - 22/09/2026 - Entrada manual (RegistrarEntradaAsync).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -79,5 +82,30 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
             .ToListAsync(cancelamento);
 
         return new ResultadoPaginadoDto<MovimentacaoRespostaDto>(itens, filtro.Pagina, filtro.TamanhoPagina, totalItens);
+    }
+
+    public async Task<MovimentacaoRespostaDto?> RegistrarEntradaAsync(EstoqueEntradaDto dados, CancellationToken cancelamento)
+    {
+        var produto = await contexto.Produtos.FirstOrDefaultAsync(p => p.Id == dados.ProdutoId, cancelamento);
+        if (produto is null)
+            return null;
+
+        if (!produto.Ativo)
+            throw new DadoInvalidoException(nameof(EstoqueEntradaDto.ProdutoId), $"O produto \"{produto.Nome}\" está inativo.");
+
+        var movimentacao = new EstoqueMovimentacao
+        {
+            ProdutoId = produto.Id,
+            Tipo = TipoMovimentacao.Entrada,
+            Quantidade = dados.Quantidade!.Value,
+            Motivo = dados.Motivo,
+            DataMovimentacao = DateTime.UtcNow
+        };
+
+        contexto.EstoqueMovimentacoes.Add(movimentacao);
+        await contexto.SaveChangesAsync(cancelamento);
+
+        return new MovimentacaoRespostaDto(
+            movimentacao.Tipo, movimentacao.Quantidade, movimentacao.Motivo, movimentacao.PedidoId, movimentacao.DataMovimentacao);
     }
 }
