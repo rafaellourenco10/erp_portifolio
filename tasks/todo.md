@@ -148,16 +148,17 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
 
 ## Fase 5: Fechamento
 
-- [ ] **T11: README, graphify e verificação final** (S)
+- [x] **T11: README, graphify e verificação final** (S) — *concluída em 22/09/2026*
   - Descrição: documentar o módulo, regravar o grafo e conferir os 10 critérios da spec.
   - Aceite:
     - README com a seção "etapa 4 — Estoque" (funcionalidades, endpoints, tabela do banco, decisões técnicas); `SPEC.md` marcada como implementada; roadmap da etapa 4 atualizado (Login passa a etapa 5).
     - Graphify atualizado sem perder conceitos/hiperarestas.
     - Os **10 critérios de sucesso** conferidos um a um; registros reais intactos.
   - Verificar: `dotnet build`, `dotnet test`, `tsc`, `oxlint`, E2E API e tela completos, `git status` revisado (sem segredos).
+  - Resultado: README ganhou a seção "etapa 4 — Estoque" (funcionalidades, endpoints, tabela `estoque_movimentacoes`, 5 decisões técnicas novas, estrutura de pastas atualizada, seção "Testes realizados" com a ressalva de UI), roadmap com Estoque na etapa 4 e Login movido pra etapa 5, "Próximas etapas" atualizada. `SPEC.md` marcada como implementada, 10 critérios conferidos com evidência apontada. Graphify atualizado 2x (AST-only, `python -m graphify update .`) capturando back-end (T1-T7) e front-end (T8-T10); backup automático antes de cada rodada em `graphify-out/2026-09-22/`. Verificação final: `dotnet build -c Release` 0 avisos, `dotnet test` 124/124, `tsc -b` e `oxlint` limpos, `git status` revisado (só `README.md`/`SPEC.md` modificados, sem segredos). **Ressalva que carrega pra fora desta tarefa:** a tela não foi testada visualmente nesta sessão (sem ferramenta de navegador) — registrado no README, no SPEC e no todo.md; recomendo um teste manual do Rafael antes de considerar a etapa 4 tão fechada quanto Pedidos.
   - Dependências: T10
   - Arquivos: `README.md`, `SPEC.md`
 
 ### Checkpoint 5: pronto
-- [ ] Todos os critérios da spec atendidos
-- [ ] Commitado a pedido do Rafael
+- [x] Todos os critérios da spec atendidos (com a ressalva de UI documentada acima)
+- [x] Commitado (autorização geral do Rafael para seguir e commitar sem precisar pedir a cada tarefa)

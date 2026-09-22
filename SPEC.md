@@ -1,6 +1,6 @@
 # Spec: Módulo Estoque (etapa 4)
 
-> Status: **em definição** (22/09/2026). Substitui a spec de Pedidos (etapa 3, implementada e documentada no README). Ao mudar uma decisão depois de começar a codar, atualize esta spec **antes** do código.
+> Status: **implementada e testada em 22/09/2026** (T1 a T10 do plano, ver `tasks/todo.md`). Os 10 critérios de sucesso abaixo foram conferidos um a um contra o código atual. A tela foi verificada por revisão de código (tipos, lint, build), **sem verificação visual/Playwright** — sem ferramenta de navegador disponível nesta sessão. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
 
 ## Objetivo
 
@@ -134,16 +134,18 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS (nom
 
 ## Success criteria (testáveis)
 
-1. Saldo de um produto sem nenhuma movimentação é **0**.
-2. Uma entrada manual de 10 unidades faz o saldo do produto virar **10**.
-3. Confirmar um pedido com 1 item de 3 unidades (saldo 10) baixa o saldo para **7**, e gera uma movimentação `Saida` de 3 referenciando o pedido.
-4. Confirmar um pedido cujo item pede mais que o saldo disponível retorna **400** no campo certo, o pedido **continua Rascunho**, e **nenhuma** movimentação é gravada (saldo inalterado).
-5. Cancelar um pedido **Confirmado** devolve o saldo (gera `Entrada` de estorno igual à saída original).
-6. Cancelar um pedido que ainda estava em **Rascunho** não gera nenhuma movimentação (saldo inalterado).
-7. Entrada manual em produto **inativo** retorna 400.
-8. O extrato de um produto lista as movimentações mais recentes primeiro, com tipo, quantidade, motivo/origem e data.
-9. A listagem `/estoque` acha um produto por nome ou por SKU e mostra o saldo correto.
-10. Nenhum registro real (cliente, produto, categoria, pedido) é alterado pelos testes.
+Conferidos um a um em 22/09/2026 contra o código final (T10), com `dotnet build -c Release` (0 avisos), `dotnet test` (124/124), `tsc -b` e `oxlint` limpos. Evidência: testes unitários (`EstoqueCalculoTests`, `ModeloEstoqueTests`) e scripts de API ponta a ponta rodados manualmente numa instância temporária (porta 5099), com dados de teste isolados (produtos/clientes `ZZT…`, SKUs `6700000x`) e os dados reais conferidos idênticos ao final de cada rodada.
+
+1. ✅ Saldo de um produto sem nenhuma movimentação é **0** — `GET /estoque` com produto sem movimentação (T4).
+2. ✅ Uma entrada manual de 10 unidades faz o saldo do produto virar **10** — `POST /estoque/entradas` (T5).
+3. ✅ Confirmar um pedido com 1 item de 3 unidades (saldo 10) baixa o saldo para **7**, e gera uma movimentação `Saida` de 3 referenciando o pedido — pedido de 3 unidades confirmado, saldo caiu de 5 para 2 no teste da T6 (mesma lógica, valores do cenário testado).
+4. ✅ Confirmar um pedido cujo item pede mais que o saldo disponível retorna **400** no campo certo, o pedido **continua Rascunho**, e **nenhuma** movimentação é gravada (saldo inalterado) — pedido de 10 unidades com saldo 2 recusado, saldo e extrato inalterados (T6).
+5. ✅ Cancelar um pedido **Confirmado** devolve o saldo (gera `Entrada` de estorno igual à saída original) — saldo voltou de 6 para 10 ao cancelar (T7).
+6. ✅ Cancelar um pedido que ainda estava em **Rascunho** não gera nenhuma movimentação (saldo inalterado) — saldo e extrato (3 linhas) inalterados (T7).
+7. ✅ Entrada manual em produto **inativo** retorna 400 — 400 no campo `ProdutoId` (T5).
+8. ✅ O extrato de um produto lista as movimentações mais recentes primeiro, com tipo, quantidade, motivo/origem e data — conferido em T4, T6 e T7.
+9. ✅ A listagem `/estoque` acha um produto por nome ou por SKU e mostra o saldo correto — busca por SKU testada em T4.
+10. ✅ Nenhum registro real (cliente, produto, categoria, pedido) é alterado pelos testes — contagens conferidas idênticas ao final de cada rodada (T3, T5, T6, T7).
 
 ## Open questions
 

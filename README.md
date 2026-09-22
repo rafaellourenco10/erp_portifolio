@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2) e **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado.
+O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, e **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos.
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -10,7 +10,8 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 | 2 | Produtos (+ navegação por rotas no menu) | Concluída e testada (21/09/2026) |
 | 2.1 | Categorias (cadastro próprio, escolhido por seleção no produto) | Concluída e testada (21/09/2026) |
 | 3 | Pedidos (cliente, itens, desconto, total calculado, confirmar/cancelar) | Concluída e testada (21/09/2026) |
-| 4+ | Login | Planejada |
+| 4 | Estoque (movimentações, entrada manual, baixa/estorno automáticos) | Back-end testado de ponta a ponta; tela não verificada visualmente (22/09/2026) |
+| 5+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -81,6 +82,20 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 - O total é recalculado **na hora** enquanto o pedido é montado (aritmética inteira no front, para não errar arredondamento); ao salvar, vale sempre o valor devolvido pelo servidor
 - Lista com filtro por número ou nome do cliente e por status, no mesmo padrão **Filtrar** dos outros módulos
 - No celular, cada item do pedido vira um **cartão** (quantidade, desconto, preço e subtotal juntos); em tela larga é uma tabela
+
+---
+
+## Funcionalidades (etapa 4 — Estoque)
+
+- Saldo de cada produto é sempre **calculado** a partir de um histórico de **movimentações** (entrada/saída), nunca gravado direto
+- Tela **Estoque** (Gestão Comercial): tabela com produto, SKU, unidade e **saldo**, busca por nome ou SKU
+- **Nova entrada** (compra/ajuste): produto (seleção com busca no servidor), quantidade e motivo em texto livre, opcional
+- **Ver movimentações**: extrato paginado de um produto, mais recente primeiro, com tipo, quantidade, motivo/origem e data
+- **Confirmar um pedido baixa o estoque** automaticamente: uma saída por item, com a quantidade do item
+- Confirmar um pedido **sem saldo suficiente é recusado** (400 no campo, como cliente/produto inativo); nenhuma movimentação é gravada, nem a dos itens que tinham saldo
+- **Cancelar um pedido que estava Confirmado devolve o estoque** automaticamente (uma entrada de estorno por item); cancelar um rascunho que nunca foi confirmado não mexe em estoque
+- Saldo negativo (não deveria acontecer, dado o bloqueio acima) aparece em vermelho na lista, mesmo padrão da margem negativa em Produtos
+- Fora do escopo por enquanto: fornecedores, pedido de compra, saída manual (perda/ajuste), múltiplos depósitos, estoque mínimo/alerta
 
 ## Stack e versões
 
@@ -165,14 +180,17 @@ erp_portifolio/
 │       │   ├── ClientesController.cs        # endpoints REST de clientes
 │       │   ├── ProdutosController.cs        # endpoints REST de produtos
 │       │   ├── CategoriasController.cs      # endpoints REST de categorias
-│       │   └── PedidosController.cs         # endpoints REST de pedidos
+│       │   ├── PedidosController.cs         # endpoints REST de pedidos
+│       │   └── EstoqueController.cs         # endpoints REST de estoque
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
 │       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
 │       │   ├── Categoria.cs                 # entidade
 │       │   ├── Pedido.cs / PedidoItem.cs    # entidades (itens ligados por FK, preco congelado)
 │       │   ├── StatusPedido.cs              # enum: Rascunho, Confirmado, Cancelado
-│       │   └── FormaPagamento.cs            # enum: Dinheiro, Pix, Boleto, Cartao
+│       │   ├── FormaPagamento.cs            # enum: Dinheiro, Pix, Boleto, Cartao
+│       │   ├── EstoqueMovimentacao.cs       # entidade (FK produto e pedido opcional)
+│       │   └── TipoMovimentacao.cs          # enum: Entrada, Saida
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
 │       │   ├── ClienteAtualizacaoDto.cs     # entrada do PUT (+ campo ativo opcional)
@@ -186,6 +204,10 @@ erp_portifolio/
 │       │   ├── PedidoResumoDto.cs           # linha da listagem (sem itens)
 │       │   ├── PedidoFiltroDto.cs           # query string da listagem
 │       │   ├── ResultadoPaginadoDto.cs      # envelope genérico de paginação
+│       │   ├── EstoqueEntradaDto.cs         # entrada do POST /estoque/entradas
+│       │   ├── EstoqueResumoDto.cs          # linha da listagem (produto + saldo)
+│       │   ├── EstoqueFiltroDto.cs          # query string da listagem/extrato
+│       │   ├── MovimentacaoRespostaDto.cs   # linha do extrato de um produto
 │       │   └── Validacoes/
 │       │       ├── DocumentoValidador.cs    # regra de CPF/CNPJ
 │       │       ├── CpfCnpjAttribute.cs      # atributo [CpfCnpj]
@@ -202,7 +224,10 @@ erp_portifolio/
 │       │   ├── CalculoPedido.cs             # subtotal/total em decimal, funcao pura (sem banco)
 │       │   ├── TransicoesPedido.cs          # transicoes de status validas, funcao pura
 │       │   ├── ConflitoException.cs         # vira HTTP 409
-│       │   └── DadoInvalidoException.cs     # campo inválido que só o banco sabe (ex.: categoria inativa) -> HTTP 400
+│       │   ├── DadoInvalidoException.cs     # campo inválido que só o banco sabe (ex.: categoria inativa) -> HTTP 400
+│       │   ├── IEstoqueService.cs
+│       │   ├── EstoqueService.cs            # saldo, extrato, entrada manual, baixa/estorno (usados pelo PedidoService)
+│       │   └── EstoqueCalculo.cs            # saldo = Σ Entrada − Σ Saída, funcao pura (sem banco)
 │       ├── Data/
 │       │   ├── ErpPortfolioDbContext.cs     # mapeamento EF Core (snake_case)
 │       │   └── Migrations/                  # migrations geradas pelo EF Core
@@ -232,11 +257,13 @@ erp_portifolio/
             │   ├── axiosClient.ts           # instância do Axios + leitura de ProblemDetails
             │   ├── clientesApi.ts           # chamadas da API de clientes
             │   ├── produtosApi.ts           # chamadas da API de produtos
-            │   └── categoriasApi.ts         # chamadas da API de categorias
+            │   ├── categoriasApi.ts         # chamadas da API de categorias
+            │   └── estoqueApi.ts            # chamadas da API de estoque
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
             │   ├── useProdutos.ts
-            │   └── useCategorias.ts         # inclui as categorias ativas do seletor de produtos
+            │   ├── useCategorias.ts         # inclui as categorias ativas do seletor de produtos
+            │   └── useEstoque.ts            # lista com saldo, extrato por produto, entrada manual
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
             │   ├── ClienteFormDrawer.tsx    # painel lateral de inclusão/edição
@@ -252,16 +279,22 @@ erp_portifolio/
             │   ├── PedidoPage.tsx           # formulário: cliente, itens, desconto, resumo, ações
             │   ├── ItensPedidoTabela.tsx    # tabela de itens (tela larga) / cartões (celular)
             │   └── pedido.css               # estilos da página do pedido
+            ├── pages/Estoque/
+            │   ├── EstoqueListaPage.tsx     # busca, tabela com saldo, paginação, ações
+            │   ├── EntradaEstoqueDrawer.tsx # painel de nova entrada manual (produto, quantidade, motivo)
+            │   └── MovimentacoesDrawer.tsx  # painel de extrato paginado de um produto
             ├── schemas/
             │   ├── clienteSchema.ts         # schema Zod do formulário de cliente
             │   ├── produtoSchema.ts         # schema Zod do formulário de produto
             │   ├── categoriaSchema.ts       # schema Zod do formulário de categoria
-            │   └── pedidoSchema.ts          # schema Zod do formulário de pedido + conversões form/API
+            │   ├── pedidoSchema.ts          # schema Zod do formulário de pedido + conversões form/API
+            │   └── estoqueEntradaSchema.ts  # schema Zod do formulário de entrada de estoque
             ├── types/
             │   ├── cliente.ts               # tipos (espelham os DTOs)
             │   ├── produto.ts
             │   ├── categoria.ts
             │   ├── pedido.ts
+            │   ├── estoque.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
             ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx  # seleção com busca no servidor (usadas no pedido)
             ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado
@@ -270,7 +303,7 @@ erp_portifolio/
             ├── api/pedidosApi.ts             # chamadas da API de pedidos
             └── utils/
                 ├── documento.ts             # validação e máscara de CPF/CNPJ
-                ├── moeda.ts                 # formatação em reais e cálculo de margem
+                ├── moeda.ts                 # formatação em reais/percentual/quantidade e cálculo de margem
                 ├── ufs.ts                   # 27 UFs com nome, busca sem acentos e ordenação
                 └── calculoPedido.ts         # subtotal/total em aritmética inteira (BigInt), mesma fórmula do back
 ```
@@ -426,6 +459,18 @@ Pedidos:
 | PATCH | `/pedidos/{id}/cancelar` | Rascunho ou Confirmado → Cancelado; cancelar duas vezes também retorna 204 | 204, 404 |
 
 Regras de validação de Pedido (API e tela): 1 a 100 itens, sem produto repetido (soma-se a quantidade na tela antes de enviar); quantidade de 0,001 a 999.999,999 (até 3 casas; `UN`/`CX` só inteiro); descontos (item e pedido) de 0 a 100 com até 2 casas; total até R$ 9.999.999.999,99 (acima disso, 400 no campo `Itens`); cliente e produtos precisam estar **ativos** ao criar o pedido ou adicionar/trocar um item; confirmar exige forma de pagamento preenchida e cliente/produtos ainda ativos. O preço de cada item é copiado do produto no momento em que é adicionado e nunca muda depois, mesmo que o preço do produto mude ou o cliente/produto seja inativado.
+
+Estoque:
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/estoque?busca=&pagina=1&tamanhoPagina=10` | Lista paginada de produtos com saldo atual; `busca` procura no nome **ou** no SKU | 200, 400 |
+| GET | `/estoque/{produtoId}/movimentacoes?pagina=1&tamanhoPagina=10` | Extrato paginado do produto, mais recente primeiro | 200, 404 |
+| POST | `/estoque/entradas` | Lança uma entrada manual (`produtoId`, `quantidade`, `motivo` opcional) | 201, 400, 404 |
+
+`PATCH /pedidos/{id}/confirmar` e `/cancelar` não ganharam rota nova: por dentro, confirmar chama a baixa de estoque (uma saída por item, checando saldo de **todos** os itens antes de gravar qualquer coisa) e cancelar um pedido que estava Confirmado chama o estorno (uma entrada por item). Estoque insuficiente ao confirmar retorna 400 no campo `Itens`, no mesmo formato dos outros erros de confirmar, e o pedido continua Rascunho.
+
+Regras de validação de Estoque (API): quantidade de 0,001 a 999.999,999 (até 3 casas), igual a Pedidos; motivo opcional até 200 caracteres; entrada manual exige produto **ativo** (senão 400 no campo `ProdutoId`); saldo é sempre `Σ Entrada − Σ Saída` das movimentações do produto, nunca uma coluna gravada.
 
 ### Filtros da listagem
 
@@ -607,6 +652,20 @@ Tabela `public.pedido_itens`:
 
 Migration: `20260921193153_CriacaoTabelasPedidos` (só cria as duas tabelas nova; não altera `clientes`, `produtos` nem `categorias`).
 
+Tabela `public.estoque_movimentacoes`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_estoque_movimentacoes`, identity (generated always) |
+| `produto_id` | integer | FK `fk_estoque_movimentacoes_produtos` → `produtos.id` (restrict), índice `ix_estoque_movimentacoes_produto_id` |
+| `tipo` | varchar(20) | `Entrada` ou `Saida` (gravado como texto) |
+| `quantidade` | numeric(12,3) | `CHECK` > 0; o `tipo` é que define se soma ou subtrai do saldo |
+| `motivo` | varchar(200) | opcional; automático nas movimentações geradas por pedido (`"Venda pedido #N"` / `"Estorno cancelamento pedido #N"`) |
+| `pedido_id` | integer | FK `fk_estoque_movimentacoes_pedidos` → `pedidos.id` (restrict), opcional (nulo em entrada manual), índice `ix_estoque_movimentacoes_pedido_id` |
+| `data_movimentacao` | timestamptz | UTC, padrão `now()`, índice `ix_estoque_movimentacoes_data_movimentacao` |
+
+O saldo de um produto **não é gravado**: é sempre `Σ Entrada − Σ Saída` das suas movimentações, calculado na consulta (subconsulta agregada por `produto_id`). Migration: `20260922120855_CriacaoTabelaEstoqueMovimentacoes` (só cria essa tabela; não altera `pedidos`, `produtos`, `clientes` nem `categorias`).
+
 ---
 
 ## Dados de teste
@@ -679,6 +738,11 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Índice único `(pedido_id, produto_id)` além da checagem no serviço | A checagem prévia dá a mensagem amigável; o índice cobre duas gravações simultâneas do mesmo produto no mesmo pedido. |
 | Item do pedido em tabela (telas largas) e em cartão empilhado (< 768 px) | A tabela de 6 colunas exigia rolagem interna e escondia preço/desconto/subtotal no celular; o cartão mostra tudo de uma vez. |
 | Pedido nunca é excluído, só cancelado (cancelar é idempotente) | Preserva o histórico de vendas; cancelar um pedido já cancelado retorna sucesso (204) porque o estado desejado já é o atual. |
+| Estoque em **histórico de movimentações**, não um campo `saldo` no produto | Dá rastreabilidade (o que entrou, o que saiu, por quê); o saldo é sempre a soma, nunca diverge de um campo gravado à parte. |
+| Confirmar um pedido **confere o saldo de todos os itens antes de gravar qualquer movimentação** | Se um item não tiver saldo, nenhum outro item do mesmo pedido é baixado (nem os que tinham saldo) — tudo ou nada. |
+| Baixa e estorno de estoque **não chamam `SaveChanges` sozinhos**; ficam na mesma transação do `SaveChangesAsync` que o `PedidoService` já fazia | Confirmar/cancelar o pedido e mexer no estoque acontecem atomicamente, sem transação explícita adicional. |
+| Cancelar só estorna se o pedido **estava Confirmado** antes de cancelar | Um rascunho nunca baixou estoque, então cancelá-lo não deve gerar uma entrada de estorno indevida. |
+| Entrada manual **sem** cadastro de fornecedor | Fora do escopo por enquanto; o campo motivo (texto livre) cobre a rastreabilidade básica de uma compra. |
 
 ---
 
@@ -786,6 +850,25 @@ Backend testado com 105 testes unitários (xUnit, `backend/ErpPortfolio.Tests`) 
 
 Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (105 aprovados), `tsc -b` sem erros e `oxlint` sem apontamentos.
 
+### Estoque (22/09/2026)
+
+Back-end testado com 5 testes unitários novos de cálculo de saldo, 14 de modelo (mapeamento EF), e ponta a ponta numa API temporária (porta 5099), com cliente/produtos de teste (`ZZT…`, SKUs `6700000x`) apagados ao final; dados reais conferidos idênticos antes e depois.
+
+| Verificação | Resultado |
+|---|---|
+| Testes unitários: saldo (lista vazia, só entradas, só saídas, misto, negativo), mapeamento EF (colunas, FKs, índices, CHECK) | ✅ 124/124 (total do projeto) |
+| Migration num banco descartável: insert válido, `CHECK` de quantidade rejeitando 0, FK rejeitando produto inexistente, `Down` removendo só a tabela nova | ✅ |
+| Migration no banco de desenvolvimento (com backup antes): contagens de clientes/produtos/categorias/pedidos idênticas antes e depois | ✅ |
+| Consulta: saldo agregado corretamente (produto sem movimentação = 0), busca por nome/SKU, extrato paginado mais recente primeiro, produto inexistente no extrato = 404 | ✅ |
+| Entrada manual: 201 com motivo, 201 sem motivo, produto inexistente = 404, produto inativo = 400 no campo, quantidade 0 ou com 4 casas = 400 | ✅ |
+| Confirmar pedido: saldo suficiente baixa exatamente a quantidade do item; saldo insuficiente recusa com 400 no campo `Itens`, pedido continua Rascunho e nenhuma movimentação é gravada; caso limite (saldo = quantidade pedida) confirma normalmente | ✅ |
+| Cancelar pedido: cancelar um Confirmado devolve o saldo (estorno); cancelar um Rascunho que nunca foi confirmado não gera movimentação; cancelar duas vezes não duplica o estorno | ✅ |
+| Nenhum registro real (cliente, produto, categoria, pedido) alterado pelos testes | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (124 aprovados), `tsc -b` sem erros e `oxlint` sem apontamentos, `npm run build` sem erros.
+
+**Limitação desta rodada:** sem ferramenta de navegador/Playwright disponível na sessão em que o módulo foi construído, a tela (lista, drawer de entrada, drawer de extrato, layout no celular) **não foi verificada visualmente** — só o back-end foi testado de ponta a ponta contra a API real. O código da tela segue os mesmos padrões (componentes, responsividade) já comprovados nos módulos anteriores, mas recomenda-se um teste manual antes de considerar a etapa 4 totalmente fechada.
+
 ---
 
 ## Padrões do projeto
@@ -874,8 +957,10 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Filtro por **categoria** na lista de Produtos e atalho "Nova categoria" dentro do seletor do formulário
 - Filtro por **cliente** e por **faixa de data** na lista de Pedidos
 - Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
-- Contas a receber e controle de estoque, a partir dos pedidos confirmados
-- Mover `clientes.css` (classes usadas também por Produtos, Categorias e Pedidos) para um arquivo compartilhado
+- Contas a receber, a partir dos pedidos confirmados
+- Verificação visual/Playwright da tela de Estoque (lista, drawers, celular) — não feita na sessão que construiu o módulo
+- Saída manual de estoque (perda/quebra/ajuste); fornecedores e pedido de compra; estoque mínimo/alerta de ruptura
+- Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos e Estoque) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**
-- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos já tem os 105 testes unitários e os scripts de ponta a ponta)
+- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos e Estoque já têm testes unitários e scripts de ponta a ponta)
