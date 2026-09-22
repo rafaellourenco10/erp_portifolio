@@ -1,10 +1,11 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.3.0
-// Data.......: 21/09/2026
+// Versão.....: 1.4.0
+// Data.......: 22/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
-//              aceita preço nem total vindos do cliente.
+//              aceita preço nem total vindos do cliente. Confirmar baixa o estoque dos
+//              itens (E2) e cancelar um pedido que estava Confirmado devolve (E3).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.pedidos, public.pedido_itens
@@ -16,13 +17,19 @@
 //                - UPDATE : edição do rascunho (cabeçalho, valor_total e itens existentes)
 //                - INSERT / DELETE em pedido_itens: itens novos e itens removidos na edição
 //                - UPDATE : status (Rascunho -> Confirmado; Rascunho/Confirmado -> Cancelado)
+//              public.estoque_movimentacoes (indiretamente, via IEstoqueService)
+//                - INSERT : Saída por item ao confirmar; Entrada de estorno por item ao
+//                           cancelar um pedido que estava Confirmado
 // Fontes.....: ErpPortfolioDbContext.Pedidos / PedidoItens / Clientes / Produtos.
+//              IEstoqueService.BaixarAsync / Estornar (não chamam SaveChanges: ficam na
+//              mesma transação do SaveChangesAsync deste serviço).
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo (criar e obter).
 //   1.1.0 - 21/09/2026 - Listagem paginada com busca e filtro de status.
 //   1.2.0 - 21/09/2026 - Edição do rascunho (PUT) com atualização dos itens no lugar.
 //   1.3.0 - 21/09/2026 - Confirmar (R6) e cancelar (R7, idempotente).
+//   1.4.0 - 22/09/2026 - Confirmar baixa estoque (E2); cancelar de Confirmado estorna (E3).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -32,7 +39,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ErpPortfolio.Api.Services;
 
-public class PedidoService(ErpPortfolioDbContext contexto) : IPedidoService
+public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoqueService) : IPedidoService
 {
     private const string CampoItens = "Itens";
 
@@ -188,6 +195,10 @@ public class PedidoService(ErpPortfolioDbContext contexto) : IPedidoService
         if (inativos.Count > 0)
             throw new DadoInvalidoException(CampoItens, $"Produto(s) inativo(s) no pedido: {string.Join(", ", inativos)}.");
 
+        // E2: confere saldo de todos os itens e enfileira as Saídas; se faltar saldo em algum item, nada é
+        // gravado (nem aqui nem no SaveChanges abaixo, que ainda não foi chamado).
+        await estoqueService.BaixarAsync(pedido.Id, pedido.Itens, cancelamento);
+
         pedido.Status = StatusPedido.Confirmado;
         await contexto.SaveChangesAsync(cancelamento);
 
@@ -196,7 +207,7 @@ public class PedidoService(ErpPortfolioDbContext contexto) : IPedidoService
 
     public async Task<bool> CancelarAsync(int id, CancellationToken cancelamento)
     {
-        var pedido = await contexto.Pedidos.FirstOrDefaultAsync(p => p.Id == id, cancelamento);
+        var pedido = await contexto.Pedidos.Include(p => p.Itens).FirstOrDefaultAsync(p => p.Id == id, cancelamento);
         if (pedido is null)
             return false;
 
@@ -206,6 +217,10 @@ public class PedidoService(ErpPortfolioDbContext contexto) : IPedidoService
 
         if (!TransicoesPedido.PodeCancelar(pedido.Status))
             throw new ConflitoException($"O pedido {id} está {pedido.Status} e não pode ser cancelado.");
+
+        // E3: só devolve estoque se o pedido JÁ TINHA baixado (estava Confirmado); um rascunho cancelado nunca baixou.
+        if (pedido.Status == StatusPedido.Confirmado)
+            estoqueService.Estornar(pedido.Id, pedido.Itens);
 
         pedido.Status = StatusPedido.Cancelado;
         await contexto.SaveChangesAsync(cancelamento);

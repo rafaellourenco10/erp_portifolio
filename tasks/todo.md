@@ -78,15 +78,16 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T4
   - Arquivos: `DTOs/EstoqueEntradaDto.cs`, `Services/EstoqueService.cs`, `Services/IEstoqueService.cs`, `Controllers/EstoqueController.cs`
 
-- [ ] **T6: Confirmar pedido baixa o estoque** (M)
+- [x] **T6: Confirmar pedido baixa o estoque** (M) — *concluída em 22/09/2026*
   - Descrição: `PedidoService.Confirmar` passa a checar saldo de todos os itens e gravar uma `Saida` por item, na mesma transação (E2).
   - Aceite:
     - Confirmar com saldo suficiente em todos os itens: saldo de cada produto cai exatamente a quantidade do item; movimentação com `pedidoId` e motivo `"Venda pedido #N"`.
     - Confirmar com **qualquer** item sem saldo suficiente: 400 no campo `Itens` (ou equivalente), pedido **continua Rascunho**, **nenhuma** movimentação é gravada (nem dos itens que tinham saldo).
     - As outras validações de confirmar (forma de pagamento, cliente/produto ativo — R6 de Pedidos) continuam valendo.
   - Verificar: E2E temporário (caso com saldo, caso sem saldo, caso limite exato); `dotnet test`; `dotnet build` 0 avisos.
+  - Resultado: cliente e produto de teste isolados (SKU `67000002`) na instância temporária (porta 5099). Entrada de 5, pedido de 3 confirmado (saldo 5→2, extrato com Saída "Venda pedido #144"), pedido de 10 recusado (400 "Estoque insuficiente: ... saldo 2,000, pedido pede 10,000", pedido continuou Rascunho, saldo e extrato inalterados), pedido editado para exatamente 2 (o saldo restante) confirmou normalmente (saldo foi a 0). Dados de teste apagados (clientes, produtos, pedidos e estoque_movimentacoes reais intactos). `dotnet test` 124/124, `dotnet build` 0 avisos. `BaixarAsync`/`Estornar` não chamam `SaveChanges`: ficam na mesma transação do `SaveChangesAsync` já existente em `PedidoService`.
   - Dependências: T5
-  - Arquivos: `Services/PedidoService.cs`, `Services/EstoqueService.cs` (método `Baixar`)
+  - Arquivos: `Services/PedidoService.cs`, `Services/EstoqueService.cs`, `Services/IEstoqueService.cs`
 
 - [ ] **T7: Cancelar pedido Confirmado devolve o estoque** (S)
   - Descrição: `PedidoService.Cancelar` passa a gerar uma `Entrada` de estorno por item **só quando** o status antes do cancelamento era `Confirmado` (E3).
