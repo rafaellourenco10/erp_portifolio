@@ -89,21 +89,22 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx` · `dotnet test backend/ErpPor
   - Dependências: T5
   - Arquivos: `Services/PedidoService.cs`, `Services/EstoqueService.cs`, `Services/IEstoqueService.cs`
 
-- [ ] **T7: Cancelar pedido Confirmado devolve o estoque** (S)
+- [x] **T7: Cancelar pedido Confirmado devolve o estoque** (S) — *concluída em 22/09/2026*
   - Descrição: `PedidoService.Cancelar` passa a gerar uma `Entrada` de estorno por item **só quando** o status antes do cancelamento era `Confirmado` (E3).
   - Aceite:
     - Cancelar um `Confirmado`: saldo de cada produto volta a subir a quantidade do item; motivo `"Estorno cancelamento pedido #N"`.
     - Cancelar um `Rascunho` (nunca confirmado): **nenhuma** movimentação gerada, saldo inalterado.
     - Cancelar duas vezes continua idempotente (204, sem gerar estorno duplicado).
   - Verificar: E2E temporário (cancelar confirmado, cancelar rascunho, cancelar duas vezes); `dotnet test`; `dotnet build` 0 avisos.
+  - Resultado: implementada junto com a T6 (mesmo arquivo/commit anterior); esta tarefa cobriu a verificação. Cliente/produto de teste isolados (SKU `67000003`): entrada de 10, pedido de 4 confirmado (saldo 6), cancelado (saldo volta a 10, extrato com "Estorno cancelamento pedido #146"), cancelado de novo (204, saldo continua 10, não duplicou), pedido rascunho nunca confirmado cancelado (204, saldo continua 10, extrato continua com só 3 linhas). Dados de teste apagados; reais intactos. `dotnet test` 124/124.
   - Dependências: T6
-  - Arquivos: `Services/PedidoService.cs`, `Services/EstoqueService.cs` (método `Estornar`)
+  - Arquivos: `Services/PedidoService.cs`, `Services/EstoqueService.cs`, `Services/IEstoqueService.cs`
 
 ### Checkpoint 3: API pronta
-- [ ] Critérios 1 a 7 da spec verificados por E2E na API real (instância temporária)
-- [ ] `dotnet test` verde, `dotnet build` sem avisos
-- [ ] Dados reais (cliente, produto, categorias, pedidos) intactos; dados de teste apagados
-- [ ] Revisão do Rafael antes de começar a tela
+- [x] Critérios 1 a 7 da spec verificados por E2E na API real (instância temporária)
+- [x] `dotnet test` verde, `dotnet build` sem avisos
+- [x] Dados reais (cliente, produto, categorias, pedidos) intactos; dados de teste apagados
+- [ ] Revisão do Rafael antes de começar a tela *(dispensada — autorização geral para seguir sem parar)*
 
 ---
 
