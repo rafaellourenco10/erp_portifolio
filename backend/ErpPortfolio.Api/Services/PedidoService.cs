@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.5.0
+// Versão.....: 1.6.0
 // Data.......: 22/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
@@ -23,9 +23,11 @@
 //                           cancelar um pedido que estava Confirmado
 //              public.parcelas_receber (indiretamente, via IContasReceberService)
 //                - INSERT : parcelas geradas ao confirmar
+//                - UPDATE : parcelas Pendentes viram Cancelado ao cancelar um Confirmado
 // Fontes.....: ErpPortfolioDbContext.Pedidos / PedidoItens / Clientes / Produtos.
-//              IEstoqueService.BaixarAsync / Estornar e IContasReceberService.GerarParcelas
-//              não chamam SaveChanges: ficam na mesma transação do SaveChangesAsync deste serviço.
+//              IEstoqueService.BaixarAsync / Estornar e IContasReceberService.GerarParcelas /
+//              CancelarPendentesAsync não chamam SaveChanges: ficam na mesma transação do
+//              SaveChangesAsync deste serviço.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo (criar e obter).
@@ -34,6 +36,7 @@
 //   1.3.0 - 21/09/2026 - Confirmar (R6) e cancelar (R7, idempotente).
 //   1.4.0 - 22/09/2026 - Confirmar baixa estoque (E2); cancelar de Confirmado estorna (E3).
 //   1.5.0 - 22/09/2026 - Confirmar gera parcelas a receber (C1).
+//   1.6.0 - 22/09/2026 - Cancelar de Confirmado cancela as parcelas Pendentes (C6).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -226,9 +229,13 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         if (!TransicoesPedido.PodeCancelar(pedido.Status))
             throw new ConflitoException($"O pedido {id} está {pedido.Status} e não pode ser cancelado.");
 
-        // E3: só devolve estoque se o pedido JÁ TINHA baixado (estava Confirmado); um rascunho cancelado nunca baixou.
+        // E3/C6: só devolve estoque e cancela parcelas se o pedido JÁ TINHA baixado/gerado (estava Confirmado);
+        // um rascunho cancelado nunca baixou estoque nem gerou parcela.
         if (pedido.Status == StatusPedido.Confirmado)
+        {
             estoqueService.Estornar(pedido.Id, pedido.Itens);
+            await contasReceberService.CancelarPendentesAsync(pedido.Id, cancelamento);
+        }
 
         pedido.Status = StatusPedido.Cancelado;
         await contexto.SaveChangesAsync(cancelamento);

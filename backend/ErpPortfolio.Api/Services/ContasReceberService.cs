@@ -1,26 +1,29 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 22/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
-//              no servidor), marcar parcela como recebida e gerar as parcelas ao
-//              confirmar um pedido.
+//              no servidor), marcar parcela como recebida, gerar as parcelas ao
+//              confirmar um pedido e cancelar as pendentes ao cancelar um confirmado.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.parcelas_receber
 //                - SELECT : listagem (JOIN pedidos/clientes, busca por nº do pedido ou
 //                           nome do cliente, filtro de status incluindo "Atrasado",
-//                           ORDER BY vencimento, id, LIMIT/OFFSET) e contagem de parcelas
-//                           irmãs do mesmo pedido (subconsulta correlacionada)
-//                - UPDATE : marcar como recebida (status + data_recebimento)
+//                           ORDER BY vencimento, id, LIMIT/OFFSET), contagem de parcelas
+//                           irmãs do mesmo pedido (subconsulta correlacionada) e busca
+//                           das parcelas Pendentes de um pedido (CancelarPendentesAsync)
+//                - UPDATE : marcar como recebida (status + data_recebimento); marcar
+//                           Pendentes como Cancelado ao cancelar o pedido
 //                - INSERT : geração das parcelas (GerarParcelas)
 // Fontes.....: ErpPortfolioDbContext.ParcelasReceber / Pedidos (EF Core / Npgsql).
-//              GerarParcelas não chama SaveChanges: fica na mesma transação do
-//              PedidoService.ConfirmarAsync.
+//              GerarParcelas e CancelarPendentesAsync não chamam SaveChanges: ficam na
+//              mesma transação do PedidoService.ConfirmarAsync/CancelarAsync.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e marcar recebido).
 //   1.1.0 - 22/09/2026 - GerarParcelas (usado pelo PedidoService ao confirmar).
+//   1.2.0 - 22/09/2026 - CancelarPendentesAsync (usado pelo PedidoService ao cancelar).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -123,5 +126,15 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
                 Status = StatusParcela.Pendente
             });
         }
+    }
+
+    public async Task CancelarPendentesAsync(int pedidoId, CancellationToken cancelamento)
+    {
+        var pendentes = await contexto.ParcelasReceber
+            .Where(p => p.PedidoId == pedidoId && p.Status == StatusParcela.Pendente)
+            .ToListAsync(cancelamento);
+
+        foreach (var parcela in pendentes)
+            parcela.Status = StatusParcela.Cancelado;
     }
 }

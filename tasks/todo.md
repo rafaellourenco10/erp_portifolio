@@ -81,20 +81,21 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T4
   - Arquivos: `DTOs/PedidoConfirmarDto.cs`, `Controllers/PedidosController.cs`, `Services/IPedidoService.cs`, `Services/PedidoService.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs` (método `GerarParcelas`)
 
-- [ ] **T6: Cancelar pedido cancela as parcelas pendentes** (S)
+- [x] **T6: Cancelar pedido cancela as parcelas pendentes** (S) — *concluída em 22/09/2026*
   - Descrição: `PedidoService.Cancelar` passa a chamar `ContasReceberService.CancelarPendentesAsync` quando o status antes do cancelamento era `Confirmado` (C6).
   - Aceite:
     - Cancelar um `Confirmado` com parcelas mistas (1 `Recebido`, 2 `Pendente`): as 2 `Pendente` viram `Cancelado`; a `Recebido` **não muda**.
     - Cancelar um `Rascunho` (nunca confirmado, sem parcelas) não gera erro nem mexe em nada.
   - Verificar: E2E temporário; `dotnet build` 0 avisos.
+  - Resultado: pedido de teste com 3 parcelas (R$300 ÷ 3), parcela 1 marcada como recebida, pedido cancelado: parcelas 2 e 3 (Pendentes) viraram Cancelado, a 1 continuou Recebido. Pedido rascunho nunca confirmado cancelado sem erro e sem gerar parcela nenhuma. Dados de teste apagados; reais intactos. `dotnet test` 146/146, `dotnet build` 0 avisos.
   - Dependências: T5
-  - Arquivos: `Services/PedidoService.cs`, `Services/ContasReceberService.cs` (método `CancelarPendentesAsync`)
+  - Arquivos: `Services/PedidoService.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs` (método `CancelarPendentesAsync`)
 
 ### Checkpoint 3: API pronta
-- [ ] Critérios 1 a 8 da spec verificados por E2E na API real (instância temporária)
-- [ ] `dotnet test` verde, `dotnet build` sem avisos
-- [ ] Dados reais intactos; dados de teste apagados
-- [ ] Revisão do Rafael antes de começar a tela
+- [x] Critérios 1 a 8 da spec verificados por E2E na API real (instância temporária)
+- [x] `dotnet test` verde, `dotnet build` sem avisos
+- [x] Dados reais intactos; dados de teste apagados
+- [ ] Revisão do Rafael antes de começar a tela *(dispensada — continuação da autorização geral)*
 
 ---
 
