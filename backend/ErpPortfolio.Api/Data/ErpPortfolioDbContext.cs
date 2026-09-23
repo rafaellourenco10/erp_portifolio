@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.9.0
+// Versão.....: 1.10.0
 // Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -41,6 +41,12 @@
 //                - UK  : ix_vendedores_cpf (cpf)
 //                - IDX : ix_vendedores_nome (nome)
 //                - CK  : ck_vendedores_percentual_comissao
+//              public.comissoes
+//                - PK  : pk_comissoes (id, identity)
+//                - UK  : ux_comissoes_parcela_receber_id (parcela_receber_id)
+//                - IDX : ix_comissoes_vendedor_id, ix_comissoes_pedido_id, ix_comissoes_data_geracao
+//                - FK  : fk_comissoes_parcelas_receber, fk_comissoes_pedidos, fk_comissoes_vendedores (restrict)
+//                - CK  : ck_comissoes_valor, ck_comissoes_percentual
 //              public.pedido_itens
 //                - PK  : pk_pedido_itens (id, identity)
 //                - UK  : ux_pedido_itens_pedido_produto (pedido_id, produto_id)
@@ -95,6 +101,7 @@
 //                        estoque_movimentacoes.pedido_compra_id (etapa 7).
 //   1.8.0 - 23/09/2026 - Mapeamento de ParcelaPagar (tabela parcelas_pagar, etapa 8).
 //   1.9.0 - 23/09/2026 - Mapeamento de Vendedor; pedidos.vendedor_id e percentual_comissao (etapa 10).
+//   1.10.0 - 23/09/2026 - Mapeamento de Comissao (tabela comissoes, etapa 11).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -127,6 +134,8 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
     public DbSet<ParcelaPagar> ParcelasPagar => Set<ParcelaPagar>();
 
     public DbSet<Vendedor> Vendedores => Set<Vendedor>();
+
+    public DbSet<Comissao> Comissoes => Set<Comissao>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -619,6 +628,84 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
             entidade.HasIndex(c => c.Nome)
                 .HasDatabaseName("ix_clientes_nome");
+        });
+
+        modelBuilder.Entity<Comissao>(entidade =>
+        {
+            entidade.ToTable("comissoes", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_comissoes_valor", "valor > 0");
+                tabela.HasCheckConstraint("ck_comissoes_percentual", "percentual > 0 AND percentual <= 100");
+            });
+
+            entidade.HasKey(c => c.Id).HasName("pk_comissoes");
+
+            entidade.Property(c => c.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(c => c.ParcelaReceberId).HasColumnName("parcela_receber_id");
+            entidade.Property(c => c.PedidoId).HasColumnName("pedido_id");
+            entidade.Property(c => c.VendedorId).HasColumnName("vendedor_id");
+
+            // Restrict em tudo: comissão é histórico financeiro, nada do que ela aponta pode ser apagado.
+            entidade.HasOne(c => c.ParcelaReceber)
+                .WithMany()
+                .HasForeignKey(c => c.ParcelaReceberId)
+                .HasConstraintName("fk_comissoes_parcelas_receber")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasOne(c => c.Pedido)
+                .WithMany()
+                .HasForeignKey(c => c.PedidoId)
+                .HasConstraintName("fk_comissoes_pedidos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasOne(c => c.Vendedor)
+                .WithMany()
+                .HasForeignKey(c => c.VendedorId)
+                .HasConstraintName("fk_comissoes_vendedores")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(c => c.ValorBase)
+                .HasColumnName("valor_base")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(c => c.Percentual)
+                .HasColumnName("percentual")
+                .HasColumnType("numeric(5,2)")
+                .IsRequired();
+
+            entidade.Property(c => c.Valor)
+                .HasColumnName("valor")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(c => c.DataGeracao)
+                .HasColumnName("data_geracao")
+                .HasColumnType("timestamp with time zone")
+                .IsRequired();
+
+            // Enum gravado como texto ("Pendente"/"Paga"), legível no banco.
+            entidade.Property(c => c.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidade.Property(c => c.DataPagamento)
+                .HasColumnName("data_pagamento")
+                .HasColumnType("timestamp with time zone");
+
+            // CM2: uma comissão por parcela, mesmo com duas requisições ao mesmo tempo.
+            entidade.HasIndex(c => c.ParcelaReceberId)
+                .IsUnique()
+                .HasDatabaseName("ux_comissoes_parcela_receber_id");
+
+            entidade.HasIndex(c => c.VendedorId).HasDatabaseName("ix_comissoes_vendedor_id");
+            entidade.HasIndex(c => c.PedidoId).HasDatabaseName("ix_comissoes_pedido_id");
+            entidade.HasIndex(c => c.DataGeracao).HasDatabaseName("ix_comissoes_data_geracao");
         });
 
         modelBuilder.Entity<Vendedor>(entidade =>

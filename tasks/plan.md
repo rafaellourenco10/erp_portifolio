@@ -1,38 +1,37 @@
-# Plano de implementação: Módulo Vendedores (etapa 10)
+# Plano de implementação: Módulo Comissões (etapa 11)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
 > Status: **aguardando aprovação**.
 
 ## Visão geral
 
-6 tarefas. O cadastro espelha Fornecedor (já testado); a parte nova de verdade é pequena: a validação só-CPF, duas colunas em `pedidos` e duas regras no `PedidoService` (salvar e confirmar).
+5 tarefas. A comissão nasce dentro do `MarcarRecebidaAsync` do Contas a Receber (mesma transação); a tela é uma lista com totais e uma ação em lote.
 
 ## Grafo de dependências
 
 ```
-T1 Vendedor (model) + colunas em pedidos + migration + [Cpf] com xUnit
-  ├─► T2 Vendedor backend (DTOs, service, controller)
-  │     └─► T3 Pedido de venda com vendedor (salvar/confirmar, % congelada) ── CP1: API pronta (E2E)
-  │           ├─► T4 Tela Vendedores + menu Cadastro
-  │           └─► T5 Campo Vendedor no pedido de venda (SelecaoVendedor)
-  │                 └─► T6 Fechamento (README, spec, graphify)
+T1 Comissao (model) + migration com carga das já recebidas + cálculo com xUnit
+  └─► T2 Gerar comissão ao receber parcela
+        └─► T3 ComissaoService + /api/comissoes (listar com totais, pagar em lote) ── CP1: API pronta (E2E)
+              └─► T4 Tela Financeiro → Comissões
+                    └─► T5 Fechamento (README, spec, graphify)
 ```
 
 ## Decisões de arquitetura
 
 | Decisão | Motivo |
 |---|---|
-| `[Cpf]` novo, reaproveitando `DocumentoValidador` | Vendedor é pessoa física; o `[CpfCnpj]` aceitaria CNPJ. |
-| `percentual_comissao` no pedido (não só no vendedor) | Congela a % da venda (PV3); a comissão futura lê do pedido. |
-| `SelecaoVendedor` espelhando `SelecaoFornecedor` | Mesmo comportamento de busca no servidor já usado nos pedidos. |
-| Sem xUnit tocando banco | Padrão do projeto; regras de pedido verificadas por E2E. |
+| Tabela própria com base, % e valor gravados | Auditável e permite o status Pendente/Paga; calcular na hora não guardaria o pagamento ao vendedor. |
+| Índice único em `parcela_receber_id` | Garante 1 comissão por parcela mesmo com corrida. |
+| Carga das já recebidas em SQL na migration | Uma vez só, no mesmo lugar que cria a tabela. |
+| Pagar em lote num endpoint só (`POST /pagar` com ids) | A ação da linha e a das selecionadas usam o mesmo caminho. |
 
 ## Riscos e mitigações
 
 | Risco | Mitigação |
 |---|---|
-| Quebrar o confirmar de vendas existente | Regra nova entra junto das validações atuais; E2E confirma também que um pedido completo continua confirmando. |
-| Pedidos antigos sem vendedor | Colunas nullable; E2E abre um pedido antigo. |
+| Quebrar o "marcar como recebido" | A geração entra depois da regra atual, no mesmo SaveChanges; E2E também recebe parcela de pedido sem vendedor. |
+| Arredondamento divergente | Função pura com xUnit; E2E compara com SQL. |
 
 ## Comandos de verificação
 
