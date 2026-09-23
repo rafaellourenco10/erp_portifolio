@@ -1,14 +1,14 @@
 /**
  * =====================================================================
  * Arquivo....: PedidoCompraPage.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Página do pedido de compra (rotas /pedidos-compra/novo e
- *              /pedidos-compra/:id). Espelho de PedidoPage.tsx, sem forma de pagamento e
- *              sem modal de parcelas: confirmar não tem corpo, então pede confirmação
- *              numa janela simples (como cancelar), salva o que estiver pendente e
- *              confirma. Confirmado dá entrada no estoque e atualiza o custo dos produtos
- *              (regra do servidor); a tela só reflete o resultado.
+ *              /pedidos-compra/:id). Espelho de PedidoPage.tsx, sem forma de pagamento.
+ *              Confirmar abre o modal de parcelas (número e intervalo em dias, contas a
+ *              pagar), salva o que estiver pendente e confirma. Confirmado dá entrada no
+ *              estoque, atualiza o custo dos produtos e gera as parcelas a pagar (regra
+ *              do servidor); a tela só reflete o resultado.
  *              Pedido salvo (/pedidos-compra/:id): o rascunho é editável e tem Salvar
  *              rascunho, Confirmar pedido e Cancelar pedido. Confirmado abre somente
  *              leitura e ainda pode ser cancelado (se o saldo ainda estiver disponível);
@@ -21,6 +21,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - Confirmar abre o modal de parcelas (contas a pagar, etapa 8).
  * =====================================================================
  */
 
@@ -34,6 +35,7 @@ import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { lerErroApi } from '../../api/axiosClient'
 import { ItemFormulario } from '../../components/ItemFormulario'
+import { ModalParcelas } from '../../components/ModalParcelas'
 import { SelecaoFornecedor } from '../../components/SelecaoFornecedor'
 import { SelecaoProduto } from '../../components/SelecaoProduto'
 import { TagStatusPedido } from '../../components/TagStatusPedido'
@@ -53,6 +55,7 @@ import {
   type PedidoCompraFormEntrada,
   type PedidoCompraFormValores,
 } from '../../schemas/pedidoCompraSchema'
+import type { PedidoConfirmarEntrada } from '../../types/pedido'
 import type { PedidoCompra } from '../../types/pedidoCompra'
 import { calcularPedido } from '../../utils/calculoPedido'
 import { formatarReal } from '../../utils/moeda'
@@ -117,6 +120,8 @@ function PedidoCompraFormulario({ pedido }: { pedido?: PedidoCompra }) {
   const somenteLeitura = pedido !== undefined && pedido.status !== 'Rascunho'
   // Muda a cada produto adicionado: recria o seletor, que volta vazio e pronto para outra busca.
   const [chaveSeletor, setChaveSeletor] = useState(0)
+  // Valores validados do formulário, guardados enquanto o modal de confirmar (parcelas) está aberto.
+  const [confirmando, setConfirmando] = useState<PedidoCompraFormValores | null>(null)
 
   const {
     control,
@@ -208,25 +213,23 @@ function PedidoCompraFormulario({ pedido }: { pedido?: PedidoCompra }) {
     }
   }
 
-  /** Confirmar: valida a tela, pede confirmação numa janela, salva o que estiver pendente e então confirma. */
+  /** Confirmar: valida a tela e abre o modal de parcelas (número de parcelas e intervalo). */
   function pedirConfirmacao(valores: PedidoCompraFormValores) {
     if (!pedido) return
-    modal.confirm({
-      title: `Confirmar o pedido de compra nº ${pedido.id}?`,
-      content:
-        'Depois de confirmado, o pedido não pode mais ser editado: só cancelado. A entrada no estoque e a atualização do custo dos produtos acontecem automaticamente.',
-      okText: 'Confirmar pedido',
-      cancelText: 'Voltar',
-      onOk: async () => {
-        try {
-          await salvarPedido.mutateAsync({ id: pedido.id, dados: paraPayload(valores) })
-          await confirmarPedido.mutateAsync(pedido.id)
-          message.success(`Pedido de compra nº ${pedido.id} confirmado com sucesso.`)
-        } catch (erro) {
-          mostrarErroApi(erro)
-        }
-      },
-    })
+    setConfirmando(valores)
+  }
+
+  /** Fecha o modal de parcelas, salva o que estiver pendente e então confirma. */
+  async function confirmar(parcelas: PedidoConfirmarEntrada) {
+    if (!pedido || !confirmando) return
+    try {
+      await salvarPedido.mutateAsync({ id: pedido.id, dados: paraPayload(confirmando) })
+      await confirmarPedido.mutateAsync({ id: pedido.id, dados: parcelas })
+      message.success(`Pedido de compra nº ${pedido.id} confirmado com sucesso.`)
+      setConfirmando(null)
+    } catch (erro) {
+      mostrarErroApi(erro)
+    }
   }
 
   function pedirCancelamento() {
@@ -252,6 +255,7 @@ function PedidoCompraFormulario({ pedido }: { pedido?: PedidoCompra }) {
   const erroItens = errors.itens?.root?.message ?? errors.itens?.message
 
   return (
+    <>
     <Form
       id={ID_FORMULARIO}
       layout="vertical"
@@ -428,5 +432,15 @@ function PedidoCompraFormulario({ pedido }: { pedido?: PedidoCompra }) {
         </div>
       )}
     </Form>
+
+    <ModalParcelas
+      aberto={confirmando !== null}
+      titulo={`Confirmar o pedido de compra nº ${pedido?.id}?`}
+      descricao="Depois de confirmado, o pedido não pode mais ser editado: só cancelado. A entrada no estoque e o custo dos produtos são atualizados automaticamente. Escolha em quantas parcelas a compra será paga."
+      carregando={salvarPedido.isPending || confirmarPedido.isPending}
+      aoConfirmar={confirmar}
+      aoFechar={() => setConfirmando(null)}
+    />
+    </>
   )
 }

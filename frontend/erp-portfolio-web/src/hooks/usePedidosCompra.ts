@@ -1,24 +1,25 @@
 /**
  * =====================================================================
  * Arquivo....: usePedidosCompra.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Hooks do TanStack Query para o módulo de Pedidos de Compra
  *              (lista paginada, um pedido, salvar, confirmar e cancelar).
  *              Toda mutação invalida o cache "pedidos-compra" (lista e
- *              detalhe) para a tela recarregar. Espelho de usePedidos.ts,
- *              sem corpo no confirmar.
+ *              detalhe) para a tela recarregar. Espelho de usePedidos.ts.
  * ---------------------------------------------------------------------
  * Fontes.....: pedidosCompraApi.ts
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - Confirmar recebe as parcelas a pagar (etapa 8).
  * =====================================================================
  */
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import { pedidosCompraApi } from '../api/pedidosCompraApi'
+import type { PedidoConfirmarEntrada } from '../types/pedido'
 import type { PedidoCompraEntrada, PedidoCompraFiltro } from '../types/pedidoCompra'
 
 const CHAVE_PEDIDOS_COMPRA = ['pedidos-compra'] as const
@@ -63,11 +64,16 @@ export function useSalvarPedidoCompra() {
   })
 }
 
+interface ConfirmarPedidoCompraParametros {
+  id: number
+  dados: PedidoConfirmarEntrada
+}
+
 export function useConfirmarPedidoCompra() {
   const invalidar = useInvalidarPedidosCompra()
 
   return useMutation({
-    mutationFn: (id: number) => pedidosCompraApi.confirmar(id),
+    mutationFn: ({ id, dados }: ConfirmarPedidoCompraParametros) => pedidosCompraApi.confirmar(id, dados),
     onSuccess: invalidar,
   })
 }

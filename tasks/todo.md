@@ -31,9 +31,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: tela gerada a partir da de Contas a Receber (mesmo layout e colunas, trocando cliente/pedido por fornecedor/compra e "Recebido" por "Pago"); `TagStatusParcela` passou a aceitar "Pago" em vez de ganhar uma cópia; item Contas a Pagar (`WalletOutlined`) em Financeiro. `tsc -b` e `oxlint` limpos.
 
-- [ ] **T6: Modal de parcelas ao confirmar compra** (S)
+- [x] **T6: Modal de parcelas ao confirmar compra** (S) — *concluída em 23/09/2026*
   - Confirmar pedido de compra abre o modal de parcelas; `pedidosCompraApi` envia o corpo.
   - Verificar: `tsc -b`, `oxlint`; fluxo da venda inalterado.
+  - Resultado: modal extraído para `components/ModalParcelas.tsx` e usado pelas duas telas (a venda só trocou o JSX do modal pelo componente: mesmo título, texto, limites e padrão 1/30; os campos agora voltam ao padrão no `afterClose` em vez de ao abrir). `pedidosCompraApi.confirmar` e `useConfirmarPedidoCompra` enviam o corpo. `tsc -b` e `oxlint` limpos.
 
 - [ ] **T7: Card "A pagar" no Dashboard** (S)
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.

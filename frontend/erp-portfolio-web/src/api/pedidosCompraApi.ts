@@ -1,10 +1,10 @@
 /**
  * =====================================================================
  * Arquivo....: pedidosCompraApi.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Chamadas HTTP do módulo de Pedidos de Compra. Espelho de
- *              pedidosApi.ts, sem corpo no confirmar (não há parcelas).
+ *              pedidosApi.ts (confirmar envia as parcelas a pagar).
  * ---------------------------------------------------------------------
  * Fontes.....: API Ambition ERP (PedidosCompraController)
  *                GET    /pedidos-compra?busca=&status=&pagina=&tamanhoPagina=
@@ -16,6 +16,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - confirmar envia numeroParcelas/intervaloDias (contas a pagar, etapa 8).
  * =====================================================================
  */
 
@@ -26,6 +27,7 @@ import type {
   PedidoCompraFiltro,
   PedidoCompraResumo,
 } from '../types/pedidoCompra'
+import type { PedidoConfirmarEntrada } from '../types/pedido'
 import { axiosClient } from './axiosClient'
 
 export const pedidosCompraApi = {
@@ -49,8 +51,8 @@ export const pedidosCompraApi = {
     return resposta.data
   },
 
-  async confirmar(id: number): Promise<PedidoCompra> {
-    const resposta = await axiosClient.patch<PedidoCompra>(`/pedidos-compra/${id}/confirmar`)
+  async confirmar(id: number, dados: PedidoConfirmarEntrada): Promise<PedidoCompra> {
+    const resposta = await axiosClient.patch<PedidoCompra>(`/pedidos-compra/${id}/confirmar`, dados)
     return resposta.data
   },
 
