@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.5.0
+// Versão.....: 1.6.0
 // Data.......: 22/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -31,6 +31,7 @@
 //                - UK  : ix_produtos_sku (sku)
 //                - IDX : ix_produtos_nome (nome), ix_produtos_categoria_id (categoria_id)
 //                - FK  : fk_produtos_categorias (categoria_id -> categorias.id, restrict)
+//                - CK  : ck_produtos_estoque_minimo
 //              public.estoque_movimentacoes
 //                - PK  : pk_estoque_movimentacoes (id, identity)
 //                - IDX : ix_estoque_movimentacoes_produto_id (produto_id),
@@ -55,6 +56,7 @@
 //   1.3.0 - 21/09/2026 - Mapeamento de Pedido e PedidoItem (tabelas pedidos e pedido_itens).
 //   1.4.0 - 22/09/2026 - Mapeamento de EstoqueMovimentacao (tabela estoque_movimentacoes).
 //   1.5.0 - 22/09/2026 - Mapeamento de ParcelaReceber (tabela parcelas_receber).
+//   1.6.0 - 22/09/2026 - produtos.estoque_minimo (usado pelo card "saldo baixo" do Dashboard).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -354,7 +356,10 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
         modelBuilder.Entity<Produto>(entidade =>
         {
-            entidade.ToTable("produtos");
+            entidade.ToTable("produtos", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_produtos_estoque_minimo", "estoque_minimo >= 0");
+            });
 
             entidade.HasKey(p => p.Id).HasName("pk_produtos");
 
@@ -395,6 +400,12 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
             entidade.Property(p => p.Custo)
                 .HasColumnName("custo")
                 .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(p => p.EstoqueMinimo)
+                .HasColumnName("estoque_minimo")
+                .HasColumnType("numeric(12,3)")
+                .HasDefaultValue(0m)
                 .IsRequired();
 
             entidade.Property(p => p.Ativo)

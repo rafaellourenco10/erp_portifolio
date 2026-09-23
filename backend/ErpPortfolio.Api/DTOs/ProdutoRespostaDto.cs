@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: ProdutoRespostaDto.cs
-// Versão.....: 1.1.0
-// Data.......: 21/09/2026
+// Versão.....: 1.2.0
+// Data.......: 22/09/2026
 // Descrição..: DTO de saída com os dados de um produto retornados pela API, incluindo
 //              a categoria (id e nome).
 // -------------------------------------------------------------------------------------
@@ -13,6 +13,7 @@
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
 //   1.1.0 - 21/09/2026 - Categoria (CategoriaId e CategoriaNome) no lugar do texto livre.
+//   1.2.0 - 22/09/2026 - EstoqueMinimo.
 // =====================================================================================
 
 using System.Linq.Expressions;
@@ -29,6 +30,7 @@ public record ProdutoRespostaDto(
     string Unidade,
     decimal PrecoVenda,
     decimal Custo,
+    decimal EstoqueMinimo,
     bool Ativo,
     DateTime DataCadastro)
 {
@@ -42,6 +44,7 @@ public record ProdutoRespostaDto(
         produto.Unidade,
         produto.PrecoVenda,
         produto.Custo,
+        produto.EstoqueMinimo,
         produto.Ativo,
         produto.DataCadastro);
 

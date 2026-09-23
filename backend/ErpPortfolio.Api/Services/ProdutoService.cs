@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ProdutoService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 22/09/2026
 // Descrição..: Regras de negócio e persistência de produtos.
 // -------------------------------------------------------------------------------------
@@ -22,6 +22,7 @@
 //   1.1.0 - 21/09/2026 - Categoria como registro: valida o CategoriaId (DadoInvalidoException)
 //                        e devolve o nome da categoria nas consultas.
 //   1.2.0 - 22/09/2026 - Filtro por categoriaId na listagem.
+//   1.3.0 - 22/09/2026 - EstoqueMinimo aplicado ao criar/editar.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -139,6 +140,7 @@ public class ProdutoService(ErpPortfolioDbContext contexto) : IProdutoService
         produto.Unidade = dados.Unidade;
         produto.PrecoVenda = dados.PrecoVenda!.Value;
         produto.Custo = dados.Custo!.Value;
+        produto.EstoqueMinimo = dados.EstoqueMinimo!.Value;
     }
 
     // Só o banco sabe se a categoria existe e está ativa. Uma categoria inativa continua aceita

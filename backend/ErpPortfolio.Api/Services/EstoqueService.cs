@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: EstoqueService.cs
-// Versão.....: 1.3.0
+// Versão.....: 1.4.0
 // Data.......: 22/09/2026
 // Descrição..: Consulta de estoque (listagem com saldo, extrato por produto), entrada
 //              manual e a baixa/estorno usados pelo PedidoService. O saldo nunca é
@@ -24,6 +24,8 @@
 //   1.1.0 - 22/09/2026 - Entrada manual (RegistrarEntradaAsync).
 //   1.2.0 - 22/09/2026 - BaixarAsync (confirmar) e Estornar (cancelar de confirmado).
 //   1.3.0 - 22/09/2026 - ObterResumoAsync (quantidade de produtos com saldo baixo), para o Dashboard.
+//   1.4.0 - 22/09/2026 - Estoque mínimo passa a ser por produto (produtos.estoque_minimo);
+//                        ObterResumoAsync devolve a lista dos produtos baixos, não só a contagem.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -36,9 +38,6 @@ namespace ErpPortfolio.Api.Services;
 public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
 {
     private const string CampoItens = "Itens";
-
-    /// <summary>Saldo igual ou abaixo disso conta como "baixo" no Dashboard (D6). Sem estoque mínimo por produto ainda.</summary>
-    public const decimal LimiteSaldoBaixo = 5m;
 
     public async Task<ResultadoPaginadoDto<EstoqueResumoDto>> ListarAsync(EstoqueFiltroDto filtro, CancellationToken cancelamento)
     {
@@ -154,15 +153,28 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
 
     public async Task<EstoqueResumoDashboardDto> ObterResumoAsync(CancellationToken cancelamento)
     {
-        var quantidade = await contexto.Produtos.AsNoTracking()
+        // Traz o saldo de todos os produtos ativos pra comparar com o próprio EstoqueMinimo de cada um em
+        // memória (a comparação entre duas colunas do mesmo produto não precisa virar SQL; escala de portfólio).
+        var produtos = await contexto.Produtos.AsNoTracking()
             .Where(p => p.Ativo)
-            // Mesma subconsulta inline de ListarAsync: um método de instância separado não é traduzido pelo EF.
-            .Where(p => contexto.EstoqueMovimentacoes
-                .Where(m => m.ProdutoId == p.Id)
-                .Sum(m => m.Tipo == TipoMovimentacao.Entrada ? m.Quantidade : -m.Quantidade) <= LimiteSaldoBaixo)
-            .CountAsync(cancelamento);
+            .Select(p => new
+            {
+                p.Id,
+                p.Nome,
+                p.EstoqueMinimo,
+                Saldo = contexto.EstoqueMovimentacoes
+                    .Where(m => m.ProdutoId == p.Id)
+                    .Sum(m => m.Tipo == TipoMovimentacao.Entrada ? m.Quantidade : -m.Quantidade)
+            })
+            .ToListAsync(cancelamento);
 
-        return new EstoqueResumoDashboardDto(quantidade, LimiteSaldoBaixo);
+        var baixos = produtos
+            .Where(p => p.Saldo <= p.EstoqueMinimo)
+            .OrderBy(p => p.Nome)
+            .Select(p => new ProdutoSaldoBaixoDto(p.Id, p.Nome, p.Saldo, p.EstoqueMinimo))
+            .ToList();
+
+        return new EstoqueResumoDashboardDto(baixos.Count, baixos);
     }
 
     private async Task<decimal> SaldoAsync(int produtoId, CancellationToken cancelamento) =>

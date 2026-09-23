@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: ProdutoCriacaoDto.cs
-// Versão.....: 1.2.0
-// Data.......: 21/09/2026
+// Versão.....: 1.3.0
+// Data.......: 22/09/2026
 // Descrição..: DTO de entrada para inclusão de produto (POST /api/produtos), com as
 //              regras de validação via DataAnnotations. Nome, SKU e unidade são
 //              normalizados (trim; maiúsculas na unidade) antes de validar.
@@ -14,6 +14,7 @@
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
 //   1.1.0 - 21/09/2026 - SKU restrito a dígitos (número de série).
 //   1.2.0 - 21/09/2026 - Categoria texto livre trocada por CategoriaId.
+//   1.3.0 - 22/09/2026 - EstoqueMinimo obrigatório (usado pelo Dashboard).
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;
@@ -65,7 +66,13 @@ public class ProdutoCriacaoDto : IValidatableObject
     [Range(0, 9_999_999_999.99, ErrorMessage = "O custo deve estar entre 0 e 9.999.999.999,99.")]
     public decimal? Custo { get; set; }
 
-    // A coluna é numeric(12,2): mais casas seriam arredondadas em silêncio pelo banco.
+    /// <summary>Saldo de estoque igual ou abaixo disso conta como "baixo" no Dashboard. 0 = sem mínimo definido.</summary>
+    /// <example>5</example>
+    [Required(ErrorMessage = "O estoque mínimo é obrigatório.")]
+    [Range(0, 999_999.999, ErrorMessage = "O estoque mínimo deve estar entre 0 e 999.999,999.")]
+    public decimal? EstoqueMinimo { get; set; }
+
+    // As colunas são numeric(12,2)/(12,3): mais casas seriam arredondadas em silêncio pelo banco.
     public IEnumerable<ValidationResult> Validate(ValidationContext contexto)
     {
         if (PrecoVenda is { } preco && decimal.Round(preco, 2) != preco)
@@ -73,5 +80,8 @@ public class ProdutoCriacaoDto : IValidatableObject
 
         if (Custo is { } custo && decimal.Round(custo, 2) != custo)
             yield return new("O custo deve ter no máximo 2 casas decimais.", [nameof(Custo)]);
+
+        if (EstoqueMinimo is { } minimo && decimal.Round(minimo, 3) != minimo)
+            yield return new("O estoque mínimo deve ter no máximo 3 casas decimais.", [nameof(EstoqueMinimo)]);
     }
 }
