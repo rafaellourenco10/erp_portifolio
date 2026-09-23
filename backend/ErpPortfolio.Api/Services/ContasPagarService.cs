@@ -1,30 +1,36 @@
 // =====================================================================================
 // Arquivo....: ContasPagarService.cs
-// Versão.....: 1.0.0
+// Versão.....: 2.0.0
 // Data.......: 23/09/2026
-// Descrição..: Consulta de contas a pagar (listagem paginada com "atrasado" calculado
-//              no servidor), marcar parcela como paga, gerar as parcelas ao confirmar
-//              um pedido de compra e cancelar as pendentes ao cancelar um confirmado.
-//              Espelho de ContasReceberService (mesma divisão em parcelas).
+// Descrição..: Contas a pagar de três origens (Compra, Comissao, Avulsa): listagem com
+//              favorecido/descrição e "atrasado" calculados no servidor, marcar como paga,
+//              cancelar (avulsa/comissão), lançar conta avulsa em parcelas, gerar/cancelar
+//              as parcelas da compra. Pagar ou cancelar uma conta de comissão propaga para
+//              as comissões ligadas (SPEC.md etapa 12, CC3/CC4).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.parcelas_pagar
-//                - SELECT : listagem (JOIN pedidos_compra/fornecedores, busca por nº do
-//                           pedido de compra ou nome do fornecedor, filtro de status
-//                           incluindo "Atrasado", ORDER BY vencimento, id, LIMIT/OFFSET),
-//                           contagem de parcelas irmãs do mesmo pedido e busca das
-//                           parcelas Pendentes de um pedido (CancelarPendentesAsync)
-//                - UPDATE : marcar como paga (status + data_pagamento); marcar Pendentes
-//                           como Cancelado ao cancelar o pedido de compra
-//                - INSERT : geração das parcelas (GerarParcelas)
-// Fontes.....: ErpPortfolioDbContext.ParcelasPagar (EF Core / Npgsql).
-//              GerarParcelas e CancelarPendentesAsync não chamam SaveChanges: ficam na
-//              mesma transação do PedidoCompraService.ConfirmarAsync/CancelarAsync.
+//                - SELECT : listagem (LEFT JOIN pedidos_compra/fornecedores e vendedores;
+//                           busca por nº da compra ou ILIKE em fornecedor/vendedor/
+//                           favorecido/descrição; filtros de status e origem; ORDER BY
+//                           vencimento, id, LIMIT/OFFSET) e Pendentes de uma compra
+//                - INSERT : parcelas da compra (GerarParcelas) e da conta avulsa
+//                - UPDATE : pagar (status + data_pagamento); cancelar (avulsa/comissão e
+//                           Pendentes da compra cancelada)
+//              public.comissoes
+//                - UPDATE : Paga ao pagar a conta de comissão; Pendente (desligada) ao cancelar
+// Fontes.....: ErpPortfolioDbContext (EF Core / Npgsql). GerarParcelas e
+//              CancelarPendentesAsync não chamam SaveChanges: ficam na mesma transação do
+//              PedidoCompraService.ConfirmarAsync/CancelarAsync.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   2.0.0 - 23/09/2026 - Origem Compra/Comissao/Avulsa: favorecido e descrição na lista,
+//                        filtro de origem, conta avulsa, cancelar e propagação para as
+//                        comissões (etapa 12).
 // =====================================================================================
 
+using System.Linq.Expressions;
 using ErpPortfolio.Api.Data;
 using ErpPortfolio.Api.DTOs;
 using ErpPortfolio.Api.Models;
@@ -40,15 +46,24 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
         var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
         var consulta = contexto.ParcelasPagar.AsNoTracking();
 
-        // Busca: número do pedido de compra ("4" ou "#4") ou parte do nome do fornecedor (P6).
+        // CP2: nº da compra ("4" ou "#4") ou trecho do favorecido (fornecedor, vendedor ou texto) ou da descrição.
         if (!string.IsNullOrWhiteSpace(filtro.Busca))
         {
             var texto = filtro.Busca.Trim();
             var padrao = $"%{ClienteService.EscaparCuringasLike(texto)}%";
-            consulta = int.TryParse(texto.TrimStart('#'), out var numeroPedido)
-                ? consulta.Where(p => p.PedidoCompraId == numeroPedido || EF.Functions.ILike(p.PedidoCompra!.Fornecedor!.Nome, padrao))
-                : consulta.Where(p => EF.Functions.ILike(p.PedidoCompra!.Fornecedor!.Nome, padrao));
+            // Número só casa com compra de verdade: um "numero" nulo compararia com pedido_compra_id IS NULL
+            // e traria todas as avulsas/comissões.
+            var ehNumero = int.TryParse(texto.TrimStart('#'), out var numero);
+            consulta = consulta.Where(p =>
+                (ehNumero && p.PedidoCompraId == numero)
+                || EF.Functions.ILike(p.PedidoCompra!.Fornecedor!.Nome, padrao)
+                || EF.Functions.ILike(p.Vendedor!.Nome, padrao)
+                || EF.Functions.ILike(p.Favorecido!, padrao)
+                || EF.Functions.ILike(p.Descricao!, padrao));
         }
+
+        if (filtro.Origem is OrigemContaPagar origem)
+            consulta = consulta.Where(p => p.Origem == origem);
 
         consulta = filtro.Status switch
         {
@@ -66,17 +81,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
             .ThenBy(p => p.Id)
             .Skip((filtro.Pagina - 1) * filtro.TamanhoPagina)
             .Take(filtro.TamanhoPagina)
-            .Select(p => new ParcelaPagarRespostaDto(
-                p.Id,
-                p.PedidoCompraId,
-                p.PedidoCompra!.Fornecedor!.Nome,
-                p.NumeroParcela,
-                p.TotalParcelas,
-                p.Valor,
-                p.Vencimento,
-                p.Status,
-                p.DataPagamento,
-                p.Status == StatusParcelaPagar.Pendente && p.Vencimento < hoje))
+            .Select(Projecao(hoje))
             .ToListAsync(cancelamento);
 
         return new ResultadoPaginadoDto<ParcelaPagarRespostaDto>(itens, filtro.Pagina, filtro.TamanhoPagina, totalItens);
@@ -84,9 +89,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
 
     public async Task<ParcelaPagarRespostaDto?> MarcarPagaAsync(int id, CancellationToken cancelamento)
     {
-        var parcela = await contexto.ParcelasPagar
-            .Include(p => p.PedidoCompra).ThenInclude(pedido => pedido!.Fornecedor)
-            .FirstOrDefaultAsync(p => p.Id == id, cancelamento);
+        var parcela = await contexto.ParcelasPagar.FirstOrDefaultAsync(p => p.Id == id, cancelamento);
         if (parcela is null)
             return null;
 
@@ -98,12 +101,85 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
         {
             parcela.Status = StatusParcelaPagar.Pago;
             parcela.DataPagamento = DateTime.UtcNow;
+
+            // CC3: as comissões desta conta ficam pagas junto, com a mesma data.
+            if (parcela.Origem == OrigemContaPagar.Comissao)
+            {
+                var comissoes = await contexto.Comissoes.Where(c => c.ParcelaPagarId == id).ToListAsync(cancelamento);
+                foreach (var comissao in comissoes)
+                {
+                    comissao.Status = StatusComissao.Paga;
+                    comissao.DataPagamento = parcela.DataPagamento;
+                }
+            }
+
             await contexto.SaveChangesAsync(cancelamento);
         }
 
-        return new ParcelaPagarRespostaDto(
-            parcela.Id, parcela.PedidoCompraId, parcela.PedidoCompra!.Fornecedor!.Nome, parcela.NumeroParcela, parcela.TotalParcelas,
-            parcela.Valor, parcela.Vencimento, parcela.Status, parcela.DataPagamento, Atrasado: false);
+        return await ObterAsync(id, cancelamento);
+    }
+
+    public async Task<ParcelaPagarRespostaDto?> CancelarAsync(int id, CancellationToken cancelamento)
+    {
+        var parcela = await contexto.ParcelasPagar.FirstOrDefaultAsync(p => p.Id == id, cancelamento);
+        if (parcela is null)
+            return null;
+
+        // CP4: parcela de compra só é cancelada junto com o pedido de compra.
+        if (parcela.Origem == OrigemContaPagar.Compra)
+            throw new ConflitoException("Esta parcela é de um pedido de compra: cancele o pedido de compra.");
+
+        if (parcela.Status == StatusParcelaPagar.Pago)
+            throw new ConflitoException("Esta parcela já foi paga e não pode ser cancelada.");
+
+        // Cancelar de novo é sucesso.
+        if (parcela.Status != StatusParcelaPagar.Cancelado)
+        {
+            parcela.Status = StatusParcelaPagar.Cancelado;
+
+            // CC4: as comissões voltam a Pendente, desligadas, para poderem gerar outra conta.
+            if (parcela.Origem == OrigemContaPagar.Comissao)
+            {
+                var comissoes = await contexto.Comissoes.Where(c => c.ParcelaPagarId == id).ToListAsync(cancelamento);
+                foreach (var comissao in comissoes)
+                {
+                    comissao.Status = StatusComissao.Pendente;
+                    comissao.ParcelaPagarId = null;
+                }
+            }
+
+            await contexto.SaveChangesAsync(cancelamento);
+        }
+
+        return await ObterAsync(id, cancelamento);
+    }
+
+    public async Task<IReadOnlyList<ParcelaPagarRespostaDto>> CriarAvulsaAsync(ContaAvulsaCriacaoDto dados, CancellationToken cancelamento)
+    {
+        var parcelas = ContasPagarCalculo.ParcelasAvulsa(dados.ValorTotal, dados.NumeroParcelas, dados.PrimeiroVencimento!.Value, dados.IntervaloDias)
+            .Select((p, i) => new ParcelaPagar
+            {
+                Origem = OrigemContaPagar.Avulsa,
+                Descricao = dados.Descricao.Trim(),
+                Favorecido = dados.Favorecido,
+                NumeroParcela = i + 1,
+                TotalParcelas = dados.NumeroParcelas,
+                Valor = p.Valor,
+                Vencimento = p.Vencimento,
+                Status = StatusParcelaPagar.Pendente
+            })
+            .ToList();
+
+        contexto.ParcelasPagar.AddRange(parcelas);
+        await contexto.SaveChangesAsync(cancelamento);
+
+        var ids = parcelas.Select(p => p.Id).ToList();
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        return await contexto.ParcelasPagar.AsNoTracking()
+            .Where(p => ids.Contains(p.Id))
+            .OrderBy(p => p.NumeroParcela)
+            .Select(Projecao(hoje))
+            .ToListAsync(cancelamento);
     }
 
     public void GerarParcelas(PedidoCompra pedido, int numeroParcelas, int intervaloDias)
@@ -150,4 +226,28 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
             pendentes.Sum(p => p.Valor), pendentes.Count,
             atrasadas.Sum(p => p.Valor), atrasadas.Count);
     }
+
+    private async Task<ParcelaPagarRespostaDto?> ObterAsync(int id, CancellationToken cancelamento) =>
+        await contexto.ParcelasPagar.AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(Projecao(DateOnly.FromDateTime(DateTime.UtcNow)))
+            .FirstOrDefaultAsync(cancelamento);
+
+    // CP2: o favorecido vem do fornecedor (compra), do vendedor (comissão) ou do texto (avulsa).
+    // Uma projeção só para a lista e para as respostas de pagar/cancelar/criar (traduzida em SQL).
+    private static Expression<Func<ParcelaPagar, ParcelaPagarRespostaDto>> Projecao(DateOnly hoje) => p =>
+        new ParcelaPagarRespostaDto(
+            p.Id,
+            p.Origem,
+            p.PedidoCompraId,
+            p.VendedorId,
+            p.PedidoCompra != null ? p.PedidoCompra.Fornecedor!.Nome : p.Vendedor != null ? p.Vendedor.Nome : p.Favorecido,
+            p.Descricao,
+            p.NumeroParcela,
+            p.TotalParcelas,
+            p.Valor,
+            p.Vencimento,
+            p.Status,
+            p.DataPagamento,
+            p.Status == StatusParcelaPagar.Pendente && p.Vencimento < hoje);
 }

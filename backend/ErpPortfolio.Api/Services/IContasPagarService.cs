@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IContasPagarService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Contrato do serviço de contas a pagar: consulta, marcar pago, geração e
 //              cancelamento de parcelas usados pelo PedidoCompraService, e o resumo do
@@ -12,6 +12,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - CriarAvulsaAsync e CancelarAsync; pagar propaga para comissões (etapa 12).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -23,7 +24,10 @@ public interface IContasPagarService
 {
     Task<ResultadoPaginadoDto<ParcelaPagarRespostaDto>> ListarAsync(ParcelaPagarFiltroDto filtro, CancellationToken cancelamento);
 
-    /// <summary>Marca a parcela como paga (P4). Nulo se não existir; ConflitoException se estiver Cancelado.</summary>
+    /// <summary>
+    /// Marca a parcela como paga (P4); se for de comissão, paga as comissões ligadas (CC3).
+    /// Nulo se não existir; ConflitoException se estiver Cancelado.
+    /// </summary>
     Task<ParcelaPagarRespostaDto?> MarcarPagaAsync(int id, CancellationToken cancelamento);
 
     /// <summary>
@@ -31,6 +35,15 @@ public interface IContasPagarService
     /// mesma transação de quem chamar).
     /// </summary>
     void GerarParcelas(PedidoCompra pedido, int numeroParcelas, int intervaloDias);
+
+    /// <summary>Lança uma conta avulsa em N parcelas (AV1/AV2) e devolve as parcelas criadas.</summary>
+    Task<IReadOnlyList<ParcelaPagarRespostaDto>> CriarAvulsaAsync(ContaAvulsaCriacaoDto dados, CancellationToken cancelamento);
+
+    /// <summary>
+    /// Cancela parcela Avulsa/Comissão pendente (CP4), idempotente; se for de comissão, devolve as comissões
+    /// para Pendente (CC4). Nulo se não existir; ConflitoException se for de compra ou já estiver paga.
+    /// </summary>
+    Task<ParcelaPagarRespostaDto?> CancelarAsync(int id, CancellationToken cancelamento);
 
     /// <summary>Cancela as parcelas ainda Pendentes do pedido de compra (P5); não chama SaveChanges.</summary>
     Task CancelarPendentesAsync(int pedidoCompraId, CancellationToken cancelamento);

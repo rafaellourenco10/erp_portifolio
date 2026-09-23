@@ -1,9 +1,9 @@
 // =====================================================================================
 // Arquivo....: ParcelaPagarFiltroDto.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Parâmetros de consulta (query string) da listagem de contas a pagar:
-//              busca por fornecedor ou número do pedido de compra, status (incluindo
+//              busca por nº da compra ou favorecido/descrição, origem, status (incluindo
 //              "Atrasado", calculado) e paginação (SPEC.md, P6).
 // -------------------------------------------------------------------------------------
 // Banco......: Não acessa banco diretamente.
@@ -12,9 +12,11 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Filtro de origem; busca também por favorecido/descrição (etapa 12).
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;
+using ErpPortfolio.Api.Models;
 
 namespace ErpPortfolio.Api.DTOs;
 
@@ -25,6 +27,10 @@ public class ParcelaPagarFiltroDto
 
     [EnumDataType(typeof(FiltroStatusParcelaPagar), ErrorMessage = "Status inválido.")]
     public FiltroStatusParcelaPagar? Status { get; set; }
+
+    /// <summary>Compra, Comissao ou Avulsa; ausente = todas.</summary>
+    [EnumDataType(typeof(OrigemContaPagar), ErrorMessage = "Origem inválida.")]
+    public OrigemContaPagar? Origem { get; set; }
 
     [Range(1, 100_000, ErrorMessage = "A página deve estar entre 1 e 100000.")]
     public int Pagina { get; set; } = 1;
