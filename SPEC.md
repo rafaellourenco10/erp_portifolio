@@ -1,6 +1,6 @@
 # Spec: Módulo Comissões (etapa 11)
 
-> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
+> Status: **implementada e testada em 23/09/2026** (T1 a T5, ver `tasks/todo.md`). Critérios 1-6 conferidos por E2E (18 verificações, dados `ZZT…` apagados, dados reais intactos); **tela sem verificação visual** (sem navegador nesta sessão).
 
 ## Objetivo
 
@@ -65,10 +65,12 @@ Gerar conta a pagar da comissão no Financeiro; estornar comissão (hoje uma par
 
 ## Success criteria (testáveis)
 
-1. Receber uma parcela de pedido com vendedor gera 1 comissão com valor = parcela × % congelada, arredondado a 2 casas; receber de novo não duplica.
-2. Pedido sem vendedor (ou com 0%) não gera comissão.
-3. Parcelas já recebidas antes do módulo, de pedidos com vendedor, têm comissão após a migration.
-4. `GET /api/comissoes` filtra por vendedor/status/período e traz totais batendo com o banco.
-5. `POST /api/comissoes/pagar` marca como pagas (data gravada), é idempotente e recusa id inexistente sem alterar nada.
-6. Cancelar um pedido com parcela recebida mantém a comissão.
-7. Tela em Financeiro → Comissões; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde.
+Conferidos em 23/09/2026; detalhes na seção "Comissões (23/09/2026)" do README.
+
+1. ✅ Receber uma parcela de pedido com vendedor gera 1 comissão com valor = parcela × % congelada, arredondado a 2 casas; receber de novo não duplica.
+2. ✅ Pedido sem vendedor (ou com 0%) não gera comissão.
+3. ✅ Parcelas já recebidas antes do módulo, de pedidos com vendedor, têm comissão após a migration (no banco de dev não havia nenhuma; a SQL da carga foi exercitada no E2E com uma parcela de teste).
+4. ✅ `GET /api/comissoes` filtra por vendedor/status/período e traz totais batendo com o banco.
+5. ✅ `POST /api/comissoes/pagar` marca como pagas (data gravada), é idempotente e recusa id inexistente sem alterar nada.
+6. ✅ Cancelar um pedido com parcela recebida mantém a comissão.
+7. ✅ Tela em Financeiro → Comissões; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` 177/177 — verificação visual não feita (sem navegador).

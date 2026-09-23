@@ -1,9 +1,9 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, e **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada — base para o cálculo de comissão. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, e **Comissões** (etapa 11), geradas quando o cliente paga cada parcela e controladas até o repasse ao vendedor. O **Dashboard** (etapa 6) resume os outros módulos.
 
-O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar); **Relatórios** (Vendas, Compras, Estoque).
+O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -19,8 +19,9 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 7 | Fornecedores e Pedidos de Compra (entrada automática de estoque, custo atualizado) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
 | 8 | Contas a Pagar (parcelas da compra, vencimento, status de pagamento, card no Dashboard) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
 | 9 | Relatórios (vendas, compras, estoque) com exportação Excel/PDF | Back-end testado de ponta a ponta e PDFs conferidos; telas confirmadas pelo Rafael (23/09/2026) |
-| 10 | Vendedores (cadastro + vendedor no pedido de venda, % de comissão congelada) | Back-end testado de ponta a ponta; telas não verificadas visualmente (23/09/2026) |
-| 11+ | Comissão, Login | Planejada |
+| 10 | Vendedores (cadastro + vendedor no pedido de venda, % de comissão congelada) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
+| 11 | Comissões (geradas no recebimento da parcela, pagamento ao vendedor) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
+| 12+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -180,7 +181,19 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - **Pedido de Venda** ganhou o campo **Vendedor** (seleção com busca, só ativos): opcional no rascunho, **obrigatório e ativo para confirmar** (igual à forma de pagamento)
 - Ao confirmar, o pedido **guarda a % de comissão do vendedor naquele momento**; mudar a % do vendedor depois não altera vendas já confirmadas. O pedido confirmado mostra o vendedor e a % congelada
 - Pedidos confirmados antes deste módulo continuam sem vendedor
-- Fora do escopo por enquanto: **cálculo e relatório de comissão** (próxima etapa), vendedor no pedido de compra, coluna/filtro de vendedor na lista de pedidos e nos relatórios
+- Fora do escopo por enquanto: vendedor no pedido de compra, coluna/filtro de vendedor na lista de pedidos e nos relatórios (o cálculo da comissão veio na etapa 11)
+
+---
+
+## Funcionalidades (etapa 11 — Comissões)
+
+- **A comissão nasce quando o cliente paga**: marcar uma parcela como recebida em Contas a Receber gera a comissão dela, se o pedido tiver vendedor — `valor da parcela × % congelada no pedido`, arredondado a 2 casas (meio para cima). A % é a do pedido (etapa 10), não a atual do vendedor
+- Uma comissão por parcela: receber de novo não duplica; pedido sem vendedor (anterior à etapa 10) ou com 0% não gera nada
+- Parcelas que já estavam recebidas antes deste módulo, de pedidos com vendedor, ganharam a comissão na migration
+- Tela **Comissões** (menu Financeiro): filtros por vendedor, período (data do recebimento) e status; cards **Gerado / A pagar / Pago** (somas do vendedor/período, calculadas no servidor); tabela com pedido e parcela, cliente, valor recebido, %, comissão, datas e status
+- **Pagar ao vendedor**: por linha ou selecionando várias pendentes ("Marcar como pagas"); a comissão passa a **Paga** com a data. Pagar de novo não muda nada
+- Cancelar um pedido não mexe nas comissões (as parcelas já recebidas continuam recebidas)
+- Fora do escopo por enquanto: gerar conta a pagar da comissão, estorno de comissão, exportação da tela para Excel/PDF, metas/faixas de comissão
 
 ## Stack e versões
 
@@ -274,6 +287,7 @@ erp_portifolio/
 │       │   ├── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
 │       │   ├── FornecedoresController.cs    # endpoints REST de fornecedores
 │       │   ├── VendedoresController.cs      # endpoints REST de vendedores
+│       │   ├── ComissoesController.cs       # listar comissões com totais e pagar em lote
 │       │   ├── PedidosCompraController.cs   # endpoints REST de pedidos de compra
 │       │   ├── ContasPagarController.cs     # endpoints REST de contas a pagar
 │       │   └── RelatoriosController.cs      # relatórios: JSON para a tela ou arquivo (?formato=xlsx|pdf)
@@ -292,6 +306,7 @@ erp_portifolio/
 │       │   ├── StatusParcelaPagar.cs        # enum: Pendente, Pago, Cancelado
 │       │   ├── Fornecedor.cs                # entidade (espelho de Cliente)
 │       │   ├── Vendedor.cs                  # entidade (CPF, % de comissão padrão)
+│       │   ├── Comissao.cs                  # entidade (uma por parcela recebida) + enum StatusComissao
 │       │   └── PedidoCompra.cs / PedidoCompraItem.cs  # entidades (espelho de Pedido/PedidoItem, sem forma de pagamento)
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
@@ -326,6 +341,7 @@ erp_portifolio/
 │       │   ├── EstoqueResumoDashboardDto.cs # saída de /dashboard/estoque
 │       │   ├── Fornecedor{Criacao,Atualizacao,Resposta,Filtro}Dto.cs  # mesmo desenho, para fornecedores
 │       │   ├── VendedorDtos.cs              # criação, atualização, filtro e resposta de vendedores
+│       │   ├── ComissaoDtos.cs              # filtro, linha, totais e corpo do "pagar"
 │       │   ├── Validacoes/CpfAttribute.cs   # só CPF (vendedor), reaproveitando o DocumentoValidador
 │       │   ├── PedidoCompraCriacaoDto.cs    # entrada do POST/PUT (itens sem preço; sem forma de pagamento)
 │       │   ├── PedidoCompraItemEntradaDto.cs # item do POST/PUT: produtoId, quantidade, desconto
@@ -360,6 +376,9 @@ erp_portifolio/
 │       │   ├── FornecedorService.cs         # regras de negócio + acesso a dados (espelho de ClienteService)
 │       │   ├── IVendedorService.cs
 │       │   ├── VendedorService.cs           # espelho de FornecedorService, com CPF único
+│       │   ├── IComissaoService.cs
+│       │   ├── ComissaoService.cs           # lista com totais do filtro, pagar em lote (a geração fica no ContasReceberService)
+│       │   ├── ComissaoCalculo.cs           # parcela × % com 2 casas, função pura (com xUnit)
 │       │   ├── IPedidoCompraService.cs
 │       │   ├── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       │   ├── IContasPagarService.cs
@@ -408,6 +427,7 @@ erp_portifolio/
             │   ├── dashboardApi.ts          # chamadas da API do Dashboard (4 endpoints)
             │   ├── fornecedoresApi.ts       # chamadas da API de fornecedores
             │   ├── vendedoresApi.ts         # chamadas da API de vendedores
+            │   ├── comissoesApi.ts          # chamadas da API de comissões
             │   └── pedidosCompraApi.ts      # chamadas da API de pedidos de compra
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
@@ -420,6 +440,7 @@ erp_portifolio/
             │   ├── useDashboard.ts          # 4 queries independentes (vendas, contas a receber, contas a pagar, estoque)
             │   ├── useFornecedores.ts       # useQuery / useMutation
             │   ├── useVendedores.ts         # useQuery / useMutation
+            │   ├── useComissoes.ts          # lista com totais e marcar como pagas
             │   └── usePedidosCompra.ts      # useQuery / useMutation de pedidos de compra
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
@@ -455,6 +476,8 @@ erp_portifolio/
             ├── pages/Fornecedores/
             │   ├── FornecedoresListaPage.tsx  # filtros, tabela, paginação, ações (espelho de Clientes)
             │   └── FornecedorFormDrawer.tsx   # painel lateral de inclusão/edição
+            ├── pages/Comissoes/
+            │   └── ComissoesListaPage.tsx     # filtros, cards, tabela com seleção, marcar como pagas
             ├── pages/Vendedores/
             │   ├── VendedoresListaPage.tsx    # filtros, tabela com % de comissão, ações (espelho de Fornecedores)
             │   └── VendedorFormDrawer.tsx     # painel lateral de inclusão/edição
@@ -483,6 +506,7 @@ erp_portifolio/
             │   ├── dashboard.ts
             │   ├── fornecedor.ts
             │   ├── vendedor.ts
+            │   ├── comissao.ts
             │   ├── pedidoCompra.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
             ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx / SelecaoFornecedor.tsx / SelecaoVendedor.tsx  # seleção com busca no servidor (usadas nos pedidos e nos filtros dos relatórios, com `aoLimpar`)
@@ -706,6 +730,15 @@ Vendedores (mesmo desenho de Fornecedores, sem cidade/UF e com `percentualComiss
 | PATCH | `/vendedores/{id}/inativar` | Inativa; repetir também retorna 204 | 204, 404 |
 
 `POST`/`PUT /pedidos` aceitam `vendedorId` (opcional; se vier, precisa existir e estar ativo, senão 400 em `VendedorId`). `PATCH /pedidos/{id}/confirmar` exige vendedor ativo (400 em `VendedorId`) e grava `percentualComissao` = % do vendedor naquele momento. `GET /pedidos/{id}` devolve `vendedorId`, `vendedorNome` e `percentualComissao`.
+
+Comissões:
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=1&tamanhoPagina=10` | `{ resultado: <lista paginada, mais recente primeiro>, totais: { totalGerado, totalPendente, totalPago } }`; `status` = `Pendente`/`Paga`; datas = data do recebimento, inclusivas; os totais são do vendedor/período (não dependem do status) | 200, 400 |
+| POST | `/comissoes/pagar` | Corpo `{ "ids": [1, 2] }` (1 a 500): marca como pagas; as já pagas não mudam; algum id inexistente → 400 em `Ids` e nada muda | 204, 400 |
+
+`PATCH /contas-receber/{id}/receber` passou a gerar a comissão por dentro (mesma transação).
 
 Pedidos de Compra (mesmo desenho de Pedidos, sem forma de pagamento):
 
@@ -960,6 +993,22 @@ Tabela `public.vendedores`:
 | `data_cadastro` | timestamptz | UTC, padrão `now()` |
 
 `public.pedidos` ganhou `vendedor_id` (integer, opcional, FK `fk_pedidos_vendedores` → `vendedores.id` restrict, índice `ix_pedidos_vendedor_id`) e `percentual_comissao` (numeric(5,2), opcional, `CHECK` 0-100; preenchido só ao confirmar). Migration: `20260923163031_AdicionaVendedores`.
+
+Tabela `public.comissoes`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_comissoes`, identity (generated always) |
+| `parcela_receber_id` | integer | FK `fk_comissoes_parcelas_receber` (restrict); **índice único** `ux_comissoes_parcela_receber_id` (1 comissão por parcela) |
+| `pedido_id` / `vendedor_id` | integer | FKs restrict; índices `ix_comissoes_pedido_id`, `ix_comissoes_vendedor_id` |
+| `valor_base` | numeric(12,2) | valor da parcela recebida |
+| `percentual` | numeric(5,2) | % congelada no pedido; `CHECK` > 0 e ≤ 100 |
+| `valor` | numeric(12,2) | `CHECK` > 0 |
+| `data_geracao` | timestamptz | data do recebimento; índice `ix_comissoes_data_geracao` |
+| `status` | varchar(20) | `Pendente` ou `Paga` |
+| `data_pagamento` | timestamptz | nula até pagar |
+
+Migration: `20260923181059_CriacaoTabelaComissoes` (cria a tabela e insere, em SQL, as comissões das parcelas já recebidas de pedidos com vendedor).
 
 Tabela `public.fornecedores` (espelho exato de `public.clientes`):
 
@@ -1357,6 +1406,24 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (17
 
 **Limitação desta rodada:** sem navegador nesta sessão, a tela de Vendedores e o campo Vendedor no pedido **não foram verificados visualmente**. Recomenda-se: cadastrar um vendedor com 5%, criar um pedido de venda escolhendo esse vendedor, confirmar e ver a comissão congelada no pedido; depois mudar a % do vendedor e reabrir o pedido.
 
+### Comissões (23/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script Python com 18 verificações, usando vendedores/cliente/produto de teste (`ZZT…`) e 5 pedidos, todos apagados via SQL ao final; os dados reais ficaram intactos.
+
+| Verificação | Resultado |
+|---|---|
+| Parcela de R$ 350 de pedido confirmado a 5% gera R$ 17,50 — mesmo com a % do vendedor já alterada para 9% depois da confirmação; receber de novo não duplica | ✅ |
+| Pedido de R$ 1.000 em 3 parcelas a 5,5%: 3 comissões de R$ 18,33 (arredondamento) | ✅ |
+| Vendedor com 0% e pedido sem vendedor: recebem normalmente e não geram comissão | ✅ |
+| A SQL de carga da migration, rodada sobre uma parcela marcada como recebida "antes", gera R$ 16,50 (300 × 5,5%) | ✅ |
+| Lista: vendedor, pedido, parcela X/Y, base e valor; filtros por vendedor, status e período; totais batendo com SQL; período invertido → 400; período vazio → totais 0 | ✅ |
+| Pagar 2 em lote → Paga com data; pagar de novo mantém a data; id inexistente → 400 sem alterar nada; lista vazia → 400 | ✅ |
+| Cancelar pedido com parcela recebida mantém a comissão | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (177 aprovados, 5 novos em `ComissaoCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
+**Limitação desta rodada:** sem navegador nesta sessão, a tela de Comissões **não foi verificada visualmente**. Recomenda-se: confirmar um pedido com vendedor, receber uma parcela em Contas a Receber, abrir Financeiro → Comissões, filtrar pelo vendedor e marcar como paga (uma e depois várias).
+
 ---
 
 ## Padrões do projeto
@@ -1450,7 +1517,7 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Gerar parcelas para pedidos (venda ou compra) confirmados antes dos módulos de Contas a Receber/Pagar
 - Recebimento parcial de mercadoria no Pedido de Compra (hoje é recebido inteiro ao confirmar)
 - Seletor de período no Dashboard (hoje é sempre o mês atual)
-- **Comissão**: cálculo por vendedor e período (valor vendido × % congelada no pedido), relatório com exportação; decidir se considera o pedido confirmado ou só as parcelas recebidas
+- Comissões: gerar conta a pagar ao fechar a comissão do vendedor, exportação Excel/PDF da tela, estorno de comissão
 - Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
