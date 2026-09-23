@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.3.0
-// Data.......: 22/09/2026
+// Versão.....: 1.4.0
+// Data.......: 23/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
 //              no servidor), marcar parcela como recebida, gerar as parcelas ao
 //              confirmar um pedido e cancelar as pendentes ao cancelar um confirmado.
@@ -16,6 +16,9 @@
 //                - UPDATE : marcar como recebida (status + data_recebimento); marcar
 //                           Pendentes como Cancelado ao cancelar o pedido
 //                - INSERT : geração das parcelas (GerarParcelas)
+//              public.comissoes
+//                - INSERT : comissão da parcela ao marcá-la como recebida, se o pedido
+//                           tiver vendedor e % (SPEC.md etapa 11, CM1/CM2)
 // Fontes.....: ErpPortfolioDbContext.ParcelasReceber / Pedidos (EF Core / Npgsql).
 //              GerarParcelas e CancelarPendentesAsync não chamam SaveChanges: ficam na
 //              mesma transação do PedidoService.ConfirmarAsync/CancelarAsync.
@@ -25,6 +28,7 @@
 //   1.1.0 - 22/09/2026 - GerarParcelas (usado pelo PedidoService ao confirmar).
 //   1.2.0 - 22/09/2026 - CancelarPendentesAsync (usado pelo PedidoService ao cancelar).
 //   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
+//   1.4.0 - 23/09/2026 - Marcar como recebida gera a comissão do vendedor (etapa 11).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -100,6 +104,9 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
         {
             parcela.Status = StatusParcela.Recebido;
             parcela.DataRecebimento = DateTime.UtcNow;
+            GerarComissao(parcela);
+            // ponytail: duas chamadas simultâneas para a mesma parcela podem colidir no índice único de
+            // comissoes (a segunda recebe erro 500, sem duplicar nada); tratar se virar caso real.
             await contexto.SaveChangesAsync(cancelamento);
         }
 
@@ -108,6 +115,31 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
         return new ParcelaRespostaDto(
             parcela.Id, parcela.PedidoId, parcela.Pedido!.Cliente!.Nome, parcela.NumeroParcela, totalParcelas,
             parcela.Valor, parcela.Vencimento, parcela.Status, parcela.DataRecebimento, Atrasado: false);
+    }
+
+    // CM1: comissão só quando o cliente paga, com a % congelada no pedido (não a atual do vendedor).
+    // Pedido sem vendedor (anterior à etapa 10) ou com 0% não gera nada. Entra no mesmo SaveChanges do recebimento.
+    private void GerarComissao(ParcelaReceber parcela)
+    {
+        var pedido = parcela.Pedido!;
+        if (pedido.VendedorId is not int vendedorId || pedido.PercentualComissao is not decimal percentual)
+            return;
+
+        var valor = ComissaoCalculo.Valor(parcela.Valor, percentual);
+        if (valor <= 0)
+            return;
+
+        contexto.Comissoes.Add(new Comissao
+        {
+            ParcelaReceberId = parcela.Id,
+            PedidoId = pedido.Id,
+            VendedorId = vendedorId,
+            ValorBase = parcela.Valor,
+            Percentual = percentual,
+            Valor = valor,
+            DataGeracao = parcela.DataRecebimento!.Value,
+            Status = StatusComissao.Pendente
+        });
     }
 
     public void GerarParcelas(Pedido pedido, int numeroParcelas, int intervaloDias)

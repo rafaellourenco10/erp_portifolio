@@ -9,9 +9,10 @@
   - Verificar: build 0 avisos; migration aplicada; `dotnet test` verde.
   - Resultado: `Models/Comissao.cs` (enum `StatusComissao` no mesmo arquivo), mapeamento com índice único em `parcela_receber_id` e FKs restrict, migration `20260923181059_CriacaoTabelaComissoes` aplicada com a carga do CM3 em SQL (0 linhas no banco de dev: não havia parcela recebida de pedido com vendedor; a SQL é exercitada no E2E da T3). `ComissaoCalculo.Valor` + 5 casos xUnit (inclusive 0,505 → 0,51): `dotnet test` 177/177. Build 0 avisos.
 
-- [ ] **T2: Gerar comissão ao receber parcela** (S)
+- [x] **T2: Gerar comissão ao receber parcela** (S) — *concluída em 23/09/2026*
   - `ContasReceberService.MarcarRecebidaAsync` gera a comissão (CM1/CM2) no mesmo SaveChanges.
   - Verificar: build; E2E na T3.
+  - Resultado: `GerarComissao` no `ContasReceberService`, chamado só quando a parcela muda para Recebido (receber de novo não passa por ele); usa a % do pedido; sem vendedor/% ou valor 0 não gera. Mesmo SaveChanges do recebimento. Corrida de duas chamadas simultâneas marcada com `ponytail:` (o índice único impede duplicar). Build 0 avisos; comportamento no E2E da T3.
 
 - [ ] **T3: API de comissões** (M)
   - DTOs, `IComissaoService`/`ComissaoService` (listar com totais do filtro, pagar em lote), `ComissoesController`, DI.
