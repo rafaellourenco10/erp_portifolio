@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IContasReceberService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 22/09/2026
 // Descrição..: Contrato do serviço de contas a receber: consulta, marcar recebido e a
 //              geração de parcelas usada pelo PedidoService ao confirmar um pedido.
@@ -13,6 +13,7 @@
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
 //   1.1.0 - 22/09/2026 - GerarParcelas (usado pelo PedidoService ao confirmar).
 //   1.2.0 - 22/09/2026 - CancelarPendentesAsync (usado pelo PedidoService ao cancelar).
+//   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -35,4 +36,7 @@ public interface IContasReceberService
 
     /// <summary>Cancela as parcelas ainda Pendentes do pedido (C6); não chama SaveChanges.</summary>
     Task CancelarPendentesAsync(int pedidoId, CancellationToken cancelamento);
+
+    /// <summary>Total e quantidade pendente/atrasado, sem filtro de mês (D5, Dashboard).</summary>
+    Task<ContasReceberResumoDto> ObterResumoAsync(CancellationToken cancelamento);
 }

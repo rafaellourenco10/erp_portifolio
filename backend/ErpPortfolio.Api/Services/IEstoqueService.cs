@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IEstoqueService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 22/09/2026
 // Descrição..: Contrato do serviço de estoque: consulta (saldo por produto e extrato),
 //              entrada manual e a baixa/estorno usados pelo PedidoService ao confirmar
@@ -14,6 +14,7 @@
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e extrato).
 //   1.1.0 - 22/09/2026 - Entrada manual (RegistrarEntradaAsync).
 //   1.2.0 - 22/09/2026 - BaixarAsync (confirmar) e Estornar (cancelar de confirmado).
+//   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -41,4 +42,7 @@ public interface IEstoqueService
 
     /// <summary>Enfileira uma Entrada de estorno por item (E3); não chama SaveChanges.</summary>
     void Estornar(int pedidoId, IEnumerable<PedidoItem> itens);
+
+    /// <summary>Quantidade de produtos ativos com saldo ≤ <see cref="EstoqueService.LimiteSaldoBaixo"/> (D6, Dashboard).</summary>
+    Task<EstoqueResumoDashboardDto> ObterResumoAsync(CancellationToken cancelamento);
 }

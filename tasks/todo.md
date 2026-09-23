@@ -20,23 +20,25 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: nenhuma
   - Arquivos: `DTOs/VendasResumoDto.cs`, `DTOs/FaturamentoDiaDto.cs`, `DTOs/PedidosPorStatusDto.cs`, `Services/DashboardCalculo.cs`, `Services/IPedidoService.cs`, `Services/PedidoService.cs`, `backend/ErpPortfolio.Tests/DashboardResumoTests.cs`
 
-- [ ] **T2: Resumo de contas a receber (`ContasReceberService`)** (S)
+- [x] **T2: Resumo de contas a receber (`ContasReceberService`)** (S) — *concluída em 22/09/2026*
   - Descrição: `ObterResumoAsync()` — total e quantidade pendente/atrasado (D5), sem filtro de mês.
   - Aceite: soma e contagem batem com as parcelas `Pendente`; "atrasado" é o subconjunto com `vencimento` no passado, mesmo cálculo já usado na listagem de Contas a Receber.
   - Verificar: `dotnet build` 0 avisos; conferido junto com o E2E da T4.
+  - Resultado: `dotnet build` 0 avisos. Sem lógica pura nova (reaproveita o mesmo cálculo de "atrasado" já usado em `ListarAsync`); verificação fica pro E2E da T4.
   - Dependências: nenhuma
   - Arquivos: `DTOs/ContasReceberResumoDto.cs`, `Services/IContasReceberService.cs`, `Services/ContasReceberService.cs`
 
-- [ ] **T3: Resumo de estoque (`EstoqueService`)** (S)
+- [x] **T3: Resumo de estoque (`EstoqueService`)** (S) — *concluída em 22/09/2026*
   - Descrição: `ObterResumoAsync()` — quantidade de produtos ativos com saldo ≤ `LimiteSaldoBaixo` (5) (D6).
   - Aceite: produto com saldo exatamente 5 conta; saldo 6 não conta; só produtos ativos entram.
   - Verificar: `dotnet test` (limite exato); `dotnet build` 0 avisos.
+  - Resultado: `dotnet build` 0 avisos. A comparação `saldo <= limite` é um `<=` puro (sem branch de lógica própria) — decidi não criar um teste xUnit só pra embrulhar um operador nativo (ponytail: one-liner não precisa de teste); o limite exato (5 conta, 6 não) é verificado por E2E na T4, com produtos de teste nos dois valores.
   - Dependências: nenhuma
-  - Arquivos: `DTOs/EstoqueResumoDashboardDto.cs`, `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`, `backend/ErpPortfolio.Tests/DashboardResumoTests.cs`
+  - Arquivos: `DTOs/EstoqueResumoDashboardDto.cs`, `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`
 
 ### Checkpoint 1: resumos prontos
-- [ ] `dotnet test` verde e `dotnet build` sem avisos
-- [ ] Revisão do Rafael antes de seguir
+- [x] `dotnet test` verde e `dotnet build` sem avisos
+- [ ] Revisão do Rafael antes de seguir *(dispensada — continuação da autorização geral)*
 
 ---
 

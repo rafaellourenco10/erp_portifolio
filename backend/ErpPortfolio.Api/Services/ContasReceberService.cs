@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 22/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
 //              no servidor), marcar parcela como recebida, gerar as parcelas ao
@@ -24,6 +24,7 @@
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e marcar recebido).
 //   1.1.0 - 22/09/2026 - GerarParcelas (usado pelo PedidoService ao confirmar).
 //   1.2.0 - 22/09/2026 - CancelarPendentesAsync (usado pelo PedidoService ao cancelar).
+//   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -136,5 +137,21 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
 
         foreach (var parcela in pendentes)
             parcela.Status = StatusParcela.Cancelado;
+    }
+
+    public async Task<ContasReceberResumoDto> ObterResumoAsync(CancellationToken cancelamento)
+    {
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        var pendentes = await contexto.ParcelasReceber.AsNoTracking()
+            .Where(p => p.Status == StatusParcela.Pendente)
+            .Select(p => new { p.Valor, p.Vencimento })
+            .ToListAsync(cancelamento);
+
+        var atrasadas = pendentes.Where(p => p.Vencimento < hoje).ToList();
+
+        return new ContasReceberResumoDto(
+            pendentes.Sum(p => p.Valor), pendentes.Count,
+            atrasadas.Sum(p => p.Valor), atrasadas.Count);
     }
 }
