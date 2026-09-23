@@ -4,43 +4,47 @@
 
 ## Fase 1: Schema
 
-- [ ] **T1: Migration + Models** (M)
+- [x] **T1: Migration + Models** (M) — *concluída em 22/09/2026*
   - Descrição: `Fornecedor.cs`, `PedidoCompra.cs`, `PedidoCompraItem.cs` (espelhando `Cliente`/`Pedido`/`PedidoItem`); `EstoqueMovimentacao.cs` ganha `PedidoCompraId`/`PedidoCompra`; mapeamento no `ErpPortfolioDbContext` (tabelas, colunas snake_case, índices únicos `ix_fornecedores_documento` e `(pedido_compra_id, produto_id)`, FKs); `dotnet ef migrations add AdicionaFornecedoresEPedidosCompra`.
   - Aceite: `dotnet ef database update` aplica sem erro; `dotnet build` 0 avisos.
   - Verificar: `dotnet build ErpPortfolio.slnx -c Release`.
+  - Resultado: migration `20260923020209_AdicionaFornecedoresEPedidosCompra` gerada e aplicada no banco de dev; 2 tabelas novas + coluna `pedido_compra_id` em `estoque_movimentacoes` (nullable, FK restrict). `dotnet build` 0 avisos.
   - Dependências: nenhuma.
   - Arquivos: `Models/Fornecedor.cs`, `Models/PedidoCompra.cs`, `Models/PedidoCompraItem.cs`, `Models/EstoqueMovimentacao.cs`, `Data/ErpPortfolioDbContext.cs`, `Migrations/*`.
 
-- [ ] **T2: Fornecedor backend** (M)
+- [x] **T2: Fornecedor backend** (M) — *concluída em 22/09/2026*
   - Descrição: `FornecedorCriacaoDto`, `FornecedorAtualizacaoDto`, `FornecedorFiltroDto`, `FornecedorRespostaDto` (espelho dos DTOs de Cliente); `IFornecedorService`/`FornecedorService` (espelho de `ClienteService`, com `GarantirDocumentoUnicoAsync` num índice próprio); `FornecedoresController` (espelho de `ClientesController`); registro no DI (`Program.cs`).
   - Aceite: CRUD completo funcionando via API real (criar, listar com filtro, editar, inativar, documento duplicado bloqueado).
   - Verificar: `dotnet build`; teste manual via `curl`/Swagger contra a API rodando.
+  - Resultado: CRUD testado via API real (criar, obter, documento duplicado → 409, editar, listar com filtro por nome, inativar → 204, `ativo=false` confirmado). Dado de teste (`ZZT Fornecedor Teste`) apagado via SQL direto (sem endpoint de exclusão física, mesmo padrão do Cliente).
   - Dependências: T1.
   - Arquivos: `DTOs/Fornecedor*.cs`, `Services/IFornecedorService.cs`, `Services/FornecedorService.cs`, `Controllers/FornecedoresController.cs`, `Program.cs`.
 
-- [ ] **T3: EstoqueService — Receber/EstornarCompra** (M)
+- [x] **T3: EstoqueService — Receber/EstornarCompra** (M) — *concluída em 22/09/2026*
   - Descrição: `IEstoqueService`/`EstoqueService` ganham `Receber(pedidoCompraId, itens)` (Entrada por item, motivo `"Compra pedido #N"`, sem checagem de saldo) e `EstornarCompraAsync(pedidoCompraId, itens, cancelamento)` (checa saldo suficiente por item ANTES de enfileirar qualquer Saída — PC7 — e lança `DadoInvalidoException` listando os itens sem saldo se faltar); `MovimentacaoRespostaDto` ganha `PedidoCompraId`.
   - Aceite: compila; comportamento (entrada gerada, estorno bloqueado por saldo insuficiente) verificado por E2E real na T4, junto do fluxo completo do Pedido de Compra — mesmo padrão do projeto, que não tem xUnit tocando banco (`BaixarAsync`/`Estornar` do Pedido de Venda também só são verificados por E2E).
   - Verificar: `dotnet build`.
+  - Resultado: build limpo; comportamento validado na T4 (ver abaixo).
   - Dependências: T1.
-  - Arquivos: `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`, `DTOs/MovimentacaoRespostaDto.cs`, `ErpPortfolio.Tests/EstoqueCalculoTests.cs` (ou novo arquivo).
+  - Arquivos: `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`, `DTOs/MovimentacaoRespostaDto.cs`.
 
 ### Checkpoint 1: schema + estoque prontos
-- [ ] `dotnet build` 0 avisos, `dotnet test` verde
+- [x] `dotnet build` 0 avisos, `dotnet test` verde (150/150)
 
 ## Fase 2: Backend Pedido de Compra
 
-- [ ] **T4: PedidoCompra backend** (L)
-  - Descrição: `PedidoCompraCriacaoDto`, `PedidoCompraItemEntradaDto`, `PedidoCompraRespostaDto`, `PedidoCompraResumoDto`, `PedidoCompraFiltroDto` (espelho dos DTOs de Pedido, sem `FormaPagamento`); `IPedidoCompraService`/`PedidoCompraService` reaproveitando `TransicoesPedido` e `CalculoPedido` — criar/editar rascunho, confirmar (PC5/PC6: fornecedor e produtos ativos, chama `ReceberAsync`, atualiza `Produto.Custo` por item), cancelar (PC7/PC8: chama `EstornarCompra`, idempotente); `PedidosCompraController` (espelho de `PedidosController`, sem corpo no `/confirmar`).
+- [x] **T4: PedidoCompra backend** (L) — *concluída em 22/09/2026*
+  - Descrição: `PedidoCompraCriacaoDto`, `PedidoCompraItemEntradaDto`, `PedidoCompraRespostaDto`, `PedidoCompraResumoDto`, `PedidoCompraFiltroDto` (espelho dos DTOs de Pedido, sem `FormaPagamento`); `IPedidoCompraService`/`PedidoCompraService` reaproveitando `TransicoesPedido` e `CalculoPedido` — criar/editar rascunho, confirmar (PC5/PC6: fornecedor e produtos ativos, chama `Receber`, atualiza `Produto.Custo` por item), cancelar (PC7/PC8: chama `EstornarCompraAsync`, idempotente); `PedidosCompraController` (espelho de `PedidosController`, sem corpo no `/confirmar`).
   - Aceite: E2E real cobrindo confirmar (entrada gerada + custo atualizado), cancelar com saldo ok (estorna), cancelar sem saldo suficiente (bloqueado, 400) e cancelar duas vezes (idempotente) — mesmo padrão de verificação do `PedidoService`.
   - Verificar: `dotnet build`, E2E manual contra a API rodando.
+  - Resultado: fluxo completo testado contra a API real — (1) item nasce com preço = Custo do produto; (2) confirmar gera Entrada ligada ao pedido (`"Compra pedido #N"`, saldo sobe) e **atualiza o Custo do produto para o preço congelado do item**, mesmo simulando uma mudança de custo entre criar o item e confirmar; (3) cancelar com saldo intacto gera Saída de estorno (`"Estorno cancelamento pedido de compra #N"`), saldo volta a 0; (4) cancelar de novo é idempotente (204, sem duplicar movimentação); (5) **caso novo (PC7)**: confirmar uma segunda compra, vender parte do saldo via Pedido de Venda, tentar cancelar a compra → bloqueado (400, "Estoque insuficiente para estornar"), nada alterado. `dotnet build` 0 avisos, `dotnet test` 150/150. Todos os dados de teste (fornecedor, produto, cliente, 2 pedidos de compra, 1 pedido de venda + parcela) apagados via SQL direto ao final.
   - Dependências: T1, T3.
   - Arquivos: `DTOs/PedidoCompra*.cs`, `Services/IPedidoCompraService.cs`, `Services/PedidoCompraService.cs`, `Controllers/PedidosCompraController.cs`, `Program.cs`.
 
 ### Checkpoint 2 (CP1 do plano): API pronta
-- [ ] Critérios 1 a 7 da spec (backend) verificados por E2E na API real
-- [ ] `dotnet test` verde, `dotnet build` sem avisos
-- [ ] Dados reais intactos; dados de teste apagados
+- [x] Critérios 1 a 7 da spec (backend) verificados por E2E na API real
+- [x] `dotnet test` verde (150/150), `dotnet build` sem avisos
+- [x] Dados reais intactos; dados de teste apagados
 
 ## Fase 3: Telas
 

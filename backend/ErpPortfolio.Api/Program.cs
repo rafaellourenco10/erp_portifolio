@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.7.0
+// Versão.....: 1.8.0
 // Data.......: 22/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
@@ -22,6 +22,7 @@
 //   1.5.0 - 22/09/2026 - Registro do IEstoqueService e Estoque na descrição do Swagger.
 //   1.6.0 - 22/09/2026 - Registro do IContasReceberService e Contas a Receber no Swagger.
 //   1.7.0 - 22/09/2026 - Registro do IFornecedorService (etapa 7).
+//   1.8.0 - 22/09/2026 - Registro do IPedidoCompraService (etapa 7).
 // =====================================================================================
 
 using System.Reflection;
@@ -44,6 +45,7 @@ builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<IContasReceberService, ContasReceberService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();
+builder.Services.AddScoped<IPedidoCompraService, PedidoCompraService>();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
