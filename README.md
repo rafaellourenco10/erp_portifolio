@@ -1,9 +1,9 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, e **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, e **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF. O **Dashboard** (etapa 6) resume os outros módulos.
 
-O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar).
+O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar); **Relatórios** (Vendas, Compras, Estoque).
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -17,8 +17,9 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 5 | Contas a Receber (parcelas, vencimento, status de recebimento) | Back-end testado de ponta a ponta; tela não verificada visualmente (22/09/2026) |
 | 6 | Dashboard (indicadores do mês) | Back-end testado com dados reais; tela não verificada visualmente (22/09/2026) |
 | 7 | Fornecedores e Pedidos de Compra (entrada automática de estoque, custo atualizado) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
-| 8 | Contas a Pagar (parcelas da compra, vencimento, status de pagamento, card no Dashboard) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
-| 9+ | Login | Planejada |
+| 8 | Contas a Pagar (parcelas da compra, vencimento, status de pagamento, card no Dashboard) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
+| 9 | Relatórios (vendas, compras, estoque) com exportação Excel/PDF | Back-end testado de ponta a ponta e PDFs conferidos; telas não verificadas visualmente (23/09/2026) |
+| 10+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -157,6 +158,18 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - Compras confirmadas **antes** deste módulo não ganharam parcelas (mesma situação das vendas antigas na etapa 5)
 - Fora do escopo por enquanto: pagamento parcial, editar parcela, contas a pagar avulsas (sem pedido de compra, ex.: aluguel), estorno de parcela já paga
 
+---
+
+## Funcionalidades (etapa 9 — Relatórios)
+
+- Seção **Relatórios** no menu com três telas: **Vendas**, **Compras** e **Estoque**. Cada uma tem filtros, botão **Gerar**, cards de resumo, tabela e botões **Excel** e **PDF**
+- **Vendas / Compras** (mesma tela, muda o cliente/fornecedor): período obrigatório (padrão: do dia 1 do mês até hoje; máximo 366 dias), status (padrão Confirmado, ou Todos) e cliente/fornecedor opcional. Um pedido por linha (nº, data, nome, itens, total, status); resumo com quantidade, valor total e ticket médio
+- **Estoque**: posição atual dos produtos ativos — saldo, estoque mínimo, custo, **valor em estoque** (saldo × custo) e situação (abaixo do mínimo = saldo ≤ mínimo, mesma regra do Dashboard); filtros por categoria e "só abaixo do mínimo"
+- Os arquivos são **gerados pelo servidor** a partir da mesma consulta da tela, então os números são sempre iguais: **Excel** (.xlsx, ClosedXML) com valores de verdade (moeda, data e número somam/ordenam no Excel), cabeçalho destacado e filtro automático; **PDF** (QuestPDF) em A4, paisagem quando a tabela é larga, com filtros, cards de resumo e "Página X de Y"
+- Nome do arquivo: `relatorio-vendas-AAAA-MM-DD_AAAA-MM-DD.xlsx` / `.pdf` (estoque: `relatorio-estoque-AAAA-MM-DD`)
+- Datas exibidas no horário de Brasília; o filtro de período compara em UTC (mesma convenção do Dashboard)
+- Fora do escopo por enquanto: seletor de período no Dashboard, relatórios de contas a receber/pagar, relatório agrupado por produto, itens dos pedidos dentro do relatório
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -166,12 +179,15 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | ORM | Entity Framework Core + Npgsql | EF Core 10.0.12 / Npgsql EF 10.0.3 |
 | Ferramenta de migrations | dotnet-ef (ferramenta local) | 10.0.12 |
 | Swagger | Swashbuckle.AspNetCore | 10.2.3 |
+| Excel dos relatórios | ClosedXML (licença MIT) | 0.105.1 |
+| PDF dos relatórios | QuestPDF (licença Community — gratuita para uso individual e empresas com faturamento < US$ 1 mi; declarada no `Program.cs`) | 2026.9.0 |
 | Banco | PostgreSQL (Docker, imagem `postgres:18-alpine`) | 18 |
 | Front-end | React + TypeScript | React 19 / TS 6 |
 | Build do front | Vite | 8 |
 | Componentes | Ant Design + @ant-design/icons | 6 |
 | Chamadas à API | TanStack Query + Axios | 5 / 1 |
 | Formulários | React Hook Form + Zod + @hookform/resolvers | 7 / 4 / 5 |
+| Datas (seletor de período) | dayjs (já vinha com o Ant Design; declarado no `package.json` na etapa 9) | 1.11 |
 | Fonte | Inter (auto-hospedada via @fontsource-variable/inter) | 5 |
 | Lint do front | oxlint | 1 |
 
@@ -246,7 +262,8 @@ erp_portifolio/
 │       │   ├── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
 │       │   ├── FornecedoresController.cs    # endpoints REST de fornecedores
 │       │   ├── PedidosCompraController.cs   # endpoints REST de pedidos de compra
-│       │   └── ContasPagarController.cs     # endpoints REST de contas a pagar
+│       │   ├── ContasPagarController.cs     # endpoints REST de contas a pagar
+│       │   └── RelatoriosController.cs      # relatórios: JSON para a tela ou arquivo (?formato=xlsx|pdf)
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
 │       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
@@ -289,6 +306,9 @@ erp_portifolio/
 │       │   ├── ContasReceberResumoDto.cs    # saída de /dashboard/contas-receber
 │       │   ├── ParcelaPagar{Resposta,Filtro}Dto.cs, FiltroStatusParcelaPagar.cs  # mesmo desenho, para contas a pagar
 │       │   ├── ContasPagarResumoDto.cs      # saída de /dashboard/contas-pagar
+│       │   ├── RelatorioFiltroDtos.cs       # filtros dos relatórios (período validado: R1)
+│       │   ├── RelatorioRespostaDtos.cs     # linhas + resumo dos 3 relatórios
+│       │   ├── FormatoRelatorio.cs          # enum: Json, Xlsx, Pdf
 │       │   ├── EstoqueResumoDashboardDto.cs # saída de /dashboard/estoque
 │       │   ├── Fornecedor{Criacao,Atualizacao,Resposta,Filtro}Dto.cs  # mesmo desenho, para fornecedores
 │       │   ├── PedidoCompraCriacaoDto.cs    # entrada do POST/PUT (itens sem preço; sem forma de pagamento)
@@ -325,7 +345,12 @@ erp_portifolio/
 │       │   ├── IPedidoCompraService.cs
 │       │   ├── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       │   ├── IContasPagarService.cs
-│       │   └── ContasPagarService.cs        # consulta, pagar, gerar/cancelar parcelas (usados pelo PedidoCompraService)
+│       │   ├── ContasPagarService.cs        # consulta, pagar, gerar/cancelar parcelas (usados pelo PedidoCompraService)
+│       │   ├── IRelatorioService.cs
+│       │   ├── RelatorioService.cs          # consultas dos relatórios + montagem do modelo de exportação
+│       │   ├── RelatorioCalculo.cs          # período válido e resumo (funções puras, com xUnit)
+│       │   ├── RelatorioModelo.cs           # modelo genérico (título, filtros, resumo, colunas, linhas) + formatação pt-BR
+│       │   └── ExportadorRelatorio.cs       # modelo -> .xlsx (ClosedXML) ou .pdf (QuestPDF), para os 3 relatórios
 │       ├── Data/
 │       │   ├── ErpPortfolioDbContext.cs     # mapeamento EF Core (snake_case)
 │       │   └── Migrations/                  # migrations geradas pelo EF Core
@@ -361,6 +386,7 @@ erp_portifolio/
             │   ├── estoqueApi.ts            # chamadas da API de estoque
             │   ├── contasReceberApi.ts      # chamadas da API de contas a receber
             │   ├── contasPagarApi.ts        # chamadas da API de contas a pagar
+            │   ├── relatoriosApi.ts         # dados dos relatórios + download do arquivo (nome do Content-Disposition)
             │   ├── dashboardApi.ts          # chamadas da API do Dashboard (4 endpoints)
             │   ├── fornecedoresApi.ts       # chamadas da API de fornecedores
             │   └── pedidosCompraApi.ts      # chamadas da API de pedidos de compra
@@ -371,6 +397,7 @@ erp_portifolio/
             │   ├── useEstoque.ts            # lista com saldo, extrato por produto, entrada manual
             │   ├── useContasReceber.ts      # lista paginada e marcar parcela como recebida
             │   ├── useContasPagar.ts        # lista paginada e marcar parcela como paga
+            │   ├── useRelatorios.ts         # consulta só após "Gerar"; download como mutação
             │   ├── useDashboard.ts          # 4 queries independentes (vendas, contas a receber, contas a pagar, estoque)
             │   ├── useFornecedores.ts       # useQuery / useMutation
             │   └── usePedidosCompra.ts      # useQuery / useMutation de pedidos de compra
@@ -397,6 +424,9 @@ erp_portifolio/
             │   └── ContasReceberListaPage.tsx  # busca, filtro de status, tabela, marcar como recebido
             ├── pages/ContasPagar/
             │   └── ContasPagarListaPage.tsx    # busca, filtro de status, tabela, marcar como paga
+            ├── pages/Relatorios/
+            │   ├── RelatorioPedidosPage.tsx    # Vendas e Compras (prop tipo): filtros, resumo, tabela, exportar
+            │   └── RelatorioEstoquePage.tsx    # posição de estoque: filtros, resumo, tabela, exportar
             ├── pages/Dashboard/
             │   ├── DashboardPage.tsx        # cards de indicador + gráfico
             │   ├── CardIndicador.tsx        # card com loading/erro próprios (D7)
@@ -425,11 +455,12 @@ erp_portifolio/
             │   ├── estoque.ts               # inclui pedidoCompraId na Movimentacao
             │   ├── contaReceber.ts
             │   ├── contaPagar.ts
+            │   ├── relatorio.ts
             │   ├── dashboard.ts
             │   ├── fornecedor.ts
             │   ├── pedidoCompra.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
-            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx / SelecaoFornecedor.tsx  # seleção com busca no servidor (usadas nos pedidos)
+            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx / SelecaoFornecedor.tsx  # seleção com busca no servidor (usadas nos pedidos e nos filtros dos relatórios, com `aoLimpar`)
             ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado (reaproveitada pelo Pedido de Compra)
             ├── hooks/useBuscaCadastros.ts    # busca com debounce para os seletores acima (clientes, fornecedores, produtos)
             ├── hooks/usePedidos.ts           # useQuery / useMutation de pedidos
@@ -660,6 +691,16 @@ Contas a Pagar (espelho de Contas a Receber):
 | PATCH | `/contas-pagar/{id}/pagar` | Marca a parcela como paga; repetir é idempotente; parcela cancelada retorna 409 | 200, 404, 409 |
 
 Confirmar um pedido de compra gera as parcelas (mesmas regras de `numeroParcelas`/`intervaloDias` do Pedido de Venda); cancelar um que estava Confirmado cancela as parcelas **Pendentes** depois da checagem de saldo — se o cancelamento for recusado por saldo, nenhuma parcela muda.
+
+Relatórios (só leitura; `formato` = `json` (padrão), `xlsx` ou `pdf` — com arquivo, a resposta é o download com `Content-Disposition`):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/relatorios/vendas?dataInicio=&dataFim=&status=&clienteId=&formato=` | Pedidos de venda do período (datas `AAAA-MM-DD`, inclusivas, obrigatórias, no máximo 366 dias), um por linha, com quantidade, valor total e ticket médio | 200, 400 |
+| GET | `/relatorios/compras?dataInicio=&dataFim=&status=&fornecedorId=&formato=` | Mesmo formato, para pedidos de compra | 200, 400 |
+| GET | `/relatorios/estoque?categoriaId=&somenteAbaixoMinimo=&formato=` | Posição atual dos produtos ativos: saldo, custo, valor em estoque, abaixo do mínimo | 200, 400 |
+
+O CORS expõe o cabeçalho `Content-Disposition` para o front ler o nome do arquivo.
 
 ### Filtros da listagem
 
@@ -1232,6 +1273,23 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (15
 
 **Limitação desta rodada:** sem navegador nesta sessão, a tela de Contas a Pagar, o modal de parcelas no Pedido de Compra (e o da venda, que passou a usar o mesmo componente) e o novo layout do Dashboard **não foram verificados visualmente**. Recomenda-se um teste manual: confirmar um pedido de compra escolhendo 2 ou 3 parcelas, ver as parcelas em `/contas-pagar`, marcar uma como paga, cancelar a compra e conferir o card "Contas a pagar" no Dashboard; e confirmar um pedido de venda para garantir que o modal continua igual.
 
+### Relatórios (23/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script Python com 25 verificações. Como os relatórios só leem, a conferência foi feita contra os **dados reais**, comparando cada resposta com SQL direto no banco — nada foi criado nem apagado.
+
+| Verificação | Resultado |
+|---|---|
+| Vendas e compras de setembro/2026: mesmos pedidos, soma, quantidade e ticket médio que o SQL; sem status traz todos; filtros por cliente e por fornecedor | ✅ |
+| Período de 1 dia inclui o dia inteiro (data final inclusiva) | ✅ |
+| Estoque: produtos ativos, saldo, valor em estoque (saldo × custo) e abaixo do mínimo batem por produto; total = soma das linhas; filtros de categoria e "só abaixo do mínimo" | ✅ |
+| Período invertido, 367 dias, datas ausentes e formato inválido → 400 no campo certo | ✅ |
+| `.xlsx` dos 3 relatórios (lido com um leitor só de biblioteca padrão): mesmas linhas e mesmo total do JSON; nome do arquivo conforme R4 | ✅ |
+| `.pdf` dos 3 relatórios e de um período sem registros: PDF válido, nome certo; **abertos e conferidos visualmente** (título, filtros, cards, tabela, estoque em paisagem, "Nenhum registro...") | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (158 aprovados, 8 novos em `RelatorioCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
+**Limitação desta rodada:** sem navegador nesta sessão, as **telas** de relatório (filtros, seletor de período, cards, tabela, botões de exportar, download pelo navegador) **não foram verificadas visualmente** — os arquivos gerados pelo servidor, sim. Recomenda-se: gerar cada relatório, baixar o Excel e o PDF pela tela e abrir os dois.
+
 ---
 
 ## Padrões do projeto
@@ -1318,13 +1376,14 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
 - Filtro por **cliente** e por **faixa de data** na lista de Pedidos
 - Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
-- Verificação visual/Playwright das telas de Contas a Receber, Contas a Pagar, do Dashboard e de Fornecedores/Pedidos de Compra (cards, gráfico, modal de confirmar com parcelas, formulários, celular) — não feita nas sessões que construíram os módulos
+- Verificação visual/Playwright das telas de Contas a Receber, do Dashboard, de Fornecedores/Pedidos de Compra e de Relatórios (cards, gráfico, modal de confirmar com parcelas, formulários, celular) — não feita nas sessões que construíram os módulos
 - Saída manual de estoque (perda/quebra/ajuste)
 - Recebimento/pagamento parcial de parcela, juros/multa por atraso, edição de parcela já gerada
 - Forma de pagamento no Pedido de Compra; pagamento parcial e contas a pagar avulsas (sem pedido de compra, ex.: aluguel)
 - Gerar parcelas para pedidos (venda ou compra) confirmados antes dos módulos de Contas a Receber/Pagar
 - Recebimento parcial de mercadoria no Pedido de Compra (hoje é recebido inteiro ao confirmar)
 - Seletor de período no Dashboard (hoje é sempre o mês atual)
+- Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**

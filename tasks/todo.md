@@ -38,5 +38,6 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T7: Documentação e verificação final** (S)
+- [x] **T7: Documentação e verificação final** (S) — *concluída em 23/09/2026*
   - README (etapa 9, dependências novas e licenças), SPEC marcada como implementada, `python -m graphify update .`, memória.
+  - Resultado: README com funcionalidades, stack (ClosedXML, QuestPDF com a licença, dayjs), estrutura, API, testes da etapa 9 e próximas etapas; etapa 8 marcada como telas confirmadas pelo Rafael. SPEC 8/8 ✅. Grafo atualizado.

@@ -1,6 +1,6 @@
 # Spec: Módulo Relatórios (etapa 9)
 
-> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
+> Status: **implementada e testada em 23/09/2026** (T1 a T7, ver `tasks/todo.md`). Critérios 1-6 conferidos por E2E contra os dados reais (25 verificações) e os PDFs abertos visualmente; **telas sem verificação visual** (sem navegador nesta sessão).
 
 ## Objetivo
 
@@ -23,6 +23,7 @@ Seletor de período no Dashboard; relatórios de contas a receber/pagar (vencida
 | Geração dos arquivos | **No servidor**: Excel com **ClosedXML** (licença MIT) e PDF com **QuestPDF** (licença Community, gratuita para uso individual e empresas com faturamento < US$ 1 mi — atende um portfólio). São as 2 únicas dependências novas. |
 | Detalhe de Vendas/Compras | **Um pedido por linha + totais** (não lista os itens de cada pedido). |
 | Dashboard | Seletor de período fica para depois. |
+| Datas no front | `dayjs` declarado no `package.json` para o seletor de período do Ant Design — já vinha instalado como dependência do próprio Ant Design (nada novo baixado nem no bundle). |
 
 ## Relatórios
 
@@ -88,11 +89,13 @@ Com `formato=xlsx`/`pdf` a resposta é o arquivo (download); com `json`, os dado
 
 ## Success criteria (testáveis)
 
-1. Relatório de vendas de um período traz só pedidos daquele período e status, com quantidade, soma e ticket médio batendo com o banco.
-2. Mesmo para compras, com filtro por fornecedor.
-3. Relatório de estoque traz saldo, valor em estoque (saldo × custo) e marcação abaixo do mínimo, batendo com o banco; filtros de categoria e "só abaixo do mínimo" funcionam.
-4. Período inválido (final antes do inicial, ou > 366 dias, ou faltando) retorna 400.
-5. `formato=xlsx` devolve um .xlsx válido com as mesmas linhas e totais do JSON.
-6. `formato=pdf` devolve um PDF válido com título, filtros e totais.
-7. Menu Relatórios com as 3 telas; exportar baixa o arquivo com o nome certo.
-8. `dotnet build` 0 avisos, `dotnet test` verde, `tsc -b`/`oxlint`/`npm run build` limpos.
+Conferidos em 23/09/2026; detalhes na seção "Relatórios (23/09/2026)" do README.
+
+1. ✅ Relatório de vendas de um período traz só pedidos daquele período e status, com quantidade, soma e ticket médio batendo com o banco.
+2. ✅ Mesmo para compras, com filtro por fornecedor.
+3. ✅ Relatório de estoque traz saldo, valor em estoque (saldo × custo) e marcação abaixo do mínimo, batendo com o banco; filtros de categoria e "só abaixo do mínimo" funcionam.
+4. ✅ Período inválido (final antes do inicial, ou > 366 dias, ou faltando) retorna 400.
+5. ✅ `formato=xlsx` devolve um .xlsx válido com as mesmas linhas e totais do JSON.
+6. ✅ `formato=pdf` devolve um PDF válido com título, filtros e totais.
+7. ✅ Menu Relatórios com as 3 telas; o servidor manda o nome certo no `Content-Disposition` (conferido no E2E) e o CORS o expõe — o clique de download no navegador não foi verificado visualmente.
+8. ✅ `dotnet build` 0 avisos, `dotnet test` 158/158, `tsc -b`/`oxlint`/`npm run build` limpos.
