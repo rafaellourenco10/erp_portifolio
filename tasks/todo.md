@@ -26,9 +26,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T5: Tela Contas a Pagar** (M)
+- [x] **T5: Tela Contas a Pagar** (M) — *concluída em 23/09/2026*
   - `types/contaPagar.ts`, `api/contasPagarApi.ts`, `hooks/useContasPagar.ts`, `pages/ContasPagar/ContasPagarListaPage.tsx`, tag de status com "Pago", rota `/contas-pagar` e item no menu Financeiro.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: tela gerada a partir da de Contas a Receber (mesmo layout e colunas, trocando cliente/pedido por fornecedor/compra e "Recebido" por "Pago"); `TagStatusParcela` passou a aceitar "Pago" em vez de ganhar uma cópia; item Contas a Pagar (`WalletOutlined`) em Financeiro. `tsc -b` e `oxlint` limpos.
 
 - [ ] **T6: Modal de parcelas ao confirmar compra** (S)
   - Confirmar pedido de compra abre o modal de parcelas; `pedidosCompraApi` envia o corpo.

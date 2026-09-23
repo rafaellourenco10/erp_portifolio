@@ -1,13 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.10.0
+ * Versão.....: 1.11.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
- *              /pedidos, /pedidos-compra, /estoque, /contas-receber) com o
+ *              /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar) com o
  *              React Router. O menu é dividido por departamento (Cadastro,
  *              Ordem Vendas/Compras, Depósito, Financeiro); o Dashboard (/)
  *              fica fora das seções: resume vários módulos.
@@ -31,6 +31,7 @@
  *   1.10.0 - 23/09/2026 - "Painel" vira "Dashboard"; "Gestão Comercial" dividida nas
  *                         seções Cadastro, Ordem Vendas/Compras, Depósito e Financeiro.
  *                         "Pedidos" vira "Pedidos de Venda" (menu, breadcrumb e títulos).
+ *   1.11.0 - 23/09/2026 - Rota e item de menu de Contas a Pagar (Financeiro), etapa 8.
  * =====================================================================
  */
 
@@ -47,6 +48,7 @@ import {
   ShoppingOutlined,
   TagsOutlined,
   TeamOutlined,
+  WalletOutlined,
 } from '@ant-design/icons'
 import { Breadcrumb, Button, Drawer, Grid, Layout, Menu, type MenuProps } from 'antd'
 import { useState } from 'react'
@@ -55,6 +57,7 @@ import './App.css'
 import { LogoAmbition } from './components/LogoAmbition'
 import { CategoriasListaPage } from './pages/Categorias/CategoriasListaPage'
 import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
+import { ContasPagarListaPage } from './pages/ContasPagar/ContasPagarListaPage'
 import { ContasReceberListaPage } from './pages/ContasReceber/ContasReceberListaPage'
 import { DashboardPage } from './pages/Dashboard/DashboardPage'
 import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
@@ -87,7 +90,13 @@ const secoes = [
     ],
   },
   { titulo: 'Depósito', itens: [{ key: '/estoque', icon: <DatabaseOutlined />, label: 'Estoque' }] },
-  { titulo: 'Financeiro', itens: [{ key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' }] },
+  {
+    titulo: 'Financeiro',
+    itens: [
+      { key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' },
+      { key: '/contas-pagar', icon: <WalletOutlined />, label: 'Contas a Pagar' },
+    ],
+  },
 ] satisfies { titulo: string; itens: MenuProps['items'] }[]
 
 /** true se a rota atual pertence a este item de menu (a raiz "/" só bate exata, nunca por prefixo). */
@@ -197,6 +206,7 @@ export default function App() {
             <Route path="/pedidos-compra/:id" element={<PedidoCompraPage />} />
             <Route path="/estoque" element={<EstoqueListaPage />} />
             <Route path="/contas-receber" element={<ContasReceberListaPage />} />
+            <Route path="/contas-pagar" element={<ContasPagarListaPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout.Content>
