@@ -14,9 +14,10 @@
   - Verificar: build; E2E na T3.
   - Resultado: ClosedXML 0.105.1. Modelo genérico em `Services/RelatorioModelo.cs` (colunas/campos com tipo: texto, inteiro, quantidade, moeda, data-hora, sim/não); `ExportadorRelatorio.GerarXlsx` grava valores tipados (o Excel soma e ordena), cabeçalho destacado, filtro automático e cabeçalho congelado. Datas exibidas no horário de Brasília. Teste rápido: .xlsx de vendas lido com um leitor só de biblioteca padrão (`zipfile`) trouxe título, filtros, resumo (2 / 1400 / 700) e as 2 linhas iguais ao JSON; `Content-Disposition` com `relatorio-vendas-2026-09-01_2026-09-30.xlsx`. `dotnet build` 0 avisos.
 
-- [ ] **T3: Exportação PDF** (M)
+- [x] **T3: Exportação PDF** (M) — *concluída em 23/09/2026*
   - Pacote QuestPDF (licença Community em `Program.cs`); mesmo modelo → .pdf (A4, cabeçalho, resumo, tabela, rodapé com página).
   - Verificar: E2E dos critérios 1-6 contra instância temporária da API.
+  - Resultado: QuestPDF 2026.9.0 (licença Community em `Program.cs`). E2E (script Python, instância temporária na 5099, só leitura dos dados reais — nada criado nem apagado): 25 verificações OK — vendas/compras/estoque batem com SQL direto no banco (linhas, somas, ticket médio, saldo × custo, abaixo do mínimo), filtros de status/cliente/fornecedor/categoria/abaixo do mínimo, período de 1 dia inclusivo, 400 para período invertido/367 dias/datas ausentes/formato inválido, .xlsx dos 3 relatórios com as mesmas linhas e total do JSON, .pdf válido com nome certo (inclusive período sem registros). PDFs abertos e conferidos visualmente (vendas, compras, estoque em paisagem, vazio); coluna Data alargada para a hora não quebrar. `dotnet test` 158/158.
 
 ## Fase 2: Frontend
 

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: RelatoriosController.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints REST dos relatórios. Cada rota devolve os dados (JSON) para a
 //              tela; com ?formato=xlsx|pdf devolve o arquivo, gerado da mesma consulta
@@ -17,6 +17,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo (JSON).
 //   1.1.0 - 23/09/2026 - formato=xlsx devolve o arquivo Excel (T2).
+//   1.2.0 - 23/09/2026 - formato=pdf devolve o arquivo PDF (T3).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -63,10 +64,8 @@ public class RelatoriosController(IRelatorioService relatorioService) : Controll
             return Ok(await dados());
 
         var relatorio = await modelo();
-        return formato switch
-        {
-            FormatoRelatorio.Xlsx => File(ExportadorRelatorio.GerarXlsx(relatorio), ExportadorRelatorio.TipoConteudoXlsx, $"{relatorio.NomeArquivo}.xlsx"),
-            _ => Problem(statusCode: StatusCodes.Status501NotImplemented, title: "Formato ainda não disponível"),
-        };
+        return formato == FormatoRelatorio.Xlsx
+            ? File(ExportadorRelatorio.GerarXlsx(relatorio), ExportadorRelatorio.TipoConteudoXlsx, $"{relatorio.NomeArquivo}.xlsx")
+            : File(ExportadorRelatorio.GerarPdf(relatorio), ExportadorRelatorio.TipoConteudoPdf, $"{relatorio.NomeArquivo}.pdf");
     }
 }

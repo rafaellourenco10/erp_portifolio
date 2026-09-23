@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.10.0
+// Versão.....: 1.11.0
 // Data.......: 23/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
@@ -25,6 +25,7 @@
 //   1.8.0 - 22/09/2026 - Registro do IPedidoCompraService (etapa 7).
 //   1.9.0 - 23/09/2026 - Registro do IContasPagarService e Contas a Pagar no Swagger (etapa 8).
 //   1.10.0 - 23/09/2026 - Registro do IRelatorioService e Relatórios no Swagger (etapa 9).
+//   1.11.0 - 23/09/2026 - Licença Community do QuestPDF (PDF dos relatórios).
 // =====================================================================================
 
 using System.Reflection;
@@ -34,6 +35,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 
 const string PoliticaCorsFrontEnd = "FrontEnd";
+
+// QuestPDF exige declarar a licença; a Community é gratuita para uso individual e empresas pequenas (portfólio).
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 
 var builder = WebApplication.CreateBuilder(args);
 
