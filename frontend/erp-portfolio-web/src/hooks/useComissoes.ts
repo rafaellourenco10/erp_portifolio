@@ -1,15 +1,17 @@
 /**
  * =====================================================================
  * Arquivo....: useComissoes.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Hooks do TanStack Query para o módulo de Comissões (lista com
- *              totais e marcar como pagas). Pagar invalida o cache "comissoes".
+ *              totais e gerar conta a pagar). Gerar a conta invalida
+ *              "comissoes" e "contas-pagar" (a conta nova aparece lá).
  * ---------------------------------------------------------------------
  * Fontes.....: comissoesApi.ts
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - useGerarContaComissoes no lugar de usePagarComissoes (etapa 12).
  * =====================================================================
  */
 
@@ -27,11 +29,15 @@ export function useListaComissoes(filtro: ComissaoFiltro) {
   })
 }
 
-export function usePagarComissoes() {
+export function useGerarContaComissoes() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (ids: number[]) => comissoesApi.pagar(ids),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: CHAVE_COMISSOES }),
+    mutationFn: ({ ids, vencimento }: { ids: number[]; vencimento: string }) => comissoesApi.gerarConta(ids, vencimento),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: CHAVE_COMISSOES }),
+        queryClient.invalidateQueries({ queryKey: ['contas-pagar'] }),
+      ]),
   })
 }

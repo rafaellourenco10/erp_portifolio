@@ -26,9 +26,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: tipos/api/hooks do Contas a Pagar atualizados (`favorecido`, `origem`, `descricao`; `criarAvulsa`, `cancelar`; as mutações invalidam também o cache de comissões). Página 2.0: colunas Favorecido e Descrição (tag de origem + "Compra #N" ou a descrição), filtro de origem, busca por favorecido/descrição/nº, botão **Nova conta** (`NovaContaModal` com RHF + Zod, `schemas/contaAvulsaSchema.ts`) e ação **Cancelar** (só avulsa/comissão pendente; Popconfirm avisa que as comissões voltam para "A pagar"). `tsc -b` e `oxlint` limpos.
 
-- [ ] **T5: Tela Comissões** (S)
+- [x] **T5: Tela Comissões** (S) — *concluída em 23/09/2026*
   - **Gerar conta a pagar** (um vendedor, vencimento, total), status Em pagamento, sem "Marcar como paga".
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: Comissões 2.0: botão **Gerar conta a pagar (N)** (habilitado só com comissões de um único vendedor; tooltip explica quando estão misturados) abre um modal com vendedor, quantidade, total e o vencimento (padrão hoje); status e filtro **Em pagamento**; 4 cards (Gerado, A pagar, Em pagamento, Pago); coluna de ações (pagar direto) removida. Gerar conta invalida também o cache de Contas a Pagar. `tsc -b`, `oxlint` e `npm run build` limpos.
 
 ## Fase 3: Fechamento
 

@@ -1,20 +1,21 @@
 /**
  * =====================================================================
  * Arquivo....: comissoesApi.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Chamadas HTTP do módulo de Comissões.
  * ---------------------------------------------------------------------
  * Fontes.....: API Ambition ERP (ComissoesController)
  *                GET  /comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=&tamanhoPagina=
- *                POST /comissoes/pagar   { ids }
+ *                POST /comissoes/gerar-conta   { ids, vencimento }
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - gerarConta no lugar de pagar (etapa 12).
  * =====================================================================
  */
 
-import type { ComissaoFiltro, ComissaoLista } from '../types/comissao'
+import type { ComissaoFiltro, ComissaoLista, ContaDeComissaoGerada } from '../types/comissao'
 import { axiosClient } from './axiosClient'
 
 export const comissoesApi = {
@@ -23,7 +24,9 @@ export const comissoesApi = {
     return resposta.data
   },
 
-  async pagar(ids: number[]): Promise<void> {
-    await axiosClient.post('/comissoes/pagar', { ids })
+  /** Fecha comissões pendentes de UM vendedor numa conta a pagar; vencimento em AAAA-MM-DD. */
+  async gerarConta(ids: number[], vencimento: string): Promise<ContaDeComissaoGerada> {
+    const resposta = await axiosClient.post<ContaDeComissaoGerada>('/comissoes/gerar-conta', { ids, vencimento })
+    return resposta.data
   },
 }
