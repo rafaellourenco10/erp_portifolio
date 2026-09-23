@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: SelecaoCliente.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 21/09/2026
  * Descrição..: Seleção de cliente com BUSCA NO SERVIDOR (só clientes ativos, 20 por
  *              consulta, com espera de 300 ms após digitar). Mostra o nome e o CPF/CNPJ
@@ -14,6 +14,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - Prop opcional aoLimpar (botão de limpar, usado nos relatórios).
  * =====================================================================
  */
 
@@ -30,6 +31,8 @@ interface SelecaoClienteProps {
   /** Cliente que já está no pedido salvo (pode estar inativo e por isso não vir na busca). */
   clienteAtual?: { id: number; nome: string }
   disabled?: boolean
+  /** Se informado, mostra o botão de limpar (volta para nenhum cliente). */
+  aoLimpar?: () => void
   placeholder?: string
   id?: string
   'aria-label'?: string
@@ -46,6 +49,7 @@ export function SelecaoCliente({
   onChange,
   clienteAtual,
   disabled,
+  aoLimpar,
   placeholder = 'Buscar cliente por nome',
   id,
   'aria-label': rotuloAcessivel,
@@ -81,6 +85,8 @@ export function SelecaoCliente({
       options={opcoes}
       loading={buscando}
       disabled={disabled}
+      allowClear={aoLimpar !== undefined}
+      onClear={aoLimpar}
       placeholder={placeholder}
       className="campo-cheio"
       notFoundContent={

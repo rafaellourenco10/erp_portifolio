@@ -21,9 +21,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T4: Base do front + menu** (S)
+- [x] **T4: Base do front** (S) — *concluída em 23/09/2026*
   - `types/relatorio.ts`, `api/relatoriosApi.ts` (JSON + download de blob com o nome do `Content-Disposition`), hooks, seção **Relatórios** no menu com as 3 rotas; CORS expõe `Content-Disposition`.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: tipos, `relatoriosApi` (JSON + download de blob com nome do `Content-Disposition`; erro em blob convertido para JSON antes do `lerErroApi`), `useRelatorios` (consulta só roda após "Gerar"), CORS com `WithExposedHeaders("Content-Disposition")`. `SelecaoCliente`/`SelecaoFornecedor` ganharam `aoLimpar` opcional (botão de limpar = "Todos"; telas de pedido não passam e ficam iguais). `dayjs` declarado no `package.json` (já vinha instalado como dependência do Ant Design, 1.11.23 — nada novo baixado nem no bundle) para o seletor de período. O menu e as rotas foram para as T5/T6, junto com as telas. `tsc -b`, `oxlint`, `dotnet build` limpos.
 
 - [ ] **T5: Tela de Vendas e Compras** (M)
   - Componente único com filtros (período, status, cliente/fornecedor), resumo, tabela e botões de exportar; duas rotas.
