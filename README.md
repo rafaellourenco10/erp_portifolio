@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, e **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada.
+O projeto é evoluído por módulos, a maioria dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, e **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada. O **Painel/Dashboard** (etapa 6) fica fora dessa área — resume os outros módulos, não é uma ação comercial.
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -9,10 +9,12 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 | 1.1 | Tema visual Ambition ERP + filtros por UF e status | Concluída e testada (18/09/2026) |
 | 2 | Produtos (+ navegação por rotas no menu) | Concluída e testada (21/09/2026) |
 | 2.1 | Categorias (cadastro próprio, escolhido por seleção no produto) | Concluída e testada (21/09/2026) |
+| 2.2 | Filtro por categoria em Produtos + atalho "Nova categoria" no seletor | Concluída (22/09/2026) |
 | 3 | Pedidos (cliente, itens, desconto, total calculado, confirmar/cancelar) | Concluída e testada (21/09/2026) |
 | 4 | Estoque (movimentações, entrada manual, baixa/estorno automáticos) | Back-end testado de ponta a ponta; tela confirmada pelo Rafael (22/09/2026) |
 | 5 | Contas a Receber (parcelas, vencimento, status de recebimento) | Back-end testado de ponta a ponta; tela não verificada visualmente (22/09/2026) |
-| 6+ | Login | Planejada |
+| 6 | Painel/Dashboard (indicadores do mês, fora de Gestão Comercial) | Back-end testado com dados reais; tela não verificada visualmente (22/09/2026) |
+| 7+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -52,13 +54,14 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 
 ## Funcionalidades (etapa 2 — Produtos)
 
-- **Navegação por rotas** (React Router): o menu lateral troca a tela por URL (`/clientes`, `/produtos`); a página aberta sobrevive ao recarregar e uma rota desconhecida cai em `/clientes`
+- **Navegação por rotas** (React Router): o menu lateral troca a tela por URL (`/clientes`, `/produtos`); a página aberta sobrevive ao recarregar e uma rota desconhecida cai no Painel (`/`)
 - Cadastro com **nome**, **SKU** (número de série do produto: único e somente dígitos; o campo da tela nem deixa digitar letras), **categoria** (opcional, escolhida numa seleção com as categorias cadastradas), **unidade** (UN, KG, L, M ou CX), **preço de venda** e **custo** (obrigatórios, em reais, com 2 casas decimais)
-- Listagem com paginação no servidor, **busca por nome ou SKU** e filtro de status (mesmo painel **Filtrar** e tags removíveis de Clientes)
+- Listagem com paginação no servidor, **busca por nome ou SKU** e filtro de status e **categoria** (mesmo painel **Filtrar** e tags removíveis de Clientes)
 - Coluna **Margem** calculada na tela: (preço − custo) ÷ preço; margem negativa aparece em vermelho
 - **Inativação** (exclusão lógica) e reativação pela edição, como em Clientes
 - **SKU único**: repetir um SKU retorna **409**; se o produto existente estiver **inativo**, a mensagem orienta a reativá-lo em vez de criar outro
 - Um `PUT` sem o campo `ativo` **mantém** o status atual do produto
+- O seletor de categoria do formulário tem um atalho **"+ Nova categoria"**: abre o cadastro de categoria por cima e já seleciona a categoria criada, sem sair da tela
 
 ## Funcionalidades (etapa 2.1 — Categorias)
 
@@ -109,6 +112,20 @@ O projeto é evoluído por módulos, todos dentro da área **Gestão Comercial**
 - Status: **Pendente**, **Recebido** (ação "Marcar como recebido", idempotente) ou **Cancelado**; **Atrasado** não é um status gravado — é uma parcela Pendente com vencimento no passado, calculado no servidor
 - **Cancelar um pedido que estava Confirmado cancela as parcelas ainda Pendentes** automaticamente; parcelas já Recebidas continuam como estão (histórico preservado)
 - Fora do escopo por enquanto: recebimento parcial, juros/multa por atraso, edição de parcela já gerada, contas a pagar
+
+---
+
+## Funcionalidades (etapa 6 — Painel/Dashboard)
+
+- Tela inicial (`/`, item **Painel** no menu, fora de "Gestão Comercial") com indicadores do **mês atual** — sem seletor de período nesta versão
+- **Faturamento e ticket médio**: soma do `valorTotal` só dos pedidos **Confirmados** no mês, e a média por pedido
+- **Pedidos por status** no mês: Rascunho / Confirmado / Cancelado
+- **Contas a receber**: total pendente e, dentro dele, quanto está atrasado (sem filtro de mês — parcelas vencem em datas futuras variadas)
+- **Saldo baixo de estoque**: quantidade de produtos ativos com saldo ≤ 5 (limite fixo por enquanto; não existe estoque mínimo por produto ainda)
+- **Gráfico de faturamento diário** do mês, com todos os dias presentes (dias sem venda aparecem com R$ 0, sem buraco no gráfico); tooltip por barra, acessível por mouse e teclado
+- Cada card busca seu próprio indicador; se um endpoint falhar, os outros continuam aparecendo normalmente
+- Só leitura — nenhuma ação a partir do Dashboard
+- Fora do escopo por enquanto: seletor de período, estoque mínimo por produto, drill-down/exportação
 
 ## Stack e versões
 
@@ -195,7 +212,8 @@ erp_portifolio/
 │       │   ├── CategoriasController.cs      # endpoints REST de categorias
 │       │   ├── PedidosController.cs         # endpoints REST de pedidos
 │       │   ├── EstoqueController.cs         # endpoints REST de estoque
-│       │   └── ContasReceberController.cs   # endpoints REST de contas a receber
+│       │   ├── ContasReceberController.cs   # endpoints REST de contas a receber
+│       │   └── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
 │       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
@@ -228,6 +246,11 @@ erp_portifolio/
 │       │   ├── ParcelaRespostaDto.cs        # linha da listagem de contas a receber
 │       │   ├── ParcelaFiltroDto.cs          # query string da listagem
 │       │   ├── FiltroStatusParcela.cs       # enum do filtro (inclui "Atrasado", calculado)
+│       │   ├── VendasResumoDto.cs           # saída de /dashboard/vendas
+│       │   ├── FaturamentoDiaDto.cs         # ponto do gráfico (dia, valor)
+│       │   ├── PedidosPorStatusDto.cs       # contagem por status no mês
+│       │   ├── ContasReceberResumoDto.cs    # saída de /dashboard/contas-receber
+│       │   ├── EstoqueResumoDashboardDto.cs # saída de /dashboard/estoque
 │       │   └── Validacoes/
 │       │       ├── DocumentoValidador.cs    # regra de CPF/CNPJ
 │       │       ├── CpfCnpjAttribute.cs      # atributo [CpfCnpj]
@@ -250,7 +273,8 @@ erp_portifolio/
 │       │   ├── EstoqueCalculo.cs            # saldo = Σ Entrada − Σ Saída, funcao pura (sem banco)
 │       │   ├── IContasReceberService.cs
 │       │   ├── ContasReceberService.cs      # consulta, receber, gerar/cancelar parcelas (usados pelo PedidoService)
-│       │   └── ContasReceberCalculo.cs      # divisao em N parcelas (resto na ultima), funcao pura (sem banco)
+│       │   ├── ContasReceberCalculo.cs      # divisao em N parcelas (resto na ultima), funcao pura (sem banco)
+│       │   └── DashboardCalculo.cs          # ticket medio e preenchimento de dias, funcao pura (sem banco)
 │       ├── Data/
 │       │   ├── ErpPortfolioDbContext.cs     # mapeamento EF Core (snake_case)
 │       │   └── Migrations/                  # migrations geradas pelo EF Core
@@ -283,13 +307,15 @@ erp_portifolio/
             │   ├── produtosApi.ts           # chamadas da API de produtos
             │   ├── categoriasApi.ts         # chamadas da API de categorias
             │   ├── estoqueApi.ts            # chamadas da API de estoque
-            │   └── contasReceberApi.ts      # chamadas da API de contas a receber
+            │   ├── contasReceberApi.ts      # chamadas da API de contas a receber
+            │   └── dashboardApi.ts          # chamadas da API do Dashboard (3 endpoints)
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
             │   ├── useProdutos.ts
             │   ├── useCategorias.ts         # inclui as categorias ativas do seletor de produtos
             │   ├── useEstoque.ts            # lista com saldo, extrato por produto, entrada manual
-            │   └── useContasReceber.ts      # lista paginada e marcar parcela como recebida
+            │   ├── useContasReceber.ts      # lista paginada e marcar parcela como recebida
+            │   └── useDashboard.ts          # 3 queries independentes (vendas, contas a receber, estoque)
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
             │   ├── ClienteFormDrawer.tsx    # painel lateral de inclusão/edição
@@ -311,6 +337,11 @@ erp_portifolio/
             │   └── MovimentacoesDrawer.tsx  # painel de extrato paginado de um produto
             ├── pages/ContasReceber/
             │   └── ContasReceberListaPage.tsx  # busca, filtro de status, tabela, marcar como recebido
+            ├── pages/Dashboard/
+            │   ├── DashboardPage.tsx        # cards de indicador + gráfico
+            │   ├── CardIndicador.tsx        # card com loading/erro próprios (D7)
+            │   ├── GraficoFaturamento.tsx   # gráfico de barras em SVG, sem biblioteca
+            │   └── dashboard.css
             ├── schemas/
             │   ├── clienteSchema.ts         # schema Zod do formulário de cliente
             │   ├── produtoSchema.ts         # schema Zod do formulário de produto
@@ -324,6 +355,7 @@ erp_portifolio/
             │   ├── pedido.ts                # inclui PedidoConfirmarEntrada (numeroParcelas, intervaloDias)
             │   ├── estoque.ts
             │   ├── contaReceber.ts
+            │   ├── dashboard.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
             ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx  # seleção com busca no servidor (usadas no pedido)
             ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado
@@ -458,7 +490,7 @@ Produtos (mesmo desenho de respostas):
 
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
-| GET | `/produtos?busca=&ativo=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome; `busca` procura no nome **ou** no SKU | 200, 400 |
+| GET | `/produtos?busca=&ativo=&categoriaId=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome; `busca` procura no nome **ou** no SKU; `categoriaId` filtra por categoria | 200, 400 |
 | GET | `/produtos/{id}` | Obtém um produto | 200, 404 |
 | POST | `/produtos` | Cadastra um produto | 201, 400, 409 |
 | PUT | `/produtos/{id}` | Edita um produto; `ativo` é opcional (ausente = mantém) | 200, 400, 404, 409 |
@@ -511,6 +543,16 @@ Contas a Receber:
 `PATCH /pedidos/{id}/confirmar` passou a aceitar corpo **opcional** `{ numeroParcelas, intervaloDias }` (padrão `{1, 30}`): ao confirmar com sucesso, gera essa quantidade de parcelas cuja soma bate exatamente com `valorTotal` (resto na última) e vencimento em `N × intervaloDias` dias. `PATCH /pedidos/{id}/cancelar` continua sem corpo, mas cancela por dentro as parcelas **Pendentes** do pedido quando ele estava Confirmado; parcelas já Recebidas não mudam.
 
 Regras de validação de Contas a Receber (API): `numeroParcelas` de 1 a 12; `intervaloDias` de 1 a 180; receber uma parcela `Cancelado` retorna 409.
+
+Dashboard:
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/dashboard/vendas` | Faturamento, ticket médio, pedidos por status e faturamento diário do **mês atual** (só pedidos Confirmados contam para faturamento/ticket médio) | 200 |
+| GET | `/dashboard/contas-receber` | Total e quantidade de parcelas pendentes/atrasadas, sem filtro de mês | 200 |
+| GET | `/dashboard/estoque` | Quantidade de produtos ativos com saldo de estoque ≤ 5 | 200 |
+
+Sem parâmetros — o mês é sempre calculado no servidor (`DateTime.UtcNow`), nunca enviado pelo cliente. Cada rota só delega pro service do módulo de origem (`PedidoService`, `ContasReceberService`, `EstoqueService`); não existe um "DashboardService" com lógica própria.
 
 ### Filtros da listagem
 
@@ -804,6 +846,12 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Geração/cancelamento de parcelas **não chamam `SaveChanges` sozinhos** | Mesmo padrão do Estoque: ficam na mesma transação do `SaveChangesAsync` que `PedidoService` já fazia ao confirmar/cancelar. |
 | Cancelar só cancela parcelas **Pendentes**, nunca as **Recebidas** | Preserva o histórico de recebimento real, mesmo que o pedido seja cancelado depois. |
 | Modal de confirmar do pedido virou um **formulário controlado** (não mais `Modal.confirm` imperativo) | Precisa capturar 2 campos (parcelas, intervalo) antes de confirmar; em erro, o modal fica aberto para corrigir sem reabrir. |
+| Filtro por **categoria** em Produtos reaproveita `useCategoriasAtivas` (já existia para o formulário) | Mesma lista de categorias ativas serve pro filtro e pro seletor do cadastro, sem duplicar a consulta. |
+| Atalho "Nova categoria" devolve a categoria criada por uma prop (`aoCriar`) no `CategoriaFormDrawer` | Evita duplicar o formulário de categoria; o mesmo painel serve pra tela de Categorias e pro atalho dentro de Produtos. |
+| Dashboard **sem tabela nova** e **sem serviço próprio** — cada resumo entra no service do módulo de origem | Não há regra de negócio do Dashboard em si, só agregação do que os outros services já calculam; um serviço novo só pra orquestrar seria uma camada sem função. |
+| Cada card do Dashboard busca seu próprio endpoint, independente dos outros | Se um indicador falhar, os outros continuam aparecendo; também deixa fácil acrescentar um card novo depois sem mexer nos existentes. |
+| Gráfico de faturamento diário em **SVG desenhado à mão**, sem biblioteca de gráfico | Uma série de ~30 barras não justifica o peso de uma lib inteira (o bundle já tem aviso de chunk grande); segue a skill de dataviz do projeto (mark specs, tooltip acessível). |
+| Saldo baixo de estoque com **limite fixo no código** (`≤ 5`), não um campo por produto | Não existe estoque mínimo cadastrado ainda; trocar por um campo por produto é uma extensão natural quando precisar. |
 
 ---
 
@@ -949,6 +997,29 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (14
 
 **Limitação desta rodada:** mesma situação de Estoque — sem ferramenta de navegador/Playwright nesta sessão, a tela (lista de contas a receber, modal de confirmar com parcelas, layout no celular) **não foi verificada visualmente**. O back-end foi testado de ponta a ponta contra a API real, e o código da tela segue os mesmos padrões já usados (e já confirmados funcionando) nos módulos anteriores. Recomenda-se um teste manual: confirmar um pedido escolhendo parcelas, ver a lista em `/contas-receber`, marcar uma parcela como recebida e cancelar um pedido confirmado para ver as parcelas pendentes cancelarem.
 
+### Filtro por categoria em Produtos (22/09/2026)
+
+Testado na API real (instância temporária, porta 5099): `GET /api/produtos?categoriaId=` achou só o produto da categoria de teste; `categoriaId` inexistente devolveu lista vazia. Produto e categoria de teste apagados ao final; dados reais intactos.
+
+O atalho "Nova categoria" no seletor do formulário (parte visual, sem chamada de API própria pra verificar por fora do navegador) não foi testado nesta sessão.
+
+### Dashboard (22/09/2026)
+
+Os três endpoints (`/dashboard/vendas`, `/dashboard/contas-receber`, `/dashboard/estoque`) foram validados de duas formas:
+
+| Verificação | Resultado |
+|---|---|
+| **Dados reais** do Rafael: 2 pedidos confirmados (R$ 1.400, ticket médio R$ 700), 1 parcela pendente, 1 produto com saldo baixo — os três endpoints responderam certo, sem erro, sem divisão por zero, com os 30 dias do mês presentes no gráfico | ✅ |
+| Pedido **Rascunho** novo no mês: contou em `porStatus.rascunho` sem alterar faturamento/ticket médio | ✅ |
+| Parcela vencida há 3 dias (inserida via SQL de teste): refletiu certo em `totalAtrasado`/`quantidadeAtrasado` | ✅ |
+| Saldo baixo de estoque: produto com saldo **exatamente 5** contou; produto com saldo **6** não contou (limite exato) | ✅ |
+| Cada endpoint responde de forma independente (D7) | ✅ (verificado por desenho — cada rota só delega pro service do módulo de origem, sem depender dos outros) |
+| Nenhum registro real alterado pelos testes; dados de teste apagados e os três endpoints conferidos batendo com o valor de antes | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (150 aprovados), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros (bundle do gráfico SVG não aumentou o tamanho final, confirmando que nenhuma dependência nova foi instalada).
+
+**Limitação desta rodada:** mesma situação dos módulos anteriores — sem ferramenta de navegador/Playwright nesta sessão, a tela (cards, gráfico, item de menu "Painel") **não foi verificada visualmente**. Os três endpoints foram validados com dados reais e casos de borda isolados, mas ninguém abriu `/` no navegador. Recomenda-se um teste manual.
+
 ---
 
 ## Padrões do projeto
@@ -1033,14 +1104,13 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 
 - Campos do mockup de cliente ainda não implementados: **PF/PJ**, **Inscrição Estadual**, **Nome Fantasia** e **Observações** (exige migration)
 - Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
-- Dashboard com indicadores, agora que Pedidos existe
-- Filtro por **categoria** na lista de Produtos e atalho "Nova categoria" dentro do seletor do formulário
 - Filtro por **cliente** e por **faixa de data** na lista de Pedidos
 - Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
-- Verificação visual/Playwright da tela de Contas a Receber (lista, modal de confirmar, celular) — não feita na sessão que construiu o módulo
-- Saída manual de estoque (perda/quebra/ajuste); fornecedores e pedido de compra; estoque mínimo/alerta de ruptura
+- Verificação visual/Playwright da tela de Contas a Receber e do Dashboard (cards, gráfico, modal de confirmar com parcelas, celular) — não feita na sessão que construiu os módulos
+- Saída manual de estoque (perda/quebra/ajuste); fornecedores e pedido de compra; estoque mínimo/alerta de ruptura (usado também pelo card "saldo baixo" do Dashboard)
 - Recebimento parcial de parcela, juros/multa por atraso, edição de parcela já gerada; contas a pagar
+- Seletor de período no Dashboard (hoje é sempre o mês atual)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**
-- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos, Estoque e Contas a Receber já têm testes unitários e scripts de ponta a ponta)
+- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos, Estoque, Contas a Receber e Dashboard já têm testes unitários e/ou scripts de ponta a ponta)

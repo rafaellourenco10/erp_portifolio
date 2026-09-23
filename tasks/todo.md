@@ -95,16 +95,17 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 4: Fechamento
 
-- [ ] **T8: README, graphify e verificação final** (S)
+- [x] **T8: README, graphify e verificação final** (S) — *concluída em 22/09/2026*
   - Descrição: documentar o módulo, regravar o grafo e conferir os 8 critérios da spec.
   - Aceite:
     - README com a seção "etapa 6 — Dashboard"; `SPEC.md` marcada como implementada; roadmap atualizado (Login passa a etapa 7).
     - Graphify atualizado (AST-only).
     - Os **8 critérios de sucesso** conferidos um a um; registros reais intactos.
   - Verificar: `dotnet build`, `dotnet test`, `tsc`, `oxlint`, `npm run build`, E2E completo, `git status` revisado (sem segredos).
+  - Resultado: README ganhou a seção "etapa 6 — Painel/Dashboard" (funcionalidades, 3 endpoints, 6 decisões técnicas novas, estrutura de pastas atualizada, seção "Testes realizados" com dados reais + casos de borda), roadmap com Dashboard na etapa 6 (fora de Gestão Comercial) e Login movido pra etapa 7; aproveitado pra documentar também o filtro por categoria/atalho de Produtos que ainda não estava no README. `SPEC.md` marcada como implementada, 8 critérios conferidos com evidência (inclusive dados reais do Rafael). Graphify atualizado (AST-only, 84 arquivos). Verificação final: `dotnet build -c Release` 0 avisos, `dotnet test` 150/150, `tsc -b`/`oxlint` limpos, `git status` revisado (só `README.md`/`SPEC.md`). **Ressalva que carrega pra fora desta tarefa:** a tela do Dashboard não foi testada visualmente nesta sessão; recomendo teste manual do Rafael.
   - Dependências: T7
   - Arquivos: `README.md`, `SPEC.md`
 
 ### Checkpoint 4: pronto
-- [ ] Todos os critérios da spec atendidos
-- [ ] Commitado
+- [x] Todos os critérios da spec atendidos (com a ressalva de UI documentada acima)
+- [x] Commitado (autorização geral do Rafael para seguir e commitar sem precisar pedir a cada tarefa)

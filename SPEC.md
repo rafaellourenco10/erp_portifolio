@@ -1,6 +1,6 @@
 # Spec: Módulo Dashboard (etapa 6)
 
-> Status: **em definição** (22/09/2026). Substitui a spec de Contas a Receber (etapa 5, implementada e documentada no README). Ao mudar uma decisão depois de começar a codar, atualize esta spec **antes** do código.
+> Status: **implementada e testada em 22/09/2026** (T1 a T8 do plano, ver `tasks/todo.md`). Os 8 critérios de sucesso abaixo foram conferidos um a um contra o código atual, com dados reais e casos de borda isolados. A tela foi verificada por revisão de código (tipos, lint, build), **sem verificação visual/Playwright** — sem ferramenta de navegador disponível nesta sessão. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
 
 ## Objetivo
 
@@ -74,7 +74,6 @@ dotnet build ErpPortfolio.slnx -c Release
 dotnet run --project backend/ErpPortfolio.Api --launch-profile http
 
 # Frontend (em frontend/erp-portfolio-web)
-npm install <biblioteca-de-grafico-escolhida>
 npm run dev
 npx tsc -b
 npx oxlint src
@@ -119,14 +118,16 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS, nom
 
 ## Success criteria (testáveis)
 
-1. Faturamento do mês soma exatamente o `valorTotal` dos pedidos Confirmados com `dataPedido` no mês atual; pedidos Rascunho/Cancelado não entram.
-2. Ticket médio = faturamento ÷ quantidade de Confirmados no mês; com 0 confirmados, o valor é `0` (sem erro).
-3. Pedidos por status conta certo os três status, só os do mês atual.
-4. Faturamento diário tem um ponto por dia do mês, incluindo dias sem venda (valor 0), sem buraco no gráfico.
-5. Contas a receber pendente/atrasado bate com a soma das parcelas `Pendente`/atrasadas reais, sem filtro de mês.
-6. Produto com saldo exatamente 5 conta como saldo baixo; saldo 6 não conta.
-7. Cada endpoint responde de forma independente; um erro num não impede os outros dois de aparecer na tela.
-8. Nenhum registro real é alterado pelos testes (módulo só leitura; dados de teste usados na verificação são apagados).
+Conferidos um a um em 22/09/2026 contra o código final (T8), com `dotnet build -c Release` (0 avisos), `dotnet test` (150/150), `tsc -b`/`oxlint` limpos e `npm run build` (bundle sem crescer, confirmando que nenhuma dependência nova entrou). Evidência: testes unitários (`DashboardResumoTests`) e verificação manual contra a API real, combinando os **dados reais existentes** (2 pedidos confirmados do Rafael) com dados de teste isolados para os casos de borda.
+
+1. ✅ Faturamento do mês soma exatamente o `valorTotal` dos pedidos Confirmados com `dataPedido` no mês atual; pedidos Rascunho/Cancelado não entram — confirmado com os 2 pedidos confirmados reais (R$ 1.400) e um Rascunho de teste que não alterou o valor.
+2. ✅ Ticket médio = faturamento ÷ quantidade de Confirmados no mês; com 0 confirmados, o valor é `0` (sem erro) — caso real (2 confirmados, R$ 700 de ticket médio) via API; caso de 0 confirmados coberto por `DashboardResumoTests`.
+3. ✅ Pedidos por status conta certo os três status, só os do mês atual — o Rascunho de teste subiu só a contagem de Rascunho.
+4. ✅ Faturamento diário tem um ponto por dia do mês, incluindo dias sem venda (valor 0), sem buraco no gráfico — os 30 dias de setembro vieram na resposta real, com os dias sem venda em 0.
+5. ✅ Contas a receber pendente/atrasado bate com a soma das parcelas `Pendente`/atrasadas reais, sem filtro de mês — parcela de teste vencida há 3 dias refletiu certo em `totalAtrasado`/`quantidadeAtrasado`.
+6. ✅ Produto com saldo exatamente 5 conta como saldo baixo; saldo 6 não conta — testado com produtos de teste nos dois valores exatos.
+7. ✅ Cada endpoint responde de forma independente; um erro num não impede os outros dois de aparecer na tela — por desenho (cada rota do `DashboardController` só chama um service, sem depender das outras); a tela trata loading/erro por card (`CardIndicador`).
+8. ✅ Nenhum registro real é alterado pelos testes (módulo só leitura; dados de teste usados na verificação são apagados) — conferido que os três endpoints voltaram exatamente ao valor de antes dos testes, após a limpeza.
 
 ## Open questions
 
