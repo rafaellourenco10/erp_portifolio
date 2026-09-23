@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.10.0
+// Versão.....: 1.11.0
 // Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -45,7 +45,8 @@
 //                - PK  : pk_comissoes (id, identity)
 //                - UK  : ux_comissoes_parcela_receber_id (parcela_receber_id)
 //                - IDX : ix_comissoes_vendedor_id, ix_comissoes_pedido_id, ix_comissoes_data_geracao
-//                - FK  : fk_comissoes_parcelas_receber, fk_comissoes_pedidos, fk_comissoes_vendedores (restrict)
+//                - FK  : fk_comissoes_parcelas_receber, fk_comissoes_pedidos, fk_comissoes_vendedores,
+//                        fk_comissoes_parcelas_pagar (restrict); IDX ix_comissoes_parcela_pagar_id
 //                - CK  : ck_comissoes_valor, ck_comissoes_percentual
 //              public.pedido_itens
 //                - PK  : pk_pedido_itens (id, identity)
@@ -85,7 +86,10 @@
 //                - UK  : ux_parcelas_pagar_pedido_compra_numero (pedido_compra_id, numero_parcela)
 //                - IDX : ix_parcelas_pagar_vencimento (vencimento)
 //                - FK  : fk_parcelas_pagar_pedidos_compra (pedido_compra_id -> pedidos_compra.id, restrict)
-//                - CK  : ck_parcelas_pagar_valor, ck_parcelas_pagar_numero_parcela
+//                - IDX : ix_parcelas_pagar_vendedor_id (vendedor_id)
+//                - FK  : fk_parcelas_pagar_vendedores (vendedor_id -> vendedores.id, restrict)
+//                - CK  : ck_parcelas_pagar_valor, ck_parcelas_pagar_numero_parcela,
+//                        ck_parcelas_pagar_total_parcelas, ck_parcelas_pagar_origem
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -102,6 +106,8 @@
 //   1.8.0 - 23/09/2026 - Mapeamento de ParcelaPagar (tabela parcelas_pagar, etapa 8).
 //   1.9.0 - 23/09/2026 - Mapeamento de Vendedor; pedidos.vendedor_id e percentual_comissao (etapa 10).
 //   1.10.0 - 23/09/2026 - Mapeamento de Comissao (tabela comissoes, etapa 11).
+//   1.11.0 - 23/09/2026 - parcelas_pagar com origem/vendedor/descrição/favorecido/total_parcelas;
+//                         comissoes.parcela_pagar_id (etapa 12).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -202,6 +208,12 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
             {
                 tabela.HasCheckConstraint("ck_parcelas_pagar_valor", "valor > 0");
                 tabela.HasCheckConstraint("ck_parcelas_pagar_numero_parcela", "numero_parcela > 0");
+                tabela.HasCheckConstraint("ck_parcelas_pagar_total_parcelas", "total_parcelas >= numero_parcela");
+                // CP1: cada origem tem o seu vínculo obrigatório.
+                tabela.HasCheckConstraint("ck_parcelas_pagar_origem",
+                    "(origem = 'Compra' AND pedido_compra_id IS NOT NULL) OR " +
+                    "(origem = 'Comissao' AND vendedor_id IS NOT NULL) OR " +
+                    "(origem = 'Avulsa' AND descricao IS NOT NULL)");
             });
 
             entidade.HasKey(p => p.Id).HasName("pk_parcelas_pagar");
@@ -210,8 +222,36 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasColumnName("id")
                 .UseIdentityAlwaysColumn();
 
+            entidade.Property(p => p.Origem)
+                .HasColumnName("origem")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .HasDefaultValue(OrigemContaPagar.Compra)
+                .IsRequired();
+
             entidade.Property(p => p.PedidoCompraId)
                 .HasColumnName("pedido_compra_id");
+
+            entidade.Property(p => p.VendedorId)
+                .HasColumnName("vendedor_id");
+
+            entidade.HasOne(p => p.Vendedor)
+                .WithMany()
+                .HasForeignKey(p => p.VendedorId)
+                .HasConstraintName("fk_parcelas_pagar_vendedores")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(p => p.Descricao)
+                .HasColumnName("descricao")
+                .HasMaxLength(200);
+
+            entidade.Property(p => p.Favorecido)
+                .HasColumnName("favorecido")
+                .HasMaxLength(150);
+
+            entidade.Property(p => p.TotalParcelas)
+                .HasColumnName("total_parcelas")
+                .IsRequired();
 
             // Restrict: o histórico de parcelas nunca é apagado, então o pedido de compra também não pode ser.
             entidade.HasOne(p => p.PedidoCompra)
@@ -251,6 +291,9 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
             entidade.HasIndex(p => p.Vencimento)
                 .HasDatabaseName("ix_parcelas_pagar_vencimento");
+
+            entidade.HasIndex(p => p.VendedorId)
+                .HasDatabaseName("ix_parcelas_pagar_vendedor_id");
         });
 
         modelBuilder.Entity<EstoqueMovimentacao>(entidade =>
@@ -666,6 +709,16 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasForeignKey(c => c.VendedorId)
                 .HasConstraintName("fk_comissoes_vendedores")
                 .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(c => c.ParcelaPagarId).HasColumnName("parcela_pagar_id");
+
+            entidade.HasOne(c => c.ParcelaPagar)
+                .WithMany()
+                .HasForeignKey(c => c.ParcelaPagarId)
+                .HasConstraintName("fk_comissoes_parcelas_pagar")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasIndex(c => c.ParcelaPagarId).HasDatabaseName("ix_comissoes_parcela_pagar_id");
 
             entidade.Property(c => c.ValorBase)
                 .HasColumnName("valor_base")

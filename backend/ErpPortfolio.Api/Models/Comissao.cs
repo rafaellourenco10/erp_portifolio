@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Comissao.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Comissão de um vendedor sobre UMA parcela recebida (SPEC.md, CM1/CM2).
 //              Guarda a base (valor da parcela), a % (congelada no pedido) e o valor,
@@ -13,6 +13,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Status EmPagamento e vínculo com a conta a pagar (etapa 12).
 // =====================================================================================
 
 using System.Text.Json.Serialization;
@@ -50,14 +51,22 @@ public class Comissao
 
     /// <summary>Nulo até a comissão ser paga ao vendedor.</summary>
     public DateTime? DataPagamento { get; set; }
+
+    /// <summary>Conta a pagar gerada no fechamento (etapa 12); nula enquanto Pendente e nas pagas antes dela.</summary>
+    public int? ParcelaPagarId { get; set; }
+
+    public ParcelaPagar? ParcelaPagar { get; set; }
 }
 
-/// <summary>Situação do repasse da comissão ao vendedor; gravado como texto ("Pendente", "Paga").</summary>
+/// <summary>Situação do repasse da comissão ao vendedor; gravado como texto ("Pendente", "EmPagamento", "Paga").</summary>
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum StatusComissao
 {
     /// <summary>Gerada e ainda não paga ao vendedor.</summary>
     Pendente,
+
+    /// <summary>Já virou conta a pagar (etapa 12); fica Paga quando a conta for paga.</summary>
+    EmPagamento,
 
     /// <summary>Paga ao vendedor; estado final.</summary>
     Paga

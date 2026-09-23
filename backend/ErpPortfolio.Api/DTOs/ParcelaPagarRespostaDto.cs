@@ -21,7 +21,7 @@ namespace ErpPortfolio.Api.DTOs;
 
 public record ParcelaPagarRespostaDto(
     int Id,
-    int PedidoCompraId,
+    int? PedidoCompraId,
     string FornecedorNome,
     int NumeroParcela,
     int TotalParcelas,

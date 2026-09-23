@@ -71,7 +71,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
                 p.PedidoCompraId,
                 p.PedidoCompra!.Fornecedor!.Nome,
                 p.NumeroParcela,
-                contexto.ParcelasPagar.Count(x => x.PedidoCompraId == p.PedidoCompraId),
+                p.TotalParcelas,
                 p.Valor,
                 p.Vencimento,
                 p.Status,
@@ -101,9 +101,8 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
             await contexto.SaveChangesAsync(cancelamento);
         }
 
-        var totalParcelas = await contexto.ParcelasPagar.CountAsync(p => p.PedidoCompraId == parcela.PedidoCompraId, cancelamento);
         return new ParcelaPagarRespostaDto(
-            parcela.Id, parcela.PedidoCompraId, parcela.PedidoCompra!.Fornecedor!.Nome, parcela.NumeroParcela, totalParcelas,
+            parcela.Id, parcela.PedidoCompraId, parcela.PedidoCompra!.Fornecedor!.Nome, parcela.NumeroParcela, parcela.TotalParcelas,
             parcela.Valor, parcela.Vencimento, parcela.Status, parcela.DataPagamento, Atrasado: false);
     }
 
@@ -117,8 +116,10 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
         {
             contexto.ParcelasPagar.Add(new ParcelaPagar
             {
+                Origem = OrigemContaPagar.Compra,
                 PedidoCompraId = pedido.Id,
                 NumeroParcela = i + 1,
+                TotalParcelas = numeroParcelas,
                 Valor = valores[i],
                 Vencimento = hoje.AddDays((i + 1) * intervaloDias),
                 Status = StatusParcelaPagar.Pendente
