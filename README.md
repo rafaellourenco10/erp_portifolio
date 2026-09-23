@@ -1,9 +1,9 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, e **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, e **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada — base para o cálculo de comissão. O **Dashboard** (etapa 6) resume os outros módulos.
 
-O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar); **Relatórios** (Vendas, Compras, Estoque).
+O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar); **Relatórios** (Vendas, Compras, Estoque).
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -18,8 +18,9 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 6 | Dashboard (indicadores do mês) | Back-end testado com dados reais; tela não verificada visualmente (22/09/2026) |
 | 7 | Fornecedores e Pedidos de Compra (entrada automática de estoque, custo atualizado) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
 | 8 | Contas a Pagar (parcelas da compra, vencimento, status de pagamento, card no Dashboard) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
-| 9 | Relatórios (vendas, compras, estoque) com exportação Excel/PDF | Back-end testado de ponta a ponta e PDFs conferidos; telas não verificadas visualmente (23/09/2026) |
-| 10+ | Login | Planejada |
+| 9 | Relatórios (vendas, compras, estoque) com exportação Excel/PDF | Back-end testado de ponta a ponta e PDFs conferidos; telas confirmadas pelo Rafael (23/09/2026) |
+| 10 | Vendedores (cadastro + vendedor no pedido de venda, % de comissão congelada) | Back-end testado de ponta a ponta; telas não verificadas visualmente (23/09/2026) |
+| 11+ | Comissão, Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -170,6 +171,17 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - Datas exibidas no horário de Brasília; o filtro de período compara em UTC (mesma convenção do Dashboard)
 - Fora do escopo por enquanto: seletor de período no Dashboard, relatórios de contas a receber/pagar, relatório agrupado por produto, itens dos pedidos dentro do relatório
 
+---
+
+## Funcionalidades (etapa 10 — Vendedores)
+
+- Tela **Vendedores** (menu Cadastro): nome, **CPF** (só pessoa física — CNPJ é recusado), e-mail e telefone opcionais, **% de comissão padrão** (0 a 100, até 2 casas) e ativo/inativo; mesmo padrão de filtros, tabela e painel de Fornecedores
+- CPF único **entre vendedores**; repetido com um vendedor inativo sugere reativar o cadastro
+- **Pedido de Venda** ganhou o campo **Vendedor** (seleção com busca, só ativos): opcional no rascunho, **obrigatório e ativo para confirmar** (igual à forma de pagamento)
+- Ao confirmar, o pedido **guarda a % de comissão do vendedor naquele momento**; mudar a % do vendedor depois não altera vendas já confirmadas. O pedido confirmado mostra o vendedor e a % congelada
+- Pedidos confirmados antes deste módulo continuam sem vendedor
+- Fora do escopo por enquanto: **cálculo e relatório de comissão** (próxima etapa), vendedor no pedido de compra, coluna/filtro de vendedor na lista de pedidos e nos relatórios
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -261,6 +273,7 @@ erp_portifolio/
 │       │   ├── ContasReceberController.cs   # endpoints REST de contas a receber
 │       │   ├── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
 │       │   ├── FornecedoresController.cs    # endpoints REST de fornecedores
+│       │   ├── VendedoresController.cs      # endpoints REST de vendedores
 │       │   ├── PedidosCompraController.cs   # endpoints REST de pedidos de compra
 │       │   ├── ContasPagarController.cs     # endpoints REST de contas a pagar
 │       │   └── RelatoriosController.cs      # relatórios: JSON para a tela ou arquivo (?formato=xlsx|pdf)
@@ -278,6 +291,7 @@ erp_portifolio/
 │       │   ├── ParcelaPagar.cs              # entidade (FK pedido de compra, vencimento como DateOnly)
 │       │   ├── StatusParcelaPagar.cs        # enum: Pendente, Pago, Cancelado
 │       │   ├── Fornecedor.cs                # entidade (espelho de Cliente)
+│       │   ├── Vendedor.cs                  # entidade (CPF, % de comissão padrão)
 │       │   └── PedidoCompra.cs / PedidoCompraItem.cs  # entidades (espelho de Pedido/PedidoItem, sem forma de pagamento)
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
@@ -311,6 +325,8 @@ erp_portifolio/
 │       │   ├── FormatoRelatorio.cs          # enum: Json, Xlsx, Pdf
 │       │   ├── EstoqueResumoDashboardDto.cs # saída de /dashboard/estoque
 │       │   ├── Fornecedor{Criacao,Atualizacao,Resposta,Filtro}Dto.cs  # mesmo desenho, para fornecedores
+│       │   ├── VendedorDtos.cs              # criação, atualização, filtro e resposta de vendedores
+│       │   ├── Validacoes/CpfAttribute.cs   # só CPF (vendedor), reaproveitando o DocumentoValidador
 │       │   ├── PedidoCompraCriacaoDto.cs    # entrada do POST/PUT (itens sem preço; sem forma de pagamento)
 │       │   ├── PedidoCompraItemEntradaDto.cs # item do POST/PUT: produtoId, quantidade, desconto
 │       │   ├── PedidoCompraRespostaDto.cs   # saída com itens (preço = custo, subtotal)
@@ -342,6 +358,8 @@ erp_portifolio/
 │       │   ├── DashboardCalculo.cs          # ticket medio e preenchimento de dias, funcao pura (sem banco)
 │       │   ├── IFornecedorService.cs
 │       │   ├── FornecedorService.cs         # regras de negócio + acesso a dados (espelho de ClienteService)
+│       │   ├── IVendedorService.cs
+│       │   ├── VendedorService.cs           # espelho de FornecedorService, com CPF único
 │       │   ├── IPedidoCompraService.cs
 │       │   ├── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       │   ├── IContasPagarService.cs
@@ -389,6 +407,7 @@ erp_portifolio/
             │   ├── relatoriosApi.ts         # dados dos relatórios + download do arquivo (nome do Content-Disposition)
             │   ├── dashboardApi.ts          # chamadas da API do Dashboard (4 endpoints)
             │   ├── fornecedoresApi.ts       # chamadas da API de fornecedores
+            │   ├── vendedoresApi.ts         # chamadas da API de vendedores
             │   └── pedidosCompraApi.ts      # chamadas da API de pedidos de compra
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
@@ -400,6 +419,7 @@ erp_portifolio/
             │   ├── useRelatorios.ts         # consulta só após "Gerar"; download como mutação
             │   ├── useDashboard.ts          # 4 queries independentes (vendas, contas a receber, contas a pagar, estoque)
             │   ├── useFornecedores.ts       # useQuery / useMutation
+            │   ├── useVendedores.ts         # useQuery / useMutation
             │   └── usePedidosCompra.ts      # useQuery / useMutation de pedidos de compra
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
@@ -435,6 +455,9 @@ erp_portifolio/
             ├── pages/Fornecedores/
             │   ├── FornecedoresListaPage.tsx  # filtros, tabela, paginação, ações (espelho de Clientes)
             │   └── FornecedorFormDrawer.tsx   # painel lateral de inclusão/edição
+            ├── pages/Vendedores/
+            │   ├── VendedoresListaPage.tsx    # filtros, tabela com % de comissão, ações (espelho de Fornecedores)
+            │   └── VendedorFormDrawer.tsx     # painel lateral de inclusão/edição
             ├── pages/PedidosCompra/
             │   ├── PedidosCompraListaPage.tsx # filtro (número/fornecedor + status), tabela, paginação
             │   ├── PedidoCompraPage.tsx       # formulário: fornecedor, itens, desconto, resumo, ações
@@ -446,6 +469,7 @@ erp_portifolio/
             │   ├── pedidoSchema.ts          # schema Zod do formulário de pedido + conversões form/API
             │   ├── estoqueEntradaSchema.ts  # schema Zod do formulário de entrada de estoque
             │   ├── fornecedorSchema.ts      # schema Zod do formulário de fornecedor
+            │   ├── vendedorSchema.ts        # schema Zod do formulário de vendedor (só CPF, % 0-100)
             │   └── pedidoCompraSchema.ts    # schema Zod do formulário de pedido de compra + conversões form/API
             ├── types/
             │   ├── cliente.ts               # tipos (espelham os DTOs)
@@ -458,9 +482,10 @@ erp_portifolio/
             │   ├── relatorio.ts
             │   ├── dashboard.ts
             │   ├── fornecedor.ts
+            │   ├── vendedor.ts
             │   ├── pedidoCompra.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
-            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx / SelecaoFornecedor.tsx  # seleção com busca no servidor (usadas nos pedidos e nos filtros dos relatórios, com `aoLimpar`)
+            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx / SelecaoFornecedor.tsx / SelecaoVendedor.tsx  # seleção com busca no servidor (usadas nos pedidos e nos filtros dos relatórios, com `aoLimpar`)
             ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado (reaproveitada pelo Pedido de Compra)
             ├── hooks/useBuscaCadastros.ts    # busca com debounce para os seletores acima (clientes, fornecedores, produtos)
             ├── hooks/usePedidos.ts           # useQuery / useMutation de pedidos
@@ -669,6 +694,18 @@ Fornecedores (mesmo desenho de respostas de Clientes):
 | PATCH | `/fornecedores/{id}/inativar` | Inativa um fornecedor; repetir a chamada também retorna 204 | 204, 404 |
 
 Documento único **num índice próprio**, independente do de Clientes: o mesmo CPF/CNPJ pode estar cadastrado como cliente e como fornecedor.
+
+Vendedores (mesmo desenho de Fornecedores, sem cidade/UF e com `percentualComissao`):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/vendedores?nome=&ativo=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome | 200, 400 |
+| GET | `/vendedores/{id}` | Obtém um vendedor | 200, 404 |
+| POST | `/vendedores` | Cadastra um vendedor (CPF válido, só pessoa física; comissão 0-100 com até 2 casas) | 201, 400, 409 |
+| PUT | `/vendedores/{id}` | Edita (inclusive `ativo`) | 200, 400, 404, 409 |
+| PATCH | `/vendedores/{id}/inativar` | Inativa; repetir também retorna 204 | 204, 404 |
+
+`POST`/`PUT /pedidos` aceitam `vendedorId` (opcional; se vier, precisa existir e estar ativo, senão 400 em `VendedorId`). `PATCH /pedidos/{id}/confirmar` exige vendedor ativo (400 em `VendedorId`) e grava `percentualComissao` = % do vendedor naquele momento. `GET /pedidos/{id}` devolve `vendedorId`, `vendedorNome` e `percentualComissao`.
 
 Pedidos de Compra (mesmo desenho de Pedidos, sem forma de pagamento):
 
@@ -909,6 +946,20 @@ Tabela `public.parcelas_receber`:
 | `data_recebimento` | timestamptz | nulo até ser marcada como recebida |
 
 Índice único `ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)` e índice `ix_parcelas_receber_vencimento`. Migration: `20260922190422_CriacaoTabelaParcelasReceber` (só cria essa tabela; não altera `pedidos`, `produtos`, `clientes`, `categorias` nem `estoque_movimentacoes`).
+
+Tabela `public.vendedores`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_vendedores`, identity (generated always) |
+| `nome` | varchar(150) | índice `ix_vendedores_nome` |
+| `cpf` | char(11) | só dígitos; índice único `ix_vendedores_cpf` |
+| `email` / `telefone` | varchar(150) / varchar(20) | opcionais |
+| `percentual_comissao` | numeric(5,2) | padrão 0, `CHECK` entre 0 e 100 |
+| `ativo` | boolean | inativação lógica |
+| `data_cadastro` | timestamptz | UTC, padrão `now()` |
+
+`public.pedidos` ganhou `vendedor_id` (integer, opcional, FK `fk_pedidos_vendedores` → `vendedores.id` restrict, índice `ix_pedidos_vendedor_id`) e `percentual_comissao` (numeric(5,2), opcional, `CHECK` 0-100; preenchido só ao confirmar). Migration: `20260923163031_AdicionaVendedores`.
 
 Tabela `public.fornecedores` (espelho exato de `public.clientes`):
 
@@ -1290,6 +1341,22 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (15
 
 **Limitação desta rodada:** sem navegador nesta sessão, as **telas** de relatório (filtros, seletor de período, cards, tabela, botões de exportar, download pelo navegador) **não foram verificadas visualmente** — os arquivos gerados pelo servidor, sim. Recomenda-se: gerar cada relatório, baixar o Excel e o PDF pela tela e abrir os dois.
 
+### Vendedores (23/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script Python com 19 verificações, usando vendedores/cliente/produto de teste (`ZZT…`), todos apagados via SQL ao final; os 3 pedidos reais ficaram intactos.
+
+| Verificação | Resultado |
+|---|---|
+| CRUD: criar (CPF com máscara gravado só com dígitos), CPF repetido → 409, CNPJ → 400, comissão 100,01% → 400, listar com filtro, editar, reativar pelo PUT | ✅ |
+| Rascunho com e sem vendedor; vendedor inexistente ou trocado por um inativo → 400 em `VendedorId` | ✅ |
+| Confirmar sem vendedor, ou com vendedor inativado depois → 400 em `VendedorId`, pedido continua Rascunho | ✅ |
+| Confirmar grava a % do vendedor (5,50); mudar a % do vendedor para 9 **não** altera esse pedido; o pedido confirmado depois pega 9 | ✅ |
+| Pedido antigo (sem vendedor) continua abrindo; lista de pedidos inalterada | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (172 aprovados, 14 novos em `VendedorValidacaoTests`: CPF com/sem máscara, CNPJ e CPF inválido recusados, comissão 0-100 com 2 casas), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
+**Limitação desta rodada:** sem navegador nesta sessão, a tela de Vendedores e o campo Vendedor no pedido **não foram verificados visualmente**. Recomenda-se: cadastrar um vendedor com 5%, criar um pedido de venda escolhendo esse vendedor, confirmar e ver a comissão congelada no pedido; depois mudar a % do vendedor e reabrir o pedido.
+
 ---
 
 ## Padrões do projeto
@@ -1383,6 +1450,7 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Gerar parcelas para pedidos (venda ou compra) confirmados antes dos módulos de Contas a Receber/Pagar
 - Recebimento parcial de mercadoria no Pedido de Compra (hoje é recebido inteiro ao confirmar)
 - Seletor de período no Dashboard (hoje é sempre o mês atual)
+- **Comissão**: cálculo por vendedor e período (valor vendido × % congelada no pedido), relatório com exportação; decidir se considera o pedido confirmado ou só as parcelas recebidas
 - Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)

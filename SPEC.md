@@ -1,6 +1,6 @@
 # Spec: Módulo Vendedores (etapa 10)
 
-> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
+> Status: **implementada e testada em 23/09/2026** (T1 a T6, ver `tasks/todo.md`). Critérios 1-5 conferidos por E2E (19 verificações, dados `ZZT…` apagados, dados reais intactos); **telas sem verificação visual** (sem navegador nesta sessão).
 
 ## Objetivo
 
@@ -80,9 +80,11 @@ CRUD de Vendedor (tela em **Cadastro**), vendedor no pedido de venda (seleção 
 
 ## Success criteria (testáveis)
 
-1. CRUD de vendedor funciona; CPF inválido, CNPJ ou % fora de 0-100 → 400; CPF repetido → 409.
-2. Rascunho salva com ou sem vendedor; vendedor inativo ou inexistente → 400 em `VendedorId`.
-3. Confirmar sem vendedor (ou com vendedor inativo) → 400 em `VendedorId`, pedido continua Rascunho.
-4. Confirmar com vendedor grava a % de comissão dele no pedido; alterar a % do vendedor depois não muda o pedido confirmado.
-5. `GET /api/pedidos/{id}` traz vendedor e % congelada; pedidos antigos continuam abrindo (sem vendedor).
-6. Tela Vendedores no menu Cadastro; campo Vendedor no pedido de venda; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde.
+Conferidos em 23/09/2026; detalhes na seção "Vendedores (23/09/2026)" do README.
+
+1. ✅ CRUD de vendedor funciona; CPF inválido, CNPJ ou % fora de 0-100 → 400; CPF repetido → 409.
+2. ✅ Rascunho salva com ou sem vendedor; vendedor inativo ou inexistente → 400 em `VendedorId`.
+3. ✅ Confirmar sem vendedor (ou com vendedor inativo) → 400 em `VendedorId`, pedido continua Rascunho.
+4. ✅ Confirmar com vendedor grava a % de comissão dele no pedido; alterar a % do vendedor depois não muda o pedido confirmado.
+5. ✅ `GET /api/pedidos/{id}` traz vendedor e % congelada; pedidos antigos continuam abrindo (sem vendedor).
+6. ✅ Tela Vendedores no menu Cadastro; campo Vendedor no pedido de venda; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` 172/172 — verificação visual não feita (sem navegador).
