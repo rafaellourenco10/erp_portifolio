@@ -48,12 +48,13 @@
 
 ## Fase 3: Telas
 
-- [ ] **T5: Tela Fornecedores** (M)
-  - Descrição: `types/fornecedor.ts`, `api/fornecedoresApi.ts`, `hooks/useFornecedores.ts`, `pages/Fornecedores/FornecedorFormDrawer.tsx`, `pages/Fornecedores/FornecedoresListaPage.tsx` (espelho de Clientes, reaproveitando `clientes.css`); rota `/fornecedores` e item de menu (ícone `ShopOutlined`), logo depois de Clientes.
+- [x] **T5: Tela Fornecedores** (M) — *concluída em 23/09/2026*
+  - Descrição: `types/fornecedor.ts`, `api/fornecedoresApi.ts`, `hooks/useFornecedores.ts`, `schemas/fornecedorSchema.ts`, `pages/Fornecedores/FornecedorFormDrawer.tsx`, `pages/Fornecedores/FornecedoresListaPage.tsx` (espelho de Clientes, reaproveitando `clientes.css`); rota `/fornecedores` e item de menu (ícone `ShopOutlined`), logo depois de Clientes.
   - Aceite: lista, cria, edita, inativa fornecedor pela tela.
   - Verificar: `npx tsc -b`, `npx oxlint src`.
+  - Resultado: espelho fiel do módulo de Clientes (mesmos componentes de filtro, drawer, validação Zod); `tsc -b` e `oxlint` limpos. Verificação visual/Playwright não feita nesta sessão (sem navegador disponível, mesma ressalva dos módulos anteriores) — a API foi validada de ponta a ponta na T2/T4.
   - Dependências: T2.
-  - Arquivos: `types/fornecedor.ts`, `api/fornecedoresApi.ts`, `hooks/useFornecedores.ts`, `pages/Fornecedores/*`, `App.tsx`.
+  - Arquivos: `types/fornecedor.ts`, `api/fornecedoresApi.ts`, `hooks/useFornecedores.ts`, `schemas/fornecedorSchema.ts`, `pages/Fornecedores/*`, `App.tsx`.
 
 - [ ] **T6: Tela Pedidos de Compra** (L)
   - Descrição: `types/pedidoCompra.ts`, `api/pedidosCompraApi.ts`, `hooks/usePedidosCompra.ts`, `pages/PedidosCompra/PedidoCompraPage.tsx`, `pages/PedidosCompra/PedidosCompraListaPage.tsx`, `pages/PedidosCompra/ItensPedidoCompraTabela.tsx` (espelho de Pedidos, reaproveitando `pedido.css`); rotas `/pedidos-compra`, `/pedidos-compra/novo`, `/pedidos-compra/:id` e item de menu (ícone `ShoppingOutlined`), logo depois de Pedidos.

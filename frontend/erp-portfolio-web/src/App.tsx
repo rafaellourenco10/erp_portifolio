@@ -1,15 +1,15 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.7.0
- * Data.......: 22/09/2026
+ * Versão.....: 1.8.0
+ * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
- *              por rota (/, /clientes, /produtos, /categorias, /pedidos,
- *              /estoque, /contas-receber) com o React Router. O Painel (/)
- *              fica fora da seção "Gestão Comercial": resume vários módulos,
- *              não é uma ação comercial.
+ *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
+ *              /pedidos, /estoque, /contas-receber) com o React Router. O
+ *              Painel (/) fica fora da seção "Gestão Comercial": resume
+ *              vários módulos, não é uma ação comercial.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
@@ -24,6 +24,7 @@
  *   1.6.0 - 22/09/2026 - Rota e item de menu de Contas a Receber.
  *   1.7.0 - 22/09/2026 - Painel (Dashboard) como rota inicial "/", fora de
  *                        "Gestão Comercial"; rota desconhecida cai em "/" (era /clientes).
+ *   1.8.0 - 23/09/2026 - Rota e item de menu de Fornecedores (etapa 7).
  * =====================================================================
  */
 
@@ -35,6 +36,7 @@ import {
   MenuFoldOutlined,
   MenuOutlined,
   MenuUnfoldOutlined,
+  ShopOutlined,
   ShoppingCartOutlined,
   TagsOutlined,
   TeamOutlined,
@@ -49,6 +51,7 @@ import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
 import { ContasReceberListaPage } from './pages/ContasReceber/ContasReceberListaPage'
 import { DashboardPage } from './pages/Dashboard/DashboardPage'
 import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
+import { FornecedoresListaPage } from './pages/Fornecedores/FornecedoresListaPage'
 import { PedidoPage } from './pages/Pedidos/PedidoPage'
 import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
@@ -59,6 +62,7 @@ const itensPainel = [{ key: '/', icon: <HomeOutlined />, label: 'Painel' }] sati
 // A chave de cada item é o caminho da rota.
 const itensMenu = [
   { key: '/clientes', icon: <TeamOutlined />, label: 'Clientes' },
+  { key: '/fornecedores', icon: <ShopOutlined />, label: 'Fornecedores' },
   { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
   { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
   { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos' },
@@ -151,6 +155,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/clientes" element={<ClientesListaPage />} />
+            <Route path="/fornecedores" element={<FornecedoresListaPage />} />
             <Route path="/produtos" element={<ProdutosListaPage />} />
             <Route path="/categorias" element={<CategoriasListaPage />} />
             <Route path="/pedidos" element={<PedidosListaPage />} />
