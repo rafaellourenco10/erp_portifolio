@@ -42,5 +42,6 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T8: Documentação e verificação final** (S)
+- [x] **T8: Documentação e verificação final** (S) — *concluída em 23/09/2026*
   - README (seção etapa 8), SPEC.md marcada como implementada com os 8 critérios conferidos, `python -m graphify update .`, memória atualizada.
+  - Resultado: README com funcionalidades, estrutura, API, tabela `parcelas_pagar` e testes da etapa 8; introdução e menções ao menu atualizadas para os departamentos (Cadastro, Ordem Vendas/Compras, Depósito, Financeiro). SPEC marcada como implementada, 8/8 critérios ✅. Grafo atualizado.

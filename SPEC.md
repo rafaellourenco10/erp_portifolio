@@ -1,6 +1,6 @@
 # Spec: Módulo Contas a Pagar (etapa 8)
 
-> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
+> Status: **implementada e testada em 23/09/2026** (T1 a T8 do plano, ver `tasks/todo.md`). Os 8 critérios abaixo foram conferidos contra a API real numa instância temporária (dados de teste `ZZT…` apagados ao final, dados reais intactos). **Sem verificação visual** das telas — sem navegador nesta sessão.
 
 ## Objetivo
 
@@ -69,11 +69,13 @@ Pagamento parcial de parcela; editar valor/vencimento de uma parcela; contas a p
 
 ## Success criteria (testáveis)
 
-1. Confirmar um pedido de compra com 3 parcelas / 30 dias gera 3 parcelas Pendentes cuja soma é exatamente o total do pedido, vencendo em +30, +60 e +90 dias.
-2. Confirmar sem corpo gera 1 parcela de 30 dias; valores fora da faixa (0 ou 13 parcelas, 0 ou 181 dias) retornam 400 sem confirmar.
-3. `/api/contas-pagar` lista com busca por número/fornecedor e filtro por status, incluindo Atrasado calculado.
-4. Marcar como paga funciona, é idempotente, e em parcela cancelada retorna 409.
-5. Cancelar um pedido de compra confirmado cancela as parcelas Pendentes e mantém as Pagas.
-6. Cancelamento bloqueado por saldo insuficiente (PC7) não altera nenhuma parcela.
-7. Resumo do dashboard bate com as parcelas pendentes/atrasadas no banco.
-8. Menu Financeiro mostra Contas a Pagar; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde.
+Conferidos em 23/09/2026 por um script E2E (26 verificações) contra a API real; detalhes na seção "Contas a Pagar (23/09/2026)" do README.
+
+1. ✅ Confirmar um pedido de compra com 3 parcelas / 30 dias gera 3 parcelas Pendentes cuja soma é exatamente o total do pedido, vencendo em +30, +60 e +90 dias.
+2. ✅ Confirmar sem corpo gera 1 parcela de 30 dias; valores fora da faixa (0 ou 13 parcelas, 0 ou 181 dias) retornam 400 sem confirmar.
+3. ✅ `/api/contas-pagar` lista com busca por número/fornecedor e filtro por status, incluindo Atrasado calculado.
+4. ✅ Marcar como paga funciona, é idempotente, e em parcela cancelada retorna 409.
+5. ✅ Cancelar um pedido de compra confirmado cancela as parcelas Pendentes e mantém as Pagas.
+6. ✅ Cancelamento bloqueado por saldo insuficiente (PC7) não altera nenhuma parcela.
+7. ✅ Resumo do dashboard bate com as parcelas pendentes/atrasadas no banco.
+8. ✅ Menu Financeiro mostra Contas a Pagar; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde (150/150) — verificação visual não feita (sem navegador).
