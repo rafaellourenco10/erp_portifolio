@@ -64,15 +64,16 @@
   - Dependências: T4.
   - Arquivos: `types/pedidoCompra.ts`, `api/pedidosCompraApi.ts`, `hooks/usePedidosCompra.ts`, `hooks/useBuscaCadastros.ts`, `schemas/pedidoCompraSchema.ts`, `components/SelecaoFornecedor.tsx`, `components/SelecaoProduto.tsx`, `pages/PedidosCompra/*`, `App.tsx`.
 
-- [ ] **T7: Estoque mostra "Compra #N"** (S)
+- [x] **T7: Estoque mostra "Compra #N"** (S) — *concluída em 23/09/2026*
   - Descrição: componente(s) do extrato de estoque passam a exibir a origem "Compra #N" quando `pedidoCompraId` estiver preenchido (hoje só mostram "Venda #N" via `pedidoId`).
   - Aceite: uma entrada gerada por um pedido de compra confirmado aparece no extrato com o rótulo certo.
   - Verificar: `npx tsc -b`, `npx oxlint src`; conferência manual contra dado real de teste.
+  - Resultado: `types/estoque.ts` ganhou `pedidoCompraId`; `MovimentacoesDrawer.tsx` ganhou uma coluna "Origem" (Venda #N / Compra #N / Manual) — mais escaneável que só o texto livre do Motivo (que já trazia "Compra pedido #N" desde a T3/T4). De quebra, corrigida uma colisão de `rowKey` (duas movimentações de compra no mesmo instante caíam na mesma chave "manual"). `tsc -b` e `oxlint` limpos; contrato conferido contra a resposta real da API na T4 (`pedidoCompraId` no formato esperado).
   - Dependências: T3, T6 (tela de estoque já existe; só ajusta a exibição).
-  - Arquivos: `types/estoque.ts`, componente do extrato em `pages/Estoque/`.
+  - Arquivos: `types/estoque.ts`, `pages/Estoque/MovimentacoesDrawer.tsx`.
 
 ### Checkpoint 3 (CP2 do plano): telas prontas
-- [ ] `tsc`, `oxlint`, `npm run build`, `dotnet build`, `dotnet test` limpos
+- [x] `tsc`, `oxlint`, `npm run build`, `dotnet build`, `dotnet test` limpos
 
 ## Fase 4: Fechamento
 

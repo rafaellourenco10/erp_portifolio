@@ -1,17 +1,19 @@
 /**
  * =====================================================================
  * Arquivo....: MovimentacoesDrawer.tsx
- * Versão.....: 1.0.0
- * Data.......: 22/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 23/09/2026
  * Descrição..: Painel lateral (Drawer) somente leitura com o extrato de
  *              movimentações de um produto (mais recente primeiro):
- *              tipo, quantidade, motivo/origem e data.
+ *              tipo, quantidade, origem (venda/compra/manual), motivo e data.
  * ---------------------------------------------------------------------
  * Fontes.....: GET /api/estoque/{produtoId}/movimentacoes?pagina=&tamanhoPagina=
  *              (via useMovimentacoesProduto)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - Coluna "Origem" (Venda #N / Compra #N / Manual), a partir de
+ *                        pedidoId/pedidoCompraId (etapa 7).
  * =====================================================================
  */
 
@@ -74,6 +76,19 @@ export function MovimentacoesDrawer({ produto, aoFechar }: MovimentacoesDrawerPr
       render: (quantidade: number) => <span className="numeros-tabulares">{formatarQuantidade(quantidade)}</span>,
     },
     {
+      title: 'Origem',
+      key: 'origem',
+      width: 110,
+      render: (_, linha) =>
+        linha.pedidoId !== null ? (
+          <span className="pilula-documento numeros-tabulares">Venda #{linha.pedidoId}</span>
+        ) : linha.pedidoCompraId !== null ? (
+          <span className="pilula-documento numeros-tabulares">Compra #{linha.pedidoCompraId}</span>
+        ) : (
+          <span className="celula-vazia">Manual</span>
+        ),
+    },
+    {
       title: 'Motivo',
       dataIndex: 'motivo',
       ellipsis: true,
@@ -109,12 +124,12 @@ export function MovimentacoesDrawer({ produto, aoFechar }: MovimentacoesDrawerPr
       }
     >
       <Table<Movimentacao>
-        rowKey={(linha) => `${linha.tipo}-${linha.dataMovimentacao}-${linha.pedidoId ?? 'manual'}`}
+        rowKey={(linha) => `${linha.tipo}-${linha.dataMovimentacao}-${linha.pedidoId ?? linha.pedidoCompraId ?? 'manual'}`}
         columns={colunas}
         dataSource={data?.itens}
         loading={isFetching}
         locale={{ emptyText: 'Nenhuma movimentação para este produto.' }}
-        scroll={ehCelular ? undefined : { x: 480 }}
+        scroll={ehCelular ? undefined : { x: 590 }}
         pagination={{
           current: filtro.pagina,
           pageSize: filtro.tamanhoPagina,
