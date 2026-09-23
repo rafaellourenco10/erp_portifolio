@@ -78,17 +78,18 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T5
   - Arquivos: `pages/Dashboard/GraficoFaturamento.tsx`, `pages/Dashboard/dashboard.css`, `pages/Dashboard/DashboardPage.tsx`
 
-- [ ] **T7: Menu "Painel" + rota inicial** (S)
+- [x] **T7: Menu "Painel" + rota inicial** (S) — *concluída em 22/09/2026*
   - Descrição: item **Painel** no menu, fora da seção "Gestão Comercial"; rota `/` aponta pro Dashboard; rota desconhecida (`*`) passa a cair em `/` em vez de `/clientes`.
   - Aceite: abrir a raiz do site mostra o Dashboard; as rotas dos outros módulos continuam iguais.
   - Verificar: `npx tsc -b`, `npx oxlint src`.
+  - Resultado: dois `<Menu>` separados no Sider e no Drawer mobile (Painel sozinho, sem rótulo de seção; Gestão Comercial embaixo, como antes). `ehRotaDoItem` trata a raiz `/` com igualdade exata (não por prefixo, senão toda rota "começaria com /" e marcaria Painel sempre selecionado). Breadcrumb do Painel mostra só "Painel", sem "Gestão Comercial". `tsc -b`, `oxlint` e `npm run build` limpos.
   - Dependências: T6
   - Arquivos: `App.tsx`
 
 ### Checkpoint 3 (CP2 do plano): tela pronta
-- [ ] Cards e gráfico funcionam com dados reais (conferência manual, sem Playwright nesta sessão)
-- [ ] `tsc`, `oxlint`, `npm run build`, `dotnet build` (0 avisos), `dotnet test` limpos
-- [ ] Revisão do Rafael antes de fechar
+- [x] Cards e gráfico funcionam com dados reais (conferência manual, sem Playwright nesta sessão) — os endpoints já foram validados com dados reais do Rafael na T4
+- [x] `tsc`, `oxlint`, `npm run build`, `dotnet build` (0 avisos), `dotnet test` limpos
+- [ ] Revisão do Rafael antes de fechar *(recomendo abrir a raiz do site e conferir visualmente, como já foi feito com Estoque)*
 
 ---
 

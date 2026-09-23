@@ -1,13 +1,15 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.6.0
+ * Versão.....: 1.7.0
  * Data.......: 22/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
- *              por rota (/clientes, /produtos, /categorias, /pedidos, /estoque,
- *              /contas-receber) com o React Router.
+ *              por rota (/, /clientes, /produtos, /categorias, /pedidos,
+ *              /estoque, /contas-receber) com o React Router. O Painel (/)
+ *              fica fora da seção "Gestão Comercial": resume vários módulos,
+ *              não é uma ação comercial.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
@@ -20,6 +22,8 @@
  *                        /pedidos/:id); o menu e o breadcrumb valem também nas subpáginas.
  *   1.5.0 - 22/09/2026 - Rota e item de menu de Estoque.
  *   1.6.0 - 22/09/2026 - Rota e item de menu de Contas a Receber.
+ *   1.7.0 - 22/09/2026 - Painel (Dashboard) como rota inicial "/", fora de
+ *                        "Gestão Comercial"; rota desconhecida cai em "/" (era /clientes).
  * =====================================================================
  */
 
@@ -27,6 +31,7 @@ import {
   AppstoreOutlined,
   DatabaseOutlined,
   DollarOutlined,
+  HomeOutlined,
   MenuFoldOutlined,
   MenuOutlined,
   MenuUnfoldOutlined,
@@ -42,10 +47,14 @@ import { LogoAmbition } from './components/LogoAmbition'
 import { CategoriasListaPage } from './pages/Categorias/CategoriasListaPage'
 import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
 import { ContasReceberListaPage } from './pages/ContasReceber/ContasReceberListaPage'
+import { DashboardPage } from './pages/Dashboard/DashboardPage'
 import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
 import { PedidoPage } from './pages/Pedidos/PedidoPage'
 import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
+
+// O Painel fica fora de "Gestão Comercial": resume vários módulos, não é uma ação comercial.
+const itensPainel = [{ key: '/', icon: <HomeOutlined />, label: 'Painel' }] satisfies MenuProps['items']
 
 // A chave de cada item é o caminho da rota.
 const itensMenu = [
@@ -56,6 +65,11 @@ const itensMenu = [
   { key: '/estoque', icon: <DatabaseOutlined />, label: 'Estoque' },
   { key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' },
 ] satisfies MenuProps['items']
+
+/** true se a rota atual pertence a este item de menu (a raiz "/" só bate exata, nunca por prefixo). */
+function ehRotaDoItem(chave: string, pathname: string): boolean {
+  return chave === '/' ? pathname === '/' : pathname === chave || pathname.startsWith(`${chave}/`)
+}
 
 /** Título da subpágina de um módulo (a última parte do breadcrumb), ou undefined na página principal. */
 function tituloDaSubpagina(pathname: string): string | undefined {
@@ -71,14 +85,17 @@ export default function App() {
   const { pathname } = useLocation()
   const navegar = useNavigate()
   // O item do menu vale também nas subpáginas (/pedidos/novo, /pedidos/12 continuam marcando "Pedidos").
-  const itemAtual = itensMenu.find((item) => pathname === item.key || pathname.startsWith(`${item.key}/`))
-  const chavesSelecionadas = itemAtual ? [itemAtual.key] : []
+  const itemAtual = [...itensPainel, ...itensMenu].find((item) => ehRotaDoItem(String(item.key), pathname))
+  const chavesSelecionadas = itemAtual ? [String(itemAtual.key)] : []
   const subpagina = tituloDaSubpagina(pathname)
-  const trilha = [
-    { title: 'Gestão Comercial' },
-    { title: subpagina && itemAtual ? <Link to={itemAtual.key}>{itemAtual.label}</Link> : itemAtual?.label },
-    ...(subpagina ? [{ title: subpagina }] : []),
-  ]
+  const trilha =
+    itemAtual?.key === '/'
+      ? [{ title: 'Painel' }]
+      : [
+          { title: 'Gestão Comercial' },
+          { title: subpagina && itemAtual ? <Link to={String(itemAtual.key)}>{itemAtual.label}</Link> : itemAtual?.label },
+          ...(subpagina ? [{ title: subpagina }] : []),
+        ]
 
   const [recolhido, setRecolhido] = useState(false)
   const [menuCelularAberto, setMenuCelularAberto] = useState(false)
@@ -99,6 +116,7 @@ export default function App() {
           <div className="app-logo">
             <LogoAmbition compacto={recolhido} />
           </div>
+          <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensPainel} onClick={({ key }) => navegar(key)} />
           {!recolhido && <div className="app-secao-menu">Gestão comercial</div>}
           <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensMenu} onClick={({ key }) => navegar(key)} />
         </Layout.Sider>
@@ -131,6 +149,7 @@ export default function App() {
 
         <Layout.Content className="app-conteudo">
           <Routes>
+            <Route path="/" element={<DashboardPage />} />
             <Route path="/clientes" element={<ClientesListaPage />} />
             <Route path="/produtos" element={<ProdutosListaPage />} />
             <Route path="/categorias" element={<CategoriasListaPage />} />
@@ -139,7 +158,7 @@ export default function App() {
             <Route path="/pedidos/:id" element={<PedidoPage />} />
             <Route path="/estoque" element={<EstoqueListaPage />} />
             <Route path="/contas-receber" element={<ContasReceberListaPage />} />
-            <Route path="*" element={<Navigate to="/clientes" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout.Content>
       </Layout>
@@ -152,6 +171,15 @@ export default function App() {
         title={<LogoAmbition tamanho={28} />}
         className="app-menu-celular"
       >
+        <Menu
+          mode="inline"
+          selectedKeys={chavesSelecionadas}
+          items={itensPainel}
+          onClick={({ key }) => {
+            navegar(key)
+            setMenuCelularAberto(false)
+          }}
+        />
         <div className="app-secao-menu">Gestão comercial</div>
         <Menu
           mode="inline"
