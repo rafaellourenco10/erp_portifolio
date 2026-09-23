@@ -41,7 +41,7 @@ Seletor de período (o mês é sempre o atual), drill-down/exportação, estoque
 
 ## Tech stack
 
-Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query no front. **Uma dependência nova no front**: biblioteca de gráfico (a decidir na implementação, seguindo a skill de dataviz do projeto — provavelmente algo leve tipo Ant Design Charts ou Recharts).
+Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query no front. **Nenhuma dependência nova**: o gráfico de faturamento diário (T6) foi feito em SVG desenhado à mão — uma série de ~30 barras não justifica o peso de uma biblioteca inteira de gráficos (o bundle já tem aviso de chunk grande). Segue a skill de dataviz do projeto (mark specs, hover por barra, cor única por ser 1 série só).
 
 ## Modelo de dados
 
@@ -114,7 +114,7 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS, nom
 ## Boundaries
 
 - **Sempre:** todo cálculo de dinheiro/contagem no servidor (a tela só exibe); cada endpoint independente dos outros; cabeçalho em cada arquivo; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir (ou autorização já dada, como nos módulos anteriores).
-- **Perguntar antes:** dependência nova de gráfico (decidir qual na hora, mas é a única autorizada por esta spec — qualquer outra dependência nova precisa perguntar de novo), seletor de período, estoque mínimo por produto, qualquer ação (não só leitura) no Dashboard.
+- **Perguntar antes:** qualquer dependência nova (o gráfico acabou sendo feito sem nenhuma, ver Tech stack), seletor de período, estoque mínimo por produto, qualquer ação (não só leitura) no Dashboard.
 - **Nunca:** gravar um valor agregado como se fosse fonte de verdade (sempre recalcular), commitar segredos, forçar push.
 
 ## Success criteria (testáveis)
@@ -134,4 +134,4 @@ Nenhuma em aberto — as quatro dúvidas da primeira versão foram fechadas em 2
 
 - **Sem seletor de período**: sempre o mês atual; um filtro de data é uma extensão natural (mais um parâmetro nos três endpoints).
 - **Limite de saldo baixo fixo (5)**: até existir um campo de estoque mínimo por produto.
-- **Biblioteca de gráfico** a escolher na implementação, seguindo a skill de dataviz do projeto.
+- ~~Biblioteca de gráfico a escolher na implementação~~ — decidido: sem biblioteca, SVG à mão (ver Tech stack).

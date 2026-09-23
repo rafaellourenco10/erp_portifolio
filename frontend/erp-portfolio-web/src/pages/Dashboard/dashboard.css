@@ -1,0 +1,17 @@
+/* Gráfico de faturamento diário (GraficoFaturamento.tsx): barra única (1 série), sem legenda. */
+
+.grafico-faturamento {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grafico-faturamento svg {
+  overflow: visible;
+}
+
+/* Reserva a altura mesmo sem barra ativa, pra não pular o layout ao passar o mouse. */
+.grafico-tooltip {
+  min-height: 22px;
+  font-size: 13px;
+}

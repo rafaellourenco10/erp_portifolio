@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: DashboardPage.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 22/09/2026
  * Descrição..: Página inicial do Ambition ERP: cards de indicador do mês atual
  *              (faturamento/ticket médio, pedidos por status, contas a receber
@@ -14,6 +14,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo (cards de número).
+ *   1.1.0 - 22/09/2026 - Gráfico de faturamento diário (T6).
  * =====================================================================
  */
 
@@ -21,6 +22,7 @@ import { Col, Flex, Row, Typography } from 'antd'
 import { useResumoContasReceber, useResumoEstoque, useResumoVendas } from '../../hooks/useDashboard'
 import { formatarReal } from '../../utils/moeda'
 import { CardIndicador } from './CardIndicador'
+import { GraficoFaturamento } from './GraficoFaturamento'
 // A tela reaproveita as classes .painel, .pagina-titulo etc. do módulo de Clientes.
 import '../Clientes/clientes.css'
 
@@ -119,6 +121,12 @@ export function DashboardPage() {
           </CardIndicador>
         </Col>
       </Row>
+
+      <div style={{ marginTop: 16 }}>
+        <CardIndicador titulo="Faturamento diário" loading={vendas.isLoading} erro={vendas.isError}>
+          {vendas.data && <GraficoFaturamento dados={vendas.data.faturamentoPorDia} />}
+        </CardIndicador>
+      </div>
     </div>
   )
 }

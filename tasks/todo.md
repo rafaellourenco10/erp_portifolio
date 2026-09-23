@@ -70,12 +70,13 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
   - Dependências: T4 (contrato)
   - Arquivos: `types/dashboard.ts`, `api/dashboardApi.ts`, `hooks/useDashboard.ts`, `pages/Dashboard/DashboardPage.tsx`, `pages/Dashboard/CardIndicador.tsx`
 
-- [ ] **T6: Gráfico de faturamento diário** (M)
+- [x] **T6: Gráfico de faturamento diário** (M) — *concluída em 22/09/2026*
   - Descrição: carregar a skill de dataviz do projeto antes de escrever o gráfico; escolher a biblioteca (única dependência nova autorizada pela spec); gráfico de linha/barra com o faturamento diário do mês.
   - Aceite: gráfico renderiza os dias do mês sem buraco (D4); segue o tema escuro Ambition (cores de `temaAmbition.ts`).
   - Verificar: `npx tsc -b`, `npx oxlint src`, `npm run build` (confirma que a dependência nova não quebra o build).
+  - Resultado: **decisão tomada durante a implementação, registrada na SPEC.md**: sem biblioteca nenhuma — SVG desenhado à mão (uma série de ~30 barras não justifica o peso de uma lib inteira, e o bundle já tinha aviso de chunk grande). Segue a skill de dataviz do projeto: barra ≤24px com topo arredondado (4px) e base reta, gap de 2px entre barras, hairline recessiva na base, cor única (1 série, sem legenda), rótulos esparsos no eixo X (a cada 5 dias), tooltip por barra acessível por mouse **e teclado** (foco/blur, não só hover). `tsc -b`, `oxlint` e `npm run build` limpos — tamanho do bundle **idêntico** ao da T5 (confirma que nada foi adicionado).
   - Dependências: T5
-  - Arquivos: `pages/Dashboard/GraficoFaturamento.tsx`, `package.json` (dependência nova)
+  - Arquivos: `pages/Dashboard/GraficoFaturamento.tsx`, `pages/Dashboard/dashboard.css`, `pages/Dashboard/DashboardPage.tsx`
 
 - [ ] **T7: Menu "Painel" + rota inicial** (S)
   - Descrição: item **Painel** no menu, fora da seção "Gestão Comercial"; rota `/` aponta pro Dashboard; rota desconhecida (`*`) passa a cair em `/` em vez de `/clientes`.
