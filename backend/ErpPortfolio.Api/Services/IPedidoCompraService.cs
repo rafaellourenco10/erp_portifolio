@@ -41,16 +41,17 @@ public interface IPedidoCompraService
 
     /// <summary>
     /// Rascunho -> Confirmado (PC5). Exige fornecedor e produtos ativos; gera uma Entrada de estoque por item
-    /// (PC6) e atualiza o Custo de cada produto para o preço pago no item.
+    /// (PC6), atualiza o Custo de cada produto para o preço pago no item e gera as parcelas a pagar (P1).
     /// </summary>
     /// <returns>O pedido confirmado, ou null se não existir.</returns>
     /// <exception cref="ConflitoException">O pedido não está em Rascunho.</exception>
     /// <exception cref="DadoInvalidoException">Fornecedor ou algum produto está inativo.</exception>
-    Task<PedidoCompraRespostaDto?> ConfirmarAsync(int id, CancellationToken cancelamento);
+    Task<PedidoCompraRespostaDto?> ConfirmarAsync(int id, int numeroParcelas, int intervaloDias, CancellationToken cancelamento);
 
     /// <summary>
     /// Rascunho ou Confirmado -> Cancelado. Cancelar um pedido já cancelado também é sucesso (PC8). Cancelar um
-    /// Confirmado exige saldo suficiente em cada item (PC7): bloqueia se o saldo já foi consumido.
+    /// Confirmado exige saldo suficiente em cada item (PC7): bloqueia se o saldo já foi consumido; se passar,
+    /// cancela as parcelas a pagar ainda Pendentes (P5).
     /// </summary>
     /// <returns>false se o pedido não existir.</returns>
     /// <exception cref="DadoInvalidoException">Saldo insuficiente para estornar algum item.</exception>

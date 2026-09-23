@@ -1,16 +1,18 @@
 // =====================================================================================
 // Arquivo....: PedidoConfirmarDto.cs
-// Versão.....: 1.0.0
-// Data.......: 22/09/2026
-// Descrição..: DTO de entrada de PATCH /api/pedidos/{id}/confirmar: número de parcelas e
-//              intervalo em dias entre vencimentos, usados para gerar as contas a
-//              receber (SPEC.md, C1). Corpo opcional; ausente = padrão (1 parcela, 30 dias).
+// Versão.....: 1.1.0
+// Data.......: 23/09/2026
+// Descrição..: DTO de entrada de PATCH /api/pedidos/{id}/confirmar e
+//              /api/pedidos-compra/{id}/confirmar: número de parcelas e intervalo em dias
+//              entre vencimentos, usados para gerar as contas a receber / a pagar. Corpo opcional; ausente = padrão (1 parcela, 30 dias).
 // -------------------------------------------------------------------------------------
 // Banco......: Não acessa banco diretamente.
-// Tabelas....: Usado por ContasReceberService.GerarParcelas para gravar public.parcelas_receber.
+// Tabelas....: Usado por ContasReceberService.GerarParcelas (public.parcelas_receber) e
+//              ContasPagarService.GerarParcelas (public.parcelas_pagar).
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Reaproveitado no confirmar do pedido de compra (etapa 8).
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;

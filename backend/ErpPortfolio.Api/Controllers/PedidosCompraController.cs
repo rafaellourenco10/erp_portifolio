@@ -1,14 +1,14 @@
 // =====================================================================================
 // Arquivo....: PedidosCompraController.cs
-// Versão.....: 1.0.0
-// Data.......: 22/09/2026
+// Versão.....: 1.1.0
+// Data.......: 23/09/2026
 // Descrição..: Endpoints REST do módulo de Pedidos de Compra. Espelho de
-//              PedidosController, sem corpo no confirmar (não há parcelas).
+//              PedidosController (confirmar recebe as parcelas a pagar).
 //                GET    /api/pedidos-compra        -> listagem paginada (filtros: busca, status)
 //                GET    /api/pedidos-compra/{id}   -> consulta por id (com itens)
 //                POST   /api/pedidos-compra        -> criação de um rascunho
 //                PUT    /api/pedidos-compra/{id}   -> edição do rascunho
-//                PATCH  /api/pedidos-compra/{id}/confirmar -> Rascunho -> Confirmado (entrada de estoque)
+//                PATCH  /api/pedidos-compra/{id}/confirmar -> Rascunho -> Confirmado (entrada de estoque + parcelas a pagar)
 //                PATCH  /api/pedidos-compra/{id}/cancelar  -> Rascunho/Confirmado -> Cancelado
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (via IPedidoCompraService)
@@ -19,6 +19,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Confirmar recebe numeroParcelas/intervaloDias (gera parcelas a pagar, etapa 8).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -94,17 +95,19 @@ public class PedidosCompraController(IPedidoCompraService pedidoCompraService) :
         }
     }
 
-    /// <summary>Confirma um rascunho (fica travado). Exige fornecedor ativo e produtos ativos; dá entrada no estoque e atualiza o custo dos produtos.</summary>
+    /// <summary>Confirma um rascunho (fica travado). Exige fornecedor ativo e produtos ativos; dá entrada no estoque, atualiza o custo dos produtos e gera as parcelas a pagar. Corpo opcional (padrão: 1 parcela, 30 dias).</summary>
     [HttpPatch("{id:int}/confirmar")]
     [ProducesResponseType<PedidoCompraRespostaDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<PedidoCompraRespostaDto>> Confirmar(int id, CancellationToken cancelamento)
+    public async Task<ActionResult<PedidoCompraRespostaDto>> Confirmar(int id, PedidoConfirmarDto? dados, CancellationToken cancelamento)
     {
+        dados ??= new PedidoConfirmarDto();
+
         try
         {
-            var pedido = await pedidoCompraService.ConfirmarAsync(id, cancelamento);
+            var pedido = await pedidoCompraService.ConfirmarAsync(id, dados.NumeroParcelas, dados.IntervaloDias, cancelamento);
             return pedido is null ? NotFound() : Ok(pedido);
         }
         catch (ConflitoException ex)

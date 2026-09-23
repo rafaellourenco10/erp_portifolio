@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: PedidoCompraService.cs
-// Versão.....: 1.0.0
-// Data.......: 22/09/2026
+// Versão.....: 1.1.0
+// Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de compra. Espelho de
 //              PedidoService, reaproveitando StatusPedido, TransicoesPedido e
 //              CalculoPedido do Pedido de Venda. O servidor decide o preço (copiado do
@@ -9,6 +9,8 @@
 //              nem total vindos do cliente. Confirmar dá entrada no estoque dos itens
 //              (PC6) e atualiza o Custo de cada produto; cancelar um pedido que estava
 //              Confirmado estorna o estoque, bloqueando se o saldo já foi consumido (PC7).
+//              Confirmar também gera as parcelas a pagar (P1); cancelar um Confirmado
+//              cancela as parcelas ainda Pendentes (P5).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.pedidos_compra, public.pedido_compra_itens
@@ -26,12 +28,17 @@
 //              public.estoque_movimentacoes (indiretamente, via IEstoqueService)
 //                - INSERT : Entrada por item ao confirmar (PC6); Saída de estorno por item
 //                           ao cancelar um pedido que estava Confirmado (PC7)
+//              public.parcelas_pagar (indiretamente, via IContasPagarService)
+//                - INSERT : parcelas ao confirmar (P1); UPDATE: Pendentes -> Cancelado (P5)
 // Fontes.....: ErpPortfolioDbContext.PedidosCompra / PedidoCompraItens / Fornecedores /
-//              Produtos. IEstoqueService.Receber / EstornarCompraAsync não chamam
+//              Produtos. IEstoqueService.Receber / EstornarCompraAsync e
+//              IContasPagarService.GerarParcelas / CancelarPendentesAsync não chamam
 //              SaveChanges: ficam na mesma transação do SaveChangesAsync deste serviço.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Confirmar gera parcelas a pagar; cancelar de Confirmado cancela as
+//                        Pendentes (etapa 8).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -41,7 +48,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ErpPortfolio.Api.Services;
 
-public class PedidoCompraService(ErpPortfolioDbContext contexto, IEstoqueService estoqueService) : IPedidoCompraService
+public class PedidoCompraService(ErpPortfolioDbContext contexto, IEstoqueService estoqueService, IContasPagarService contasPagarService) : IPedidoCompraService
 {
     private const string CampoItens = "Itens";
 
@@ -171,7 +178,7 @@ public class PedidoCompraService(ErpPortfolioDbContext contexto, IEstoqueService
         return await ObterPorIdAsync(id, cancelamento);
     }
 
-    public async Task<PedidoCompraRespostaDto?> ConfirmarAsync(int id, CancellationToken cancelamento)
+    public async Task<PedidoCompraRespostaDto?> ConfirmarAsync(int id, int numeroParcelas, int intervaloDias, CancellationToken cancelamento)
     {
         var pedido = await contexto.PedidosCompra
             .Include(p => p.Fornecedor)
@@ -197,6 +204,8 @@ public class PedidoCompraService(ErpPortfolioDbContext contexto, IEstoqueService
         estoqueService.Receber(pedido.Id, pedido.Itens);
         foreach (var item in pedido.Itens)
             item.Produto!.Custo = item.PrecoUnitario;
+
+        contasPagarService.GerarParcelas(pedido, numeroParcelas, intervaloDias);
 
         pedido.Status = StatusPedido.Confirmado;
 
@@ -225,6 +234,9 @@ public class PedidoCompraService(ErpPortfolioDbContext contexto, IEstoqueService
         if (pedido.Status == StatusPedido.Confirmado)
         {
             await estoqueService.EstornarCompraAsync(pedido.Id, pedido.Itens, cancelamento);
+            // P5: depois da checagem de saldo (que lança sem gravar nada), então um cancelamento
+            // bloqueado não mexe nas parcelas. As já Pagas não mudam.
+            await contasPagarService.CancelarPendentesAsync(pedido.Id, cancelamento);
         }
 
         pedido.Status = StatusPedido.Cancelado;
