@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.11.0
+// Versão.....: 1.12.0
 // Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -90,6 +90,19 @@
 //                - FK  : fk_parcelas_pagar_vendedores (vendedor_id -> vendedores.id, restrict)
 //                - CK  : ck_parcelas_pagar_valor, ck_parcelas_pagar_numero_parcela,
 //                        ck_parcelas_pagar_total_parcelas, ck_parcelas_pagar_origem
+//              public.orcamentos
+//                - PK  : pk_orcamentos (id, identity)
+//                - UK  : ux_orcamentos_pedido_id (pedido_id)
+//                - IDX : ix_orcamentos_cliente_id, ix_orcamentos_vendedor_id, ix_orcamentos_data_orcamento
+//                - FK  : fk_orcamentos_clientes, fk_orcamentos_vendedores, fk_orcamentos_pedidos (restrict)
+//                - CK  : ck_orcamentos_desconto_percentual, ck_orcamentos_valor_total, ck_orcamentos_status
+//              public.orcamento_itens
+//                - PK  : pk_orcamento_itens (id, identity)
+//                - UK  : ux_orcamento_itens_orcamento_produto (orcamento_id, produto_id)
+//                - IDX : ix_orcamento_itens_produto_id (produto_id)
+//                - FK  : fk_orcamento_itens_orcamentos (cascade), fk_orcamento_itens_produtos (restrict)
+//                - CK  : ck_orcamento_itens_quantidade, ck_orcamento_itens_preco_unitario,
+//                        ck_orcamento_itens_desconto_percentual
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -108,6 +121,7 @@
 //   1.10.0 - 23/09/2026 - Mapeamento de Comissao (tabela comissoes, etapa 11).
 //   1.11.0 - 23/09/2026 - parcelas_pagar com origem/vendedor/descrição/favorecido/total_parcelas;
 //                         comissoes.parcela_pagar_id (etapa 12).
+//   1.12.0 - 23/09/2026 - Mapeamento de Orcamento e OrcamentoItem (etapa 13).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -142,6 +156,10 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
     public DbSet<Vendedor> Vendedores => Set<Vendedor>();
 
     public DbSet<Comissao> Comissoes => Set<Comissao>();
+
+    public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
+
+    public DbSet<OrcamentoItem> OrcamentoItens => Set<OrcamentoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -508,6 +526,164 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
             entidade.HasIndex(i => i.ProdutoId)
                 .HasDatabaseName("ix_pedido_itens_produto_id");
+        });
+
+        modelBuilder.Entity<Orcamento>(entidade =>
+        {
+            entidade.ToTable("orcamentos", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_orcamentos_desconto_percentual", "desconto_percentual >= 0 AND desconto_percentual <= 100");
+                tabela.HasCheckConstraint("ck_orcamentos_valor_total", "valor_total >= 0");
+                // Aprovado sempre aponta para o pedido gerado; os outros nunca (GP4).
+                tabela.HasCheckConstraint("ck_orcamentos_status",
+                    "(status = 'Aprovado' AND pedido_id IS NOT NULL) OR " +
+                    "(status IN ('Aberto', 'Perdido') AND pedido_id IS NULL)");
+            });
+
+            entidade.HasKey(o => o.Id).HasName("pk_orcamentos");
+
+            entidade.Property(o => o.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(o => o.ClienteId)
+                .HasColumnName("cliente_id");
+
+            entidade.HasOne(o => o.Cliente)
+                .WithMany()
+                .HasForeignKey(o => o.ClienteId)
+                .HasConstraintName("fk_orcamentos_clientes")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(o => o.VendedorId)
+                .HasColumnName("vendedor_id");
+
+            entidade.HasOne(o => o.Vendedor)
+                .WithMany()
+                .HasForeignKey(o => o.VendedorId)
+                .HasConstraintName("fk_orcamentos_vendedores")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(o => o.DataOrcamento)
+                .HasColumnName("data_orcamento")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
+                .IsRequired();
+
+            entidade.Property(o => o.Validade)
+                .HasColumnName("validade")
+                .HasColumnType("date")
+                .IsRequired();
+
+            entidade.Property(o => o.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidade.Property(o => o.FormaPagamento)
+                .HasColumnName("forma_pagamento")
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            entidade.Property(o => o.DescontoPercentual)
+                .HasColumnName("desconto_percentual")
+                .HasColumnType("numeric(5,2)")
+                .HasDefaultValue(0m)
+                .IsRequired();
+
+            entidade.Property(o => o.ValorTotal)
+                .HasColumnName("valor_total")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(o => o.Observacoes)
+                .HasColumnName("observacoes")
+                .HasMaxLength(500);
+
+            entidade.Property(o => o.MotivoPerda)
+                .HasColumnName("motivo_perda")
+                .HasMaxLength(200);
+
+            entidade.Property(o => o.PedidoId)
+                .HasColumnName("pedido_id");
+
+            entidade.HasOne(o => o.Pedido)
+                .WithMany()
+                .HasForeignKey(o => o.PedidoId)
+                .HasConstraintName("fk_orcamentos_pedidos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Um pedido nasce de no máximo um orçamento.
+            entidade.HasIndex(o => o.PedidoId)
+                .IsUnique()
+                .HasDatabaseName("ux_orcamentos_pedido_id");
+
+            entidade.HasIndex(o => o.ClienteId)
+                .HasDatabaseName("ix_orcamentos_cliente_id");
+
+            entidade.HasIndex(o => o.VendedorId)
+                .HasDatabaseName("ix_orcamentos_vendedor_id");
+
+            entidade.HasIndex(o => o.DataOrcamento)
+                .HasDatabaseName("ix_orcamentos_data_orcamento");
+        });
+
+        modelBuilder.Entity<OrcamentoItem>(entidade =>
+        {
+            entidade.ToTable("orcamento_itens", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_orcamento_itens_quantidade", "quantidade > 0");
+                tabela.HasCheckConstraint("ck_orcamento_itens_preco_unitario", "preco_unitario >= 0");
+                tabela.HasCheckConstraint("ck_orcamento_itens_desconto_percentual", "desconto_percentual >= 0 AND desconto_percentual <= 100");
+            });
+
+            entidade.HasKey(i => i.Id).HasName("pk_orcamento_itens");
+
+            entidade.Property(i => i.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(i => i.OrcamentoId)
+                .HasColumnName("orcamento_id");
+
+            entidade.HasOne(i => i.Orcamento)
+                .WithMany(o => o.Itens)
+                .HasForeignKey(i => i.OrcamentoId)
+                .HasConstraintName("fk_orcamento_itens_orcamentos")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entidade.Property(i => i.ProdutoId)
+                .HasColumnName("produto_id");
+
+            entidade.HasOne(i => i.Produto)
+                .WithMany()
+                .HasForeignKey(i => i.ProdutoId)
+                .HasConstraintName("fk_orcamento_itens_produtos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(i => i.Quantidade)
+                .HasColumnName("quantidade")
+                .HasColumnType("numeric(12,3)")
+                .IsRequired();
+
+            entidade.Property(i => i.PrecoUnitario)
+                .HasColumnName("preco_unitario")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(i => i.DescontoPercentual)
+                .HasColumnName("desconto_percentual")
+                .HasColumnType("numeric(5,2)")
+                .HasDefaultValue(0m)
+                .IsRequired();
+
+            entidade.HasIndex(i => new { i.OrcamentoId, i.ProdutoId })
+                .IsUnique()
+                .HasDatabaseName("ux_orcamento_itens_orcamento_produto");
+
+            entidade.HasIndex(i => i.ProdutoId)
+                .HasDatabaseName("ix_orcamento_itens_produto_id");
         });
 
         modelBuilder.Entity<Categoria>(entidade =>

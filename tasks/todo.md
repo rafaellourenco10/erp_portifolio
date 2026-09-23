@@ -1,38 +1,37 @@
-# Checklist: Comissão como conta a pagar + contas avulsas (etapa 12)
+# Checklist: Orçamentos (etapa 13)
 
 > Origem: [plan.md](plan.md). Marcar `[x]` ao concluir cada tarefa e registrar o resultado.
 
 ## Fase 1: Backend
 
 - [x] **T1: Schema** (M) — *concluída em 23/09/2026*
-  - `ParcelaPagar`: `PedidoCompraId` nulo, `Origem`, `Descricao`, `Favorecido`, `VendedorId`, `TotalParcelas`; `Comissao.ParcelaPagarId`; `StatusComissao.EmPagamento`; migration `ContasPagarOrigemEComissoes` (preenche `total_parcelas`, CHECK de origem); compra passa a gravar `TotalParcelas`.
-  - Verificar: build 0 avisos; migration aplicada; linhas existentes com origem `Compra` e total certo.
-  - Resultado: migration `20260923184154_ContasPagarOrigemEComissoes` aplicada, com um `UPDATE` que preenche `total_parcelas` antes do CHECK; as 2 parcelas reais (compra #12) ficaram `Compra`, 1/2 e 2/2. Enum `OrigemContaPagar` junto do model. `GerarParcelas` da compra grava origem e total; a lista passa a ler `TotalParcelas` gravado. `dotnet test` 177/177, build 0 avisos.
+  - `Orcamento`, `OrcamentoItem`, `StatusOrcamento` (Aberto/Aprovado/Perdido); mapeamento no DbContext (CHECK de status, único em `pedido_id` e em (`orcamento_id`, `produto_id`)); migration `CriacaoTabelasOrcamentos`.
+  - Verificar: build 0 avisos; migration aplicada; tabelas e índices no banco.
+  - Resultado: migration `20260923235828_CriacaoTabelasOrcamentos` aplicada; `\d` confere PK, FKs (restrict; itens cascade), únicos e CHECKs. `ck_orcamentos_status` amarra Aprovado ⇔ `pedido_id` preenchido. `Orcamento.EstaVencido(hoje)` implementa OR4 no model. Build Release 0 avisos (a API do Rafael estava rodando em Debug, por isso migrations/builds em Release).
 
-- [x] **T2: Contas a Pagar generalizado** (M) — *concluída em 23/09/2026*
-  - Lista com origem/favorecido/descrição + filtro de origem + busca; `POST /api/contas-pagar` (avulsa, AV1/AV2); `PATCH /{id}/cancelar` (CP4); xUnit da avulsa.
-  - Verificar: build; `dotnet test`; E2E na T3.
-  - Resultado: `ContasPagarService` 2.0: uma projeção só (lista e respostas) com favorecido = fornecedor/vendedor/texto; filtro de origem; busca por nº da compra (só quando o texto é número; evitado o bug de `numero` nulo casar com `pedido_compra_id IS NULL`) ou ILIKE em fornecedor/vendedor/favorecido/descrição; `CriarAvulsaAsync` (`ContasPagarCalculo.ParcelasAvulsa`); `CancelarAsync` (compra/paga → 409, idempotente). A propagação para comissões ao pagar/cancelar (CC3/CC4) entrou já aqui, nos mesmos métodos. DTO: `FornecedorNome` → `Favorecido`, + `Origem`, `VendedorId`, `Descricao`. 8 testes novos (`ContasPagarCalculoTests`): `dotnet test` 185/185, build 0 avisos.
+- [ ] **T2: API básica** (M)
+  - DTOs (criação/edição com validade e observações, resposta com `vencido`, resumo, filtro); `OrcamentoService` listar/obter/criar/editar; validações de item compartilhadas com o `PedidoService`; `OrcamentosController`; xUnit (vencido, DTOs, transições).
+  - Verificar: build; `dotnet test` (os testes do pedido continuam passando).
 
-- [x] **T3: Comissões → conta a pagar** (M) — *concluída em 23/09/2026*
-  - `POST /api/comissoes/gerar-conta` (CC1/CC2); pagar/cancelar a parcela propagam para as comissões (CC3/CC4); remove `/comissoes/pagar` (CC5).
-  - Verificar: E2E dos critérios 1-6 contra instância temporária.
-  - Resultado: `ComissaoService.GerarContaAsync` + `POST /api/comissoes/gerar-conta` (201 com id da conta, quantidade, valor e vencimento); `/comissoes/pagar` removido; totais ganham `totalEmPagamento`; lista traz `parcelaPagarId`. E2E (instância temporária na 5099, dados `ZZT…` apagados, dados reais intactos): 28 verificações OK — regressão da compra (3x com 1/3..3/3, pagar, cancelar parcela de compra 409, cancelar pedido cancela pendentes), avulsa 3x com valores/vencimentos e 4 validações 400, busca por favorecido, filtro de origem, busca por número sem trazer avulsas, cancelar avulsa (idempotente, paga 409, inexistente 404), gerar conta (misturados/inexistente/sem vencimento 400, soma 25,00, Em pagamento ligadas, favorecido = vendedor, 1/1, gerar de novo 400), pagar a conta paga as comissões com a mesma data, cancelar a conta devolve para Pendente e permite gerar de novo, `/pagar` 404.
+- [ ] **T3: Gerar pedido + perder** (M)
+  - `POST /{id}/gerar-pedido` (GP1-GP4), `PATCH /{id}/perder` (PE1).
+  - Verificar: E2E dos critérios 1-5 contra instância temporária (dados `ZZT…` apagados), incluindo a regressão do pedido.
+
+- [ ] **T4: PDF** (S)
+  - `ExportadorOrcamento.GerarPdf` + `GET /{id}/pdf` (PD1).
+  - Verificar: 200 `application/pdf`; abrir o arquivo e conferir o layout.
 
 ## Fase 2: Frontend
 
-- [x] **T4: Tela Contas a Pagar** (M) — *concluída em 23/09/2026*
-  - Colunas Favorecido e Descrição/Origem, filtro de origem, **Nova conta** (avulsa), **Cancelar**.
+- [ ] **T5: Tela de Orçamentos** (M)
+  - Tipos, `orcamentosApi`, `useOrcamentos`, schema Zod; página com lista, busca, filtro de status (tag Vencido) e formulário em gaveta (reaproveitando `SelecaoCliente`, `SelecaoVendedor`, `ItemFormulario`); item no menu e rota `/orcamentos`.
   - Verificar: `tsc -b`, `oxlint`.
-  - Resultado: tipos/api/hooks do Contas a Pagar atualizados (`favorecido`, `origem`, `descricao`; `criarAvulsa`, `cancelar`; as mutações invalidam também o cache de comissões). Página 2.0: colunas Favorecido e Descrição (tag de origem + "Compra #N" ou a descrição), filtro de origem, busca por favorecido/descrição/nº, botão **Nova conta** (`NovaContaModal` com RHF + Zod, `schemas/contaAvulsaSchema.ts`) e ação **Cancelar** (só avulsa/comissão pendente; Popconfirm avisa que as comissões voltam para "A pagar"). `tsc -b` e `oxlint` limpos.
 
-- [x] **T5: Tela Comissões** (S) — *concluída em 23/09/2026*
-  - **Gerar conta a pagar** (um vendedor, vencimento, total), status Em pagamento, sem "Marcar como paga".
+- [ ] **T6: Ações da tela** (S)
+  - Gerar pedido (confirmação → link para o pedido), Marcar como perdido (modal com motivo), Baixar PDF, link "Pedido #N" no Aprovado.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
-  - Resultado: Comissões 2.0: botão **Gerar conta a pagar (N)** (habilitado só com comissões de um único vendedor; tooltip explica quando estão misturados) abre um modal com vendedor, quantidade, total e o vencimento (padrão hoje); status e filtro **Em pagamento**; 4 cards (Gerado, A pagar, Em pagamento, Pago); coluna de ações (pagar direto) removida. Gerar conta invalida também o cache de Contas a Pagar. `tsc -b`, `oxlint` e `npm run build` limpos.
 
 ## Fase 3: Fechamento
 
-- [x] **T6: Documentação e verificação final** (S) — *concluída em 23/09/2026*
-  - README (etapa 12), SPEC marcada como implementada, `python -m graphify update .`, memória.
-  - Resultado: README com a seção da etapa 12, API (contas a pagar e gerar-conta), colunas novas no banco, testes e próximas etapas; a etapa 11 aponta para o novo fluxo e está marcada como tela confirmada pelo Rafael. SPEC 7/7 ✅. Grafo atualizado.
+- [ ] **T7: Documentação e verificação final** (S)
+  - README (etapa 13; Login passa a 14), SPEC marcada como implementada, `python -m graphify update .`, memória.

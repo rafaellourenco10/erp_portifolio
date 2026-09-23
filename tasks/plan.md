@@ -1,38 +1,40 @@
-# Plano de implementação: Comissão como conta a pagar + contas avulsas (etapa 12)
+# Plano de implementação: Orçamentos (etapa 13)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
 > Status: **aguardando aprovação**.
 
 ## Visão geral
 
-6 tarefas. A base é generalizar `parcelas_pagar` (origem, favorecido, descrição, total gravado) sem mudar o comportamento da compra; em cima disso entram a avulsa, o cancelar e a ponte com Comissões.
+7 tarefas. O orçamento é um "irmão" do pedido de venda: mesma forma (cabeçalho + itens), mesmo cálculo e as mesmas validações de item. Por isso a base é reaproveitar o que o `PedidoService` já faz, e não copiar.
 
 ## Grafo de dependências
 
 ```
-T1 Schema: origem/favorecido/descricao/vendedor/total_parcelas + comissoes.parcela_pagar_id + EmPagamento
-  └─► T2 Contas a Pagar: lista generalizada, conta avulsa, cancelar (+ xUnit)
-        └─► T3 Comissões → conta (gerar-conta, pagar/cancelar propagam; remove /pagar) ── CP1: API pronta (E2E)
-              ├─► T4 Tela Contas a Pagar (nova conta, colunas, filtro, cancelar)
-              └─► T5 Tela Comissões (gerar conta a pagar, Em pagamento)
-                    └─► T6 Fechamento
+T1 Schema: orcamentos + orcamento_itens (models, DbContext, migration)
+  └─► T2 API: listar/obter/criar/editar + vencido (+ xUnit)
+        ├─► T3 Gerar pedido + perder ── CP1: API pronta (E2E)
+        └─► T4 PDF do orçamento (QuestPDF)
+              └─► T5 Front: tipos/api/hooks + lista + formulário + menu
+                    └─► T6 Front: ações (gerar pedido, perder, PDF)
+                          └─► T7 Fechamento
 ```
 
 ## Decisões de arquitetura
 
 | Decisão | Motivo |
 |---|---|
-| Uma tabela `parcelas_pagar` com `origem` (em vez de uma tabela por tipo) | Lista, filtros, pagar, dashboard e resumo continuam num lugar só. |
-| `total_parcelas` gravado | Avulsas não têm pedido para contar as irmãs; também simplifica a consulta. |
-| Favorecido derivado na consulta (fornecedor / vendedor / texto) | Sem duplicar nome de fornecedor/vendedor na parcela. |
-| Status `EmPagamento` na comissão + FK para a parcela | Mostra o que já foi para o financeiro e permite desfazer (cancelar a conta). |
+| Tabelas próprias (`orcamentos`, `orcamento_itens`) em vez de um status "Orçamento" no pedido | Não mexe no fluxo, nos relatórios nem no dashboard de pedidos; a numeração de pedidos continua só de vendas. |
+| Validações de item e cálculo do `PedidoService` extraídas para métodos estáticos compartilhados (`CalculoPedido` já é) | Uma regra só para quantidade/unidade/produto ativo; o orçamento não duplica código. |
+| Gerar pedido monta o `Pedido` direto no `OrcamentoService` (mesmo `DbContext`, um `SaveChanges`) | Precisa gravar o **preço do orçamento**, e o `PedidoService.CriarAsync` copia o preço atual do produto (R3). |
+| `vencido` calculado, não gravado | Sem job agendado; é sempre coerente com a data de hoje. |
+| PDF em classe própria (`ExportadorOrcamento`) | O `ExportadorRelatorio` é tabular genérico; o orçamento tem layout de documento. Reaproveita a licença QuestPDF já configurada. |
 
 ## Riscos e mitigações
 
 | Risco | Mitigação |
 |---|---|
-| Quebrar o fluxo de compra | Migration preserva as linhas (origem `Compra`, total preenchido); E2E refaz o fluxo de compra. |
-| Front do Contas a Pagar usa `fornecedorNome` | A T2 troca o campo da API para `favorecido`; entre a T2 e a T4 a coluna Fornecedor da tela fica vazia (compila, só não mostra). A T4 vem logo em seguida e o E2E da T3 cobre a API. |
+| Extrair as validações do `PedidoService` quebrar o pedido | Refatoração sem mudança de comportamento, com os testes existentes passando + E2E de regressão do pedido na T3. |
+| Filtro "Aberto" x "Vencido" depender do fuso | Mesma referência de "hoje" de Contas a Receber (UTC) e teste unitário da borda (validade = hoje não está vencido). |
 
 ## Comandos de verificação
 

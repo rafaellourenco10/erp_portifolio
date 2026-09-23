@@ -1,99 +1,107 @@
-# Spec: Comissão como conta a pagar + contas avulsas (etapa 12)
+# Spec: Orçamentos (etapa 13)
 
-> Status: **implementada e testada em 23/09/2026** (T1 a T6, ver `tasks/todo.md`). Critérios 1-6 conferidos por E2E (28 verificações, dados `ZZT…` apagados, dados reais intactos); **telas sem verificação visual** (sem navegador nesta sessão).
+> Status: **aguardando aprovação** (23/09/2026).
 
 ## Objetivo
 
-Integrar Comissões e Contas a Pagar: fechar as comissões de um vendedor gera **uma conta a pagar**; pagar essa conta marca as comissões como pagas. Ao abrir o Contas a Pagar para contas que não vêm de pedido de compra, entram também as **contas avulsas** (aluguel, luz, salários...).
+Registrar a proposta feita ao cliente **antes** da venda: um orçamento com itens, descontos e validade, que pode ser enviado em **PDF** e, quando o cliente aprova, vira um **pedido de venda com um clique**, mantendo os preços combinados.
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** escolha do Rafael em 23/09/2026, depois de Comissões.
-- **Sucesso:** o dinheiro de comissão e de despesas avulsas passa pelo Contas a Pagar, como o de compras.
+- **Por que agora:** escolha do Rafael em 23/09/2026, depois da etapa 12.
+- **Sucesso:** um orçamento aprovado gera o pedido de venda sem redigitar nada, e o PDF está pronto para mandar ao cliente.
 
 ### Dentro do escopo
-Origem da conta a pagar (Compra / Comissão / Avulsa); gerar conta a partir de comissões; pagar a conta → comissões pagas; cancelar conta avulsa/de comissão; cadastro de conta avulsa em parcelas; tela de Contas a Pagar e de Comissões ajustadas.
+Cadastro de orçamento (cliente, vendedor, itens, descontos, forma de pagamento, validade, observações); lista com busca e filtro de status; situação **Vencido** calculada; **Gerar pedido** (rascunho, com os preços do orçamento); **Marcar como perdido** (com motivo); **PDF** do orçamento; tela no menu.
 
 ### Fora do escopo (entram depois)
-Contas recorrentes automáticas (todo mês); categorias/plano de contas; editar conta já lançada (cancele e lance de novo); anexos/comprovantes; juros e pagamento parcial.
+Reabrir orçamento perdido ou aprovado; duplicar orçamento; orçamento para quem não é cliente cadastrado; envio por e-mail; orçamentos no Dashboard ou em Relatórios (taxa de conversão); desfazer a aprovação se o pedido gerado for cancelado; reservar estoque.
 
 ## Decisões já tomadas (com o Rafael, 23/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Fluxo da comissão | Selecionar comissões **pendentes de um vendedor** → **Gerar conta a pagar** (com vencimento) → comissões ficam **Em pagamento** → pagar a conta em Contas a Pagar → comissões **Pagas**. |
-| Pagar comissão direto | **Sai.** Só pelo Contas a Pagar. Comissões já pagas antes continuam pagas (sem conta vinculada). |
-| Contas avulsas | **Entram nesta etapa**: descrição, favorecido (texto), valor, 1º vencimento, nº de parcelas e intervalo. |
+| Conversão | "Gerar pedido" cria um **pedido de venda em Rascunho**; a confirmação segue o fluxo normal (estoque, parcelas, vendedor). |
+| Preço | O pedido gerado usa o **preço e os descontos do orçamento**, mesmo que o produto tenha mudado de preço depois. |
+| Status | **Aberto**, **Aprovado** (automático ao gerar pedido) e **Perdido** (manual, com motivo opcional). **Vencido** é calculado (Aberto com a validade já passada): não gera pedido, mas pode ser editado para prorrogar a validade. |
+| Cliente | Obrigatório e **cadastrado** (mesmo seletor do pedido). |
 
 ## Regras
 
-### Conta a pagar (CP)
+### Orçamento (OR)
 
 | # | Regra |
 |---|---|
-| CP1 | Toda parcela a pagar tem **origem**: `Compra` (tem pedido de compra — como hoje), `Comissao` (tem vendedor) ou `Avulsa` (tem descrição). Garantido por CHECK no banco. |
-| CP2 | A lista mostra para todas: **favorecido** (fornecedor, vendedor ou o texto da avulsa), **descrição** (Compra #N / "Comissões — Vendedor (N)" / texto), parcela X/Y, valor, vencimento, status. Busca por nº da compra ou por trecho de favorecido/descrição; filtro por origem. |
-| CP3 | O total de parcelas (Y) passa a ser **gravado** na parcela (as avulsas não têm pedido para contar); a migration preenche as existentes. |
-| CP4 | **Cancelar** uma parcela Pendente é permitido para `Avulsa` e `Comissao` (idempotente); paga → 409; de `Compra` → 409 ("cancele o pedido de compra"). |
+| OR1 | Campos: cliente (obrigatório, ativo), vendedor (opcional, ativo), forma de pagamento (opcional), desconto do orçamento 0-100 (2 casas), **validade** (data, obrigatória, ≥ hoje ao criar ou editar), observações (opcional, até 500), 1-100 itens sem produto repetido. Mesmas regras de quantidade/unidade e desconto de item do pedido (R4, R5, R8). |
+| OR2 | Preço do item copiado do produto **ao adicionar o item** e congelado (igual ao pedido, R3). Total calculado pelo `CalculoPedido` (mesma conta do pedido). |
+| OR3 | Tela sugere validade = hoje + 15 dias. "Hoje" = `DateOnly.FromDateTime(DateTime.UtcNow)`, a mesma referência de Contas a Receber. |
+| OR4 | **Vencido** = status Aberto e validade < hoje. Não é gravado; a API devolve `vencido: true/false`. |
+| OR5 | Só orçamento **Aberto** (vencido ou não) pode ser editado; Aprovado ou Perdido → 409. Editar com validade nova ≥ hoje "prorroga" o vencido. |
 
-### Conta avulsa (AV)
-
-| # | Regra |
-|---|---|
-| AV1 | Descrição 3-200 (obrigatória), favorecido opcional até 150, valor total > 0 (até 2 casas), 1º vencimento obrigatório, 1-12 parcelas, intervalo 1-180 dias (padrão 1 parcela, 30 dias). |
-| AV2 | Valor dividido igualmente com o resto na última (mesma regra das outras parcelas); vencimento da parcela `i` = 1º vencimento + `(i-1) × intervalo`. |
-
-### Comissão → conta (CC)
+### Gerar pedido (GP)
 
 | # | Regra |
 |---|---|
-| CC1 | Gerar conta exige 1+ comissões, **todas Pendentes e do mesmo vendedor**, e a data de vencimento; senão 400 sem alterar nada. |
-| CC2 | Gera **uma** parcela a pagar (origem Comissão, 1/1) com a **soma** das comissões; as comissões passam a **Em pagamento** e ficam ligadas a ela. |
-| CC3 | Marcar essa conta como **paga** em Contas a Pagar marca as comissões ligadas como **Pagas** (mesma data), na mesma transação. |
-| CC4 | **Cancelar** essa conta devolve as comissões para **Pendente** (desligadas), para gerar de novo. |
-| CC5 | O `POST /api/comissoes/pagar` direto é **removido**. |
+| GP1 | Só de orçamento Aberto e **não vencido**; Aprovado/Perdido → 409; vencido → 400 ("prorrogue a validade"). |
+| GP2 | Cliente precisa estar ativo; produtos inativos → 400 listando os nomes; vendedor inativo é **deixado em branco** no pedido (é opcional no rascunho). |
+| GP3 | Cria o pedido **Rascunho** com cliente, vendedor, forma de pagamento, desconto e itens (quantidade, **preço unitário e desconto do orçamento**). |
+| GP4 | O orçamento passa a **Aprovado** e guarda o nº do pedido gerado, na **mesma transação**. Resposta: `201` com o id do pedido. |
+| GP5 | Se o pedido gerado for cancelado depois, o orçamento continua Aprovado (fora do escopo desfazer). |
+
+### Perdido (PE)
+
+| # | Regra |
+|---|---|
+| PE1 | Marcar como perdido: de Aberto (vencido ou não), com motivo opcional (até 200). Repetir em um Perdido → 200 sem mudar nada (idempotente). Aprovado → 409. |
+
+### PDF (PD)
+
+| # | Regra |
+|---|---|
+| PD1 | `GET /api/orcamentos/{id}/pdf`, qualquer status. A4 retrato (QuestPDF): cabeçalho "Ambition ERP — Orçamento Nº N", data e validade; cliente (nome, CPF/CNPJ formatado, e-mail, telefone, cidade/UF); vendedor; tabela (produto, qtd, un, preço unitário, desc. %, subtotal); subtotal dos itens, desconto do orçamento, **total**; forma de pagamento; observações; rodapé "Orçamento válido até dd/mm/aaaa · Página X de Y". |
 
 ## Modelo de dados
 
-- **`parcelas_pagar`**: `pedido_compra_id` passa a nulo; novas `origem` varchar(20) (padrão `Compra`), `descricao` varchar(200), `favorecido` varchar(150), `vendedor_id` (FK → vendedores, restrict), `total_parcelas` int (preenchido na migration); CHECK de origem (CP1).
-- **`comissoes`**: nova `parcela_pagar_id` (FK → parcelas_pagar, restrict, nula); status ganha `EmPagamento`.
-- Uma migration.
+- **`orcamentos`**: `id`, `cliente_id` (FK restrict), `vendedor_id` (FK restrict, nulo), `data_orcamento` (timestamptz), `validade` (date), `status` varchar(20) (`Aberto`/`Aprovado`/`Perdido`, CHECK), `forma_pagamento` (nulo), `desconto_percentual` numeric(5,2), `valor_total` numeric(12,2), `observacoes` varchar(500), `motivo_perda` varchar(200), `pedido_id` (FK → pedidos, restrict, nulo, **único**).
+- **`orcamento_itens`**: `id`, `orcamento_id` (FK cascade), `produto_id` (FK restrict), `quantidade` numeric(12,3), `preco_unitario` numeric(12,2), `desconto_percentual` numeric(5,2); índice único (`orcamento_id`, `produto_id`).
+- Uma migration. `pedidos` não muda.
 
 ## API
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/contas-pagar?busca=&status=&origem=&...` | Passa a trazer `origem`, `favorecido`, `descricao`; `pedidoCompraId` pode ser nulo |
-| POST | `/api/contas-pagar` | Lança conta **avulsa** em N parcelas |
-| PATCH | `/api/contas-pagar/{id}/cancelar` | Cancela parcela Avulsa/Comissão pendente (CP4, CC4) |
-| PATCH | `/api/contas-pagar/{id}/pagar` | (existente) paga; se for de comissão, paga as comissões (CC3) |
-| POST | `/api/comissoes/gerar-conta` | `{ ids, vencimento }` → conta a pagar (CC1/CC2) |
-| POST | `/api/comissoes/pagar` | **removido** (CC5) |
+| GET | `/api/orcamentos?busca=&status=&pagina=&tamanhoPagina=` | Paginada; busca por nº ou nome do cliente; `status` = `Aberto` (não vencidos), `Vencido`, `Aprovado`, `Perdido` |
+| GET | `/api/orcamentos/{id}` | Detalhe com itens, `vencido`, `pedidoId`, `motivoPerda` |
+| POST | `/api/orcamentos` | Cria (OR1-OR3) → 201 |
+| PUT | `/api/orcamentos/{id}` | Edita o Aberto (OR5); itens atualizados no lugar, como no pedido |
+| POST | `/api/orcamentos/{id}/gerar-pedido` | GP1-GP4 → 201 `{ pedidoId }` |
+| PATCH | `/api/orcamentos/{id}/perder` | `{ motivo? }` (PE1) |
+| GET | `/api/orcamentos/{id}/pdf` | Arquivo PDF (PD1) |
 
 ## Telas
 
-- **Contas a Pagar**: botão **Nova conta** (avulsa); colunas Favorecido e Descrição/Origem no lugar de Fornecedor/Compra; filtro por origem; ação **Cancelar** nas pendentes avulsas/de comissão.
-- **Comissões**: botão **Gerar conta a pagar** (seleção de um vendedor só; pede o vencimento e mostra o total); status **Em pagamento**; sem "Marcar como paga".
+- **Menu**: "Orçamentos" em **Ordem Vendas/Compras**, antes de Pedidos de Venda (rota `/orcamentos`).
+- **Lista**: nº, cliente, data, validade, total, status (tag; **Vencido** em laranja); busca e filtro de status no mesmo padrão de Pedidos.
+- **Formulário** (gaveta, como Pedidos): cliente, vendedor, forma de pagamento, validade (padrão +15 dias), itens, desconto, observações, total ao vivo.
+- **Ações**: Editar (Aberto); **Gerar pedido** (confirmação → mensagem com link para o pedido gerado); **Marcar como perdido** (modal com motivo); **Baixar PDF** (qualquer status); no Aprovado, link "Pedido #N".
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** vencimentos e valores da conta avulsa em N parcelas; validação dos DTOs (avulsa e gerar-conta).
-2. **API ponta a ponta (instância temporária, dados `ZZT…` apagados):** regressão da compra (confirmar → parcelas com X/Y certo, pagar, cancelar compra); avulsa em 3 parcelas; cancelar avulsa; cancelar compra/paga → 409; gerar conta de comissões (soma, Em pagamento), regras de CC1; pagar a conta → comissões Pagas; cancelar a conta → comissões Pendentes; `/comissoes/pagar` não existe mais; migration preencheu `total_parcelas`.
+1. **Unitário (xUnit):** `vencido` (validade ontem, hoje, amanhã); validação dos DTOs (validade passada, observações longas, itens repetidos); transições (editar/gerar/perder por status).
+2. **API ponta a ponta (instância temporária, dados `ZZT…` apagados):** criar com preço congelado; editar e prorrogar; filtros Aberto/Vencido/Aprovado/Perdido; gerar pedido → rascunho com preços do orçamento mesmo após mudar o preço do produto; orçamento Aprovado com `pedidoId`; gerar de novo → 409; vencido → 400; produto inativo → 400; perder (idempotente, Aprovado → 409); PDF → 200 `application/pdf` com bytes `%PDF`; o pedido gerado confirma normalmente (estoque e parcelas).
 3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; verificação visual com o Rafael.
 
 ## Boundaries
 
-- **Sempre:** reaproveitar a divisão em parcelas existente; propagar status na mesma transação; manter o fluxo de compra igual.
-- **Perguntar antes:** dependência nova; recorrência automática; categorias.
-- **Nunca:** alterar conta já paga; commitar segredos; push sem pedido.
+- **Sempre:** reaproveitar `CalculoPedido`, as validações de item e os seletores do pedido; gerar pedido numa transação só; manter o fluxo do pedido igual.
+- **Perguntar antes:** dependência nova; mexer na tabela `pedidos`; e-mail.
+- **Nunca:** alterar orçamento Aprovado/Perdido; commitar segredos; push sem pedido.
 
 ## Success criteria (testáveis)
 
-Conferidos em 23/09/2026; detalhes na seção "Comissão vira conta a pagar + contas avulsas (23/09/2026)" do README.
-
-1. ✅ O fluxo de compra continua igual (parcelas com X/Y certo, pagar, cancelar compra cancela pendentes).
-2. ✅ Conta avulsa em N parcelas soma exatamente o valor, com os vencimentos certos; validações → 400.
-3. ✅ Cancelar avulsa/comissão pendente funciona e é idempotente; compra ou paga → 409.
-4. ✅ Gerar conta de comissões cria 1 conta com a soma e deixa as comissões Em pagamento; vendedores misturados, comissão não pendente ou id inexistente → 400 sem alterar nada.
-5. ✅ Pagar a conta de comissão deixa as comissões Pagas; cancelar devolve para Pendente.
-6. ✅ Lista de contas a pagar traz origem/favorecido/descrição e filtra por origem; busca por favorecido.
-7. ✅ Telas ajustadas; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` 185/185 — verificação visual não feita (sem navegador).
+1. Criar/editar orçamento com as validações de OR1 → 400 por campo; preço congelado no item.
+2. Vencido calculado corretamente e filtros de status devolvem os conjuntos certos.
+3. Gerar pedido cria um rascunho com os preços/descontos do orçamento e deixa o orçamento Aprovado com `pedidoId`; as regras de GP1/GP2 barram sem alterar nada.
+4. O pedido gerado confirma pelo fluxo normal (estoque baixa, parcelas geradas).
+5. Marcar como perdido funciona, é idempotente e bloqueia a edição.
+6. PDF gerado com cliente, itens e totais corretos.
+7. Tela completa; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` todos passando.
