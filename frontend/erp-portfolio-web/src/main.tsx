@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: main.tsx
- * Versão.....: 1.2.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.3.0
+ * Data.......: 23/09/2026
  * Descrição..: Ponto de entrada do front-end. Registra os providers do
  *              TanStack Query, do Ant Design (idioma pt-BR e tema
  *              Ambition ERP) e do React Router, e carrega a fonte Inter.
@@ -11,6 +11,7 @@
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
  *   1.1.0 - 18/09/2026 - Tema escuro Ambition ERP e fonte Inter.
  *   1.2.0 - 21/09/2026 - BrowserRouter (navegação por rotas).
+ *   1.3.0 - 23/09/2026 - Idioma pt-BR do dayjs (calendário do seletor de período dos relatórios).
  * =====================================================================
  */
 
@@ -18,6 +19,8 @@ import '@fontsource-variable/inter'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App as AntApp, ConfigProvider } from 'antd'
 import ptBR from 'antd/locale/pt_BR'
+import dayjs from 'dayjs'
+import 'dayjs/locale/pt-br'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -26,6 +29,8 @@ import './index.css'
 import { aplicarVariaveisCss, temaAmbition } from './tema/temaAmbition'
 
 aplicarVariaveisCss()
+// Nomes de meses/dias em português nos calendários do Ant Design.
+dayjs.locale('pt-br')
 
 const queryClient = new QueryClient({
   defaultOptions: {

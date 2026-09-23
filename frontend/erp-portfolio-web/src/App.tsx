@@ -1,13 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.11.0
+ * Versão.....: 1.12.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
- *              /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar) com o
+ *              /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /relatorios/*) com o
  *              React Router. O menu é dividido por departamento (Cadastro,
  *              Ordem Vendas/Compras, Depósito, Financeiro); o Dashboard (/)
  *              fica fora das seções: resume vários módulos.
@@ -32,14 +32,17 @@
  *                         seções Cadastro, Ordem Vendas/Compras, Depósito e Financeiro.
  *                         "Pedidos" vira "Pedidos de Venda" (menu, breadcrumb e títulos).
  *   1.11.0 - 23/09/2026 - Rota e item de menu de Contas a Pagar (Financeiro), etapa 8.
+ *   1.12.0 - 23/09/2026 - Seção Relatórios: Vendas e Compras (etapa 9).
  * =====================================================================
  */
 
 import {
   AppstoreOutlined,
+  BarChartOutlined,
   DatabaseOutlined,
   DollarOutlined,
   HomeOutlined,
+  LineChartOutlined,
   MenuFoldOutlined,
   MenuOutlined,
   MenuUnfoldOutlined,
@@ -67,6 +70,7 @@ import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { PedidoCompraPage } from './pages/PedidosCompra/PedidoCompraPage'
 import { PedidosCompraListaPage } from './pages/PedidosCompra/PedidosCompraListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
+import { RelatorioPedidosPage } from './pages/Relatorios/RelatorioPedidosPage'
 
 // O Dashboard fica fora das seções: resume vários módulos, não pertence a um departamento.
 const itensPainel = [{ key: '/', icon: <HomeOutlined />, label: 'Dashboard' }] satisfies MenuProps['items']
@@ -95,6 +99,13 @@ const secoes = [
     itens: [
       { key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' },
       { key: '/contas-pagar', icon: <WalletOutlined />, label: 'Contas a Pagar' },
+    ],
+  },
+  {
+    titulo: 'Relatórios',
+    itens: [
+      { key: '/relatorios/vendas', icon: <LineChartOutlined />, label: 'Vendas' },
+      { key: '/relatorios/compras', icon: <BarChartOutlined />, label: 'Compras' },
     ],
   },
 ] satisfies { titulo: string; itens: MenuProps['items'] }[]
@@ -207,6 +218,9 @@ export default function App() {
             <Route path="/estoque" element={<EstoqueListaPage />} />
             <Route path="/contas-receber" element={<ContasReceberListaPage />} />
             <Route path="/contas-pagar" element={<ContasPagarListaPage />} />
+            {/* key diferente: trocar entre vendas e compras recria a tela (não leva o cliente escolhido como fornecedor). */}
+            <Route path="/relatorios/vendas" element={<RelatorioPedidosPage key="vendas" tipo="vendas" />} />
+            <Route path="/relatorios/compras" element={<RelatorioPedidosPage key="compras" tipo="compras" />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout.Content>

@@ -26,9 +26,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: tipos, `relatoriosApi` (JSON + download de blob com nome do `Content-Disposition`; erro em blob convertido para JSON antes do `lerErroApi`), `useRelatorios` (consulta só roda após "Gerar"), CORS com `WithExposedHeaders("Content-Disposition")`. `SelecaoCliente`/`SelecaoFornecedor` ganharam `aoLimpar` opcional (botão de limpar = "Todos"; telas de pedido não passam e ficam iguais). `dayjs` declarado no `package.json` (já vinha instalado como dependência do Ant Design, 1.11.23 — nada novo baixado nem no bundle) para o seletor de período. O menu e as rotas foram para as T5/T6, junto com as telas. `tsc -b`, `oxlint`, `dotnet build` limpos.
 
-- [ ] **T5: Tela de Vendas e Compras** (M)
+- [x] **T5: Tela de Vendas e Compras** (M) — *concluída em 23/09/2026*
   - Componente único com filtros (período, status, cliente/fornecedor), resumo, tabela e botões de exportar; duas rotas.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: `pages/Relatorios/RelatorioPedidosPage.tsx` (prop `tipo`), rotas `/relatorios/vendas` e `/relatorios/compras` com `key` diferente (trocar de uma para outra recria a tela e não leva o cliente como fornecedor), seção **Relatórios** no menu. Período padrão: dia 1 do mês até hoje; status padrão Confirmado; cliente/fornecedor com botão de limpar ("Todos"). Exportar usa os filtros do último "Gerar". Idioma pt-BR do dayjs no `main.tsx` (calendário). `tsc -b` e `oxlint` limpos.
 
 - [ ] **T6: Tela de Estoque** (S)
   - Filtros (categoria, só abaixo do mínimo), resumo, tabela, exportar.
