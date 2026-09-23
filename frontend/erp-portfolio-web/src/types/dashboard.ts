@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: dashboard.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 22/09/2026
  * Descrição..: Tipos do Dashboard, espelhando os DTOs da API (VendasResumoDto,
  *              PedidosPorStatusDto, FaturamentoDiaDto, ContasReceberResumoDto,
@@ -9,6 +9,8 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
+ *   1.1.0 - 22/09/2026 - EstoqueResumoDashboard troca limiteSaldoBaixo pela
+ *                        lista de produtos (estoque mínimo por produto).
  * =====================================================================
  */
 
@@ -39,7 +41,14 @@ export interface ContasReceberResumo {
   quantidadeAtrasado: number
 }
 
+export interface ProdutoSaldoBaixo {
+  produtoId: number
+  produtoNome: string
+  saldo: number
+  estoqueMinimo: number
+}
+
 export interface EstoqueResumoDashboard {
   quantidadeSaldoBaixo: number
-  limiteSaldoBaixo: number
+  produtos: ProdutoSaldoBaixo[]
 }

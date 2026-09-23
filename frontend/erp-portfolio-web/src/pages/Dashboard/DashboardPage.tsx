@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: DashboardPage.tsx
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 22/09/2026
  * Descrição..: Página inicial do Ambition ERP: cards de indicador do mês atual
  *              (faturamento/ticket médio, pedidos por status, contas a receber
@@ -15,6 +15,8 @@
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo (cards de número).
  *   1.1.0 - 22/09/2026 - Gráfico de faturamento diário (T6).
+ *   1.2.0 - 22/09/2026 - Card "Saldo baixo" lista os produtos (estoque mínimo
+ *                        por produto, não mais limite fixo).
  * =====================================================================
  */
 
@@ -105,19 +107,28 @@ export function DashboardPage() {
 
         <Col xs={24} sm={12} lg={6}>
           <CardIndicador titulo="Saldo baixo de estoque" loading={estoque.isLoading} erro={estoque.isError}>
-            {estoque.data && (
-              <>
-                <Typography.Title
-                  level={3}
-                  className="numeros-tabulares"
-                  type={estoque.data.quantidadeSaldoBaixo > 0 ? 'warning' : undefined}
-                  style={{ margin: 0 }}
-                >
-                  {estoque.data.quantidadeSaldoBaixo}
-                </Typography.Title>
-                <span className="texto-discreto">produto{estoque.data.quantidadeSaldoBaixo === 1 ? '' : 's'} com saldo ≤ {estoque.data.limiteSaldoBaixo}</span>
-              </>
-            )}
+            {estoque.data &&
+              (estoque.data.quantidadeSaldoBaixo === 0 ? (
+                <>
+                  <Typography.Title level={3} className="numeros-tabulares" style={{ margin: 0 }}>
+                    0
+                  </Typography.Title>
+                  <span className="texto-discreto">Nenhum produto com saldo baixo.</span>
+                </>
+              ) : (
+                <Flex vertical gap={4} style={{ maxHeight: 96, overflowY: 'auto' }}>
+                  {estoque.data.produtos.map((produto) => (
+                    <Flex key={produto.produtoId} justify="space-between" gap={8}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {produto.produtoNome}
+                      </span>
+                      <Typography.Text type="warning" className="numeros-tabulares" style={{ flexShrink: 0 }}>
+                        {produto.saldo}/{produto.estoqueMinimo}
+                      </Typography.Text>
+                    </Flex>
+                  ))}
+                </Flex>
+              ))}
           </CardIndicador>
         </Col>
       </Row>

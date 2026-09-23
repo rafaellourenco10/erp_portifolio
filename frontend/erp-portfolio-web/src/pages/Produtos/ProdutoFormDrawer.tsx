@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ProdutoFormDrawer.tsx
- * Versão.....: 1.3.0
+ * Versão.....: 1.4.0
  * Data.......: 22/09/2026
  * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
  *              de produto (React Hook Form + Zod), no mesmo layout do
@@ -18,6 +18,7 @@
  *   1.1.0 - 21/09/2026 - Campo SKU só aceita dígitos.
  *   1.2.0 - 21/09/2026 - Categoria vira uma seleção das categorias ativas.
  *   1.3.0 - 22/09/2026 - Atalho "Nova categoria" no seletor.
+ *   1.4.0 - 22/09/2026 - Campo Estoque mínimo.
  * =====================================================================
  */
 
@@ -105,6 +106,7 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
             unidade: produto.unidade,
             precoVenda: produto.precoVenda,
             custo: produto.custo,
+            estoqueMinimo: produto.estoqueMinimo,
             ativo: produto.ativo,
           }
         : valoresIniciaisProduto,
@@ -291,6 +293,27 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
                     min={0}
                     max={9_999_999_999.99}
                     precision={2}
+                    decimalSeparator=","
+                    controls={false}
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                  />
+                )}
+              />
+            </ItemFormulario>
+          </Col>
+          <Col xs={24} sm={12}>
+            <ItemFormulario rotulo="Estoque mínimo" erro={errors.estoqueMinimo} obrigatorio>
+              <Controller
+                name="estoqueMinimo"
+                control={control}
+                render={({ field }) => (
+                  <InputNumber
+                    className="campo-cheio numeros-tabulares"
+                    min={0}
+                    max={999_999.999}
+                    precision={3}
                     decimalSeparator=","
                     controls={false}
                     value={field.value}

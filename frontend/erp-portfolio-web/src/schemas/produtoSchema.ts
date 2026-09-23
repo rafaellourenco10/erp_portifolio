@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: produtoSchema.ts
- * Versão.....: 1.2.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.3.0
+ * Data.......: 22/09/2026
  * Descrição..: Schema Zod do formulário de produto (mesmas regras dos DTOs
  *              da API) e conversão dos valores do formulário para o payload.
  * ---------------------------------------------------------------------
@@ -10,6 +10,7 @@
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 21/09/2026 - SKU restrito a dígitos (número de série).
  *   1.2.0 - 21/09/2026 - categoria (texto) trocada por categoriaId (seleção).
+ *   1.3.0 - 22/09/2026 - estoqueMinimo obrigatório (padrão 0 = sem mínimo).
  * =====================================================================
  */
 
@@ -25,6 +26,7 @@ export const UNIDADES = [
 ] as const
 
 const VALOR_MAXIMO = 9_999_999_999.99
+const QUANTIDADE_MAXIMA = 999_999.999
 
 // O campo numérico vazio chega como null; a mensagem "Informe..." cobre esse caso.
 const dinheiro = (rotulo: string) =>
@@ -33,6 +35,16 @@ const dinheiro = (rotulo: string) =>
     .nullable()
     .refine((valor) => valor !== null, `Informe ${rotulo}.`)
     .refine((valor) => valor === null || (valor >= 0 && valor <= VALOR_MAXIMO), 'O valor deve estar entre 0 e 9.999.999.999,99.')
+
+// Estoque mínimo: 0 = sem mínimo definido (nunca conta como "saldo baixo"); obrigatório, mesmo se 0.
+const estoqueMinimo = z
+  .number()
+  .nullable()
+  .refine((valor) => valor !== null, 'Informe o estoque mínimo.')
+  .refine(
+    (valor) => valor === null || (valor >= 0 && valor <= QUANTIDADE_MAXIMA),
+    'O estoque mínimo deve estar entre 0 e 999.999,999.',
+  )
 
 export const produtoSchema = z.object({
   nome: z
@@ -51,6 +63,7 @@ export const produtoSchema = z.object({
   unidade: z.string().refine((valor) => UNIDADES.some((u) => u.value === valor), 'Selecione a unidade.'),
   precoVenda: dinheiro('o preço de venda'),
   custo: dinheiro('o custo'),
+  estoqueMinimo,
   ativo: z.boolean(),
 })
 
@@ -66,6 +79,7 @@ export const valoresIniciaisProduto: ProdutoFormEntrada = {
   unidade: '',
   precoVenda: null,
   custo: null,
+  estoqueMinimo: 0,
   ativo: true,
 }
 

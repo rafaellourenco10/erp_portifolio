@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: produto.ts
- * Versão.....: 1.2.0
+ * Versão.....: 1.3.0
  * Data.......: 22/09/2026
  * Descrição..: Tipos do módulo de Produtos, espelhando os DTOs da API
  *              (ProdutoRespostaDto, ProdutoCriacaoDto, ProdutoAtualizacaoDto
@@ -11,6 +11,7 @@
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 21/09/2026 - categoria (texto) trocada por categoriaId / categoriaNome.
  *   1.2.0 - 22/09/2026 - Filtro por categoriaId.
+ *   1.3.0 - 22/09/2026 - estoqueMinimo.
  * =====================================================================
  */
 
@@ -23,6 +24,8 @@ export interface Produto {
   unidade: string
   precoVenda: number
   custo: number
+  /** Saldo de estoque igual ou abaixo disso conta como "baixo" no Dashboard. 0 = sem mínimo definido. */
+  estoqueMinimo: number
   ativo: boolean
   /** Data/hora ISO 8601 em UTC. */
   dataCadastro: string
@@ -35,6 +38,7 @@ export interface ProdutoCriacao {
   unidade: string
   precoVenda: number
   custo: number
+  estoqueMinimo: number
 }
 
 export interface ProdutoAtualizacao extends ProdutoCriacao {
