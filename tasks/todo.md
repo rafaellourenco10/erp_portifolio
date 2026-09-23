@@ -21,9 +21,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T4: Tela Comissões** (M)
+- [x] **T4: Tela Comissões** (M) — *concluída em 23/09/2026*
   - Tipos, api, hooks, `pages/Comissoes/ComissoesListaPage.tsx` (filtros, cards, tabela com seleção, marcar como pagas), item **Comissões** em Financeiro.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: `types/comissao.ts`, `api/comissoesApi.ts`, `hooks/useComissoes.ts`, `pages/Comissoes/ComissoesListaPage.tsx`: filtros aplicados na hora (vendedor com `SelecaoVendedor`, período do recebimento, status A pagar/Pagas), cards Gerado / A pagar / Pago, tabela com seleção só das pendentes, "Marcar como pagas (N)" com o total no Popconfirm e ação por linha; seleção limpa ao filtrar/paginar/pagar. Item **Comissões** em Financeiro (`PercentageOutlined`). `tsc -b`, `oxlint` e `npm run build` limpos.
 
 ## Fase 3: Fechamento
 
