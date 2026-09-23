@@ -21,9 +21,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T4: Tela Contas a Pagar** (M)
+- [x] **T4: Tela Contas a Pagar** (M) — *concluída em 23/09/2026*
   - Colunas Favorecido e Descrição/Origem, filtro de origem, **Nova conta** (avulsa), **Cancelar**.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: tipos/api/hooks do Contas a Pagar atualizados (`favorecido`, `origem`, `descricao`; `criarAvulsa`, `cancelar`; as mutações invalidam também o cache de comissões). Página 2.0: colunas Favorecido e Descrição (tag de origem + "Compra #N" ou a descrição), filtro de origem, busca por favorecido/descrição/nº, botão **Nova conta** (`NovaContaModal` com RHF + Zod, `schemas/contaAvulsaSchema.ts`) e ação **Cancelar** (só avulsa/comissão pendente; Popconfirm avisa que as comissões voltam para "A pagar"). `tsc -b` e `oxlint` limpos.
 
 - [ ] **T5: Tela Comissões** (S)
   - **Gerar conta a pagar** (um vendedor, vencimento, total), status Em pagamento, sem "Marcar como paga".
