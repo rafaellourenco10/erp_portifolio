@@ -1,0 +1,45 @@
+/**
+ * =====================================================================
+ * Arquivo....: dashboard.ts
+ * Versão.....: 1.0.0
+ * Data.......: 22/09/2026
+ * Descrição..: Tipos do Dashboard, espelhando os DTOs da API (VendasResumoDto,
+ *              PedidosPorStatusDto, FaturamentoDiaDto, ContasReceberResumoDto,
+ *              EstoqueResumoDashboardDto).
+ * ---------------------------------------------------------------------
+ * Histórico de alterações:
+ *   1.0.0 - 22/09/2026 - Criação do arquivo.
+ * =====================================================================
+ */
+
+export interface PedidosPorStatus {
+  rascunho: number
+  confirmado: number
+  cancelado: number
+}
+
+export interface FaturamentoDia {
+  /** Data no formato AAAA-MM-DD (sem hora). */
+  dia: string
+  valor: number
+}
+
+export interface VendasResumo {
+  faturamento: number
+  ticketMedio: number
+  quantidadeConfirmados: number
+  porStatus: PedidosPorStatus
+  faturamentoPorDia: FaturamentoDia[]
+}
+
+export interface ContasReceberResumo {
+  totalPendente: number
+  quantidadePendente: number
+  totalAtrasado: number
+  quantidadeAtrasado: number
+}
+
+export interface EstoqueResumoDashboard {
+  quantidadeSaldoBaixo: number
+  limiteSaldoBaixo: number
+}

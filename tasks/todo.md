@@ -62,10 +62,11 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 3: Tela
 
-- [ ] **T5: Base do front + cards de número** (M)
+- [x] **T5: Base do front + cards de número** (M) — *concluída em 22/09/2026*
   - Descrição: espelho do contrato da API (`types/dashboard.ts`, `api/dashboardApi.ts`, `hooks/useDashboard.ts`), página `DashboardPage.tsx` com os cards (Faturamento, Ticket médio, Pedidos por status, Contas a receber, Saldo baixo).
   - Aceite: os três hooks buscam em paralelo; cada card mostra seu próprio loading/erro (D7) — um endpoint falhando não derruba os outros cards.
   - Verificar: `npx tsc -b`, `npx oxlint src`.
+  - Resultado: `tsc -b` e `oxlint` limpos. 4 cards (Faturamento+ticket médio juntos, Pedidos por status, Contas a receber, Saldo baixo de estoque), cada um com `CardIndicador` próprio (loading via `Skeleton`, erro em texto vermelho, sem afetar os outros). Página ainda não está na rota (entra na T7).
   - Dependências: T4 (contrato)
   - Arquivos: `types/dashboard.ts`, `api/dashboardApi.ts`, `hooks/useDashboard.ts`, `pages/Dashboard/DashboardPage.tsx`, `pages/Dashboard/CardIndicador.tsx`
 
