@@ -31,9 +31,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: `pages/Relatorios/RelatorioPedidosPage.tsx` (prop `tipo`), rotas `/relatorios/vendas` e `/relatorios/compras` com `key` diferente (trocar de uma para outra recria a tela e não leva o cliente como fornecedor), seção **Relatórios** no menu. Período padrão: dia 1 do mês até hoje; status padrão Confirmado; cliente/fornecedor com botão de limpar ("Todos"). Exportar usa os filtros do último "Gerar". Idioma pt-BR do dayjs no `main.tsx` (calendário). `tsc -b` e `oxlint` limpos.
 
-- [ ] **T6: Tela de Estoque** (S)
+- [x] **T6: Tela de Estoque** (S) — *concluída em 23/09/2026*
   - Filtros (categoria, só abaixo do mínimo), resumo, tabela, exportar.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: `pages/Relatorios/RelatorioEstoquePage.tsx` (categoria das ativas, checkbox "Só abaixo do mínimo", cards Produtos / Valor total / Abaixo do mínimo, coluna Situação com a tag vermelha "Abaixo do mínimo" ou verde "OK"), item Estoque em Relatórios. `tsc -b`, `oxlint` e `npm run build` limpos (aviso de chunk > 500 kB já existia).
 
 ## Fase 3: Fechamento
 

@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.12.0
+ * Versão.....: 1.13.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
@@ -33,12 +33,14 @@
  *                         "Pedidos" vira "Pedidos de Venda" (menu, breadcrumb e títulos).
  *   1.11.0 - 23/09/2026 - Rota e item de menu de Contas a Pagar (Financeiro), etapa 8.
  *   1.12.0 - 23/09/2026 - Seção Relatórios: Vendas e Compras (etapa 9).
+ *   1.13.0 - 23/09/2026 - Relatório de Estoque (etapa 9).
  * =====================================================================
  */
 
 import {
   AppstoreOutlined,
   BarChartOutlined,
+  ContainerOutlined,
   DatabaseOutlined,
   DollarOutlined,
   HomeOutlined,
@@ -70,6 +72,7 @@ import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { PedidoCompraPage } from './pages/PedidosCompra/PedidoCompraPage'
 import { PedidosCompraListaPage } from './pages/PedidosCompra/PedidosCompraListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
+import { RelatorioEstoquePage } from './pages/Relatorios/RelatorioEstoquePage'
 import { RelatorioPedidosPage } from './pages/Relatorios/RelatorioPedidosPage'
 
 // O Dashboard fica fora das seções: resume vários módulos, não pertence a um departamento.
@@ -106,6 +109,7 @@ const secoes = [
     itens: [
       { key: '/relatorios/vendas', icon: <LineChartOutlined />, label: 'Vendas' },
       { key: '/relatorios/compras', icon: <BarChartOutlined />, label: 'Compras' },
+      { key: '/relatorios/estoque', icon: <ContainerOutlined />, label: 'Estoque' },
     ],
   },
 ] satisfies { titulo: string; itens: MenuProps['items'] }[]
@@ -221,6 +225,7 @@ export default function App() {
             {/* key diferente: trocar entre vendas e compras recria a tela (não leva o cliente escolhido como fornecedor). */}
             <Route path="/relatorios/vendas" element={<RelatorioPedidosPage key="vendas" tipo="vendas" />} />
             <Route path="/relatorios/compras" element={<RelatorioPedidosPage key="compras" tipo="compras" />} />
+            <Route path="/relatorios/estoque" element={<RelatorioEstoquePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout.Content>
