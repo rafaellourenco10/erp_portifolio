@@ -1,94 +1,81 @@
-# Spec: Módulo Contas a Receber (etapa 5)
+# Spec: Módulo Dashboard (etapa 6)
 
-> Status: **implementada e testada em 22/09/2026** (T1 a T9 do plano, ver `tasks/todo.md`). Os 9 critérios de sucesso abaixo foram conferidos um a um contra o código atual. A tela foi verificada por revisão de código (tipos, lint, build), **sem verificação visual/Playwright** — sem ferramenta de navegador disponível nesta sessão. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
+> Status: **em definição** (22/09/2026). Substitui a spec de Contas a Receber (etapa 5, implementada e documentada no README). Ao mudar uma decisão depois de começar a codar, atualize esta spec **antes** do código.
 
 ## Objetivo
 
-Fechar o ciclo financeiro de uma venda: ao confirmar um pedido, gerar as **parcelas a receber** (vencimento e valor), controlar o status de cada uma (pendente, recebida, atrasada) e permitir marcar o recebimento.
+Tela inicial com indicadores agregados de Pedidos, Estoque e Contas a Receber, para responder "como estou indo" sem precisar abrir cada módulo.
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** Pedidos e Estoque existem; falta saber **quanto e quando** vai entrar de dinheiro das vendas já confirmadas.
-- **Sucesso:** confirmar um pedido gera as parcelas certas (valor e vencimento), a lista mostra o que está pendente/atrasado/recebido, e marcar uma parcela como recebida reflete na tela.
+- **Por que agora:** Pedidos, Estoque e Contas a Receber existem e têm dado real; antes disso o Dashboard só mostraria número fictício.
+- **Sucesso:** abrir o Dashboard mostra faturamento e ticket médio do mês, pedidos por status, contas a receber pendentes/atrasadas e produtos com saldo baixo, tudo batendo com o que aparece nos módulos de origem.
 
 ### Dentro do escopo
-Geração automática de parcelas ao confirmar um pedido (quantidade e intervalo escolhidos no momento de confirmar), tela de listagem com filtro por status (incluindo "Atrasado", calculado), ação de marcar parcela como recebida, cancelamento automático das parcelas pendentes quando o pedido confirmado é cancelado.
+Cards de indicador (faturamento do mês, ticket médio, pedidos por status, contas a receber pendente/atrasado, produtos com saldo baixo) e um gráfico de faturamento diário do mês atual. Só leitura — nenhuma ação a partir do Dashboard.
 
 ### Fora do escopo (entram depois)
-Recebimento parcial de uma parcela, juros/multa por atraso, boleto/nota fiscal de verdade, edição do valor/vencimento de uma parcela já gerada, contas a pagar, relatório financeiro/fluxo de caixa.
+Seletor de período (o mês é sempre o atual), drill-down/exportação, estoque mínimo configurável por produto (o limite de "saldo baixo" é fixo no código por enquanto), cache/agregação pré-calculada (tudo é consulta direta, sem tabela nova).
 
 ## Decisões já tomadas (com o Rafael, 22/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Geração das parcelas | **Automática ao confirmar** o pedido — o número de parcelas e o intervalo em dias são escolhidos nesse momento (não antes, não depois). |
-| Parcelamento | **N parcelas iguais** (1 a 12) **+ intervalo em dias** entre vencimentos; o valor do pedido é dividido igualmente, com o **resto na última parcela**. |
-| Pedido cancelado | Cancelar um pedido **Confirmado** cancela as parcelas que ainda estão **Pendentes**; parcelas já **Recebidas** continuam como estão (histórico). |
-| Marcar recebido | Botão **"Marcar como recebido"**, tudo ou nada (sem recebimento parcial); grava a data/hora do recebimento. |
+| Indicadores da v1 | Faturamento + ticket médio, pedidos por status, contas a receber pendente/atrasado, produtos com saldo baixo de estoque. |
+| Período | **Mês atual, fixo** — sem seletor de data nesta versão. |
+| Contas a receber no Dashboard | Mostra o **saldo em aberto agora** (não filtrado por mês) — parcelas vencem em datas futuras variadas, filtrar por "mês da venda" não faz sentido para elas. |
+| Visual | Cards de número **+ 1 gráfico**: faturamento diário do mês atual (linha/barra). |
+| Saldo baixo de estoque | Limite **fixo no código** (`saldo ≤ 5`), igual para todos os produtos — não existe estoque mínimo por produto hoje. |
+| Arquitetura dos cards | Cada card **independente**: se um indicador falhar, os outros continuam aparecendo. Endpoints agrupados por módulo de origem (Pedidos, Estoque, Contas a Receber), não um endpoint único. |
 
 ## Regras de negócio
 
 | # | Regra |
 |---|---|
-| C1 | Confirmar um pedido (`PATCH /pedidos/{id}/confirmar`) recebe `numeroParcelas` (1 a 12, padrão 1) e `intervaloDias` (1 a 180, padrão 30). Ao confirmar com sucesso, gera exatamente `numeroParcelas` parcelas cuja soma bate **exatamente** com `valorTotal` do pedido. |
-| C2 | Valor de cada uma das primeiras `numeroParcelas − 1` parcelas = `valorTotal / numeroParcelas`, arredondado para baixo em 2 casas; a **última parcela leva o resto** (garante que a soma bate com o total, mesmo com divisão não exata). |
-| C3 | Vencimento da parcela `N` (1-based) = data de confirmação (hoje, UTC) **+ `N × intervaloDias` dias**. A parcela 1 vence em `intervaloDias` dias, nunca no mesmo dia da confirmação (evita nascer "atrasada"). |
-| C4 | Status de uma parcela: `Pendente` → `Recebido` (ação manual, grava `dataRecebimento`) ou `Pendente` → `Cancelado` (quando o pedido é cancelado). Ambos são finais. |
-| C5 | **"Atrasado" não é um status gravado**: é uma parcela `Pendente` com `vencimento` no passado, calculado na consulta (nunca precisa de um job para "atualizar status"). |
-| C6 | Cancelar um pedido que estava `Confirmado` cancela **todas as parcelas `Pendentes`** desse pedido (idempotente, como o próprio cancelamento do pedido). Parcelas `Recebidas` não mudam. |
-| C7 | Marcar uma parcela como recebida é **idempotente**: marcar de novo uma já `Recebido` não gera erro e não duplica a data. Parcela `Cancelado` não pode ser recebida (409). |
-| C8 | Uma parcela **nunca é excluída** — histórico definitivo, como o pedido e as movimentações de estoque. |
+| D1 | "Faturamento do mês" = soma de `valorTotal` dos pedidos **Confirmados** com `dataPedido` no mês/ano atual (UTC). Pedidos Rascunho e Cancelado não entram. |
+| D2 | "Ticket médio" = faturamento do mês ÷ quantidade de pedidos Confirmados no mês; `0` se não houver nenhum. |
+| D3 | "Pedidos por status" conta **todos** os pedidos (qualquer status) com `dataPedido` no mês atual, agrupados por status. |
+| D4 | "Faturamento diário" = faturamento (D1) agrupado por dia do mês atual, um ponto por dia (dias sem venda confirmada entram com 0, para o gráfico não ter buracos). |
+| D5 | "Contas a receber pendente" = soma de `valor` das parcelas com status `Pendente` (todas, não só do mês); "atrasado" = subconjunto com `vencimento` no passado (mesmo cálculo do módulo de Contas a Receber). |
+| D6 | "Saldo baixo de estoque" = quantidade de produtos **ativos** cujo saldo (Σ Entrada − Σ Saída) é **≤ 5** (constante `LimiteSaldoBaixo`). |
+| D7 | Cada indicador vem de um endpoint próprio, agrupado por módulo de origem; a tela busca os três em paralelo e mostra cada card assim que a resposta dele chega (não espera todos). |
 
 ## Tech stack
 
-Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 (Docker, porta 5433) no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query + react-hook-form + Zod + React Router no front. Nenhuma dependência nova.
+Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query no front. **Uma dependência nova no front**: biblioteca de gráfico (a decidir na implementação, seguindo a skill de dataviz do projeto — provavelmente algo leve tipo Ant Design Charts ou Recharts).
 
-## Modelo de dados (migration só **adiciona** tabela)
+## Modelo de dados
 
-`parcelas_receber`:
-
-| Coluna | Tipo | Observação |
-|---|---|---|
-| `id` | integer | PK, identity |
-| `pedido_id` | integer | FK `pedidos` (RESTRICT — histórico nunca é apagado), índice `ix_parcelas_receber_pedido_id` |
-| `numero_parcela` | integer | 1-based; `CHECK` > 0 |
-| `valor` | numeric(12,2) | `CHECK` > 0 |
-| `vencimento` | date | sem hora (é uma data de calendário, não um instante) |
-| `status` | varchar(20) | `Pendente`, `Recebido` ou `Cancelado` (texto, como `status` em pedidos) |
-| `data_recebimento` | timestamptz | nulo até ser marcada como recebida |
-
-Índice único `ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)`; índice `ix_parcelas_receber_vencimento` (para ordenar/filtrar por vencimento e achar atrasadas).
+**Nenhuma tabela nova.** Tudo consulta agregada sobre `pedidos`, `parcelas_receber`, `produtos` e `estoque_movimentacoes` já existentes.
 
 ## API
 
-Novo `ContasReceberController` (`/api/contas-receber`):
+Três endpoints pequenos, um por módulo de origem, sem controller/service novo — cada método entra no service que já existe (`PedidoService`, `ContasReceberService`, `EstoqueService`), atrás de um `DashboardController` fino que só delega:
 
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
-| GET | `/contas-receber?busca=&status=&pagina=&tamanhoPagina=` | Lista paginada, vencimento mais próximo primeiro. `busca` = nº do pedido ou nome do cliente. `status` = `Pendente`/`Recebido`/`Cancelado`/**`Atrasado`** (filtro calculado: `Pendente` + `vencimento` no passado) | 200, 400 |
-| PATCH | `/contas-receber/{id}/receber` | Marca a parcela como recebida (C7) | 200, 404, 409 |
+| GET | `/dashboard/vendas` | Faturamento do mês, ticket médio, pedidos por status, faturamento diário (D1-D4) | 200 |
+| GET | `/dashboard/contas-receber` | Total e quantidade pendente/atrasado (D5) | 200 |
+| GET | `/dashboard/estoque` | Quantidade de produtos com saldo baixo (D6) | 200 |
 
-`PedidosController` sem rota nova — `PATCH /pedidos/{id}/confirmar` ganha corpo opcional `{ numeroParcelas?, intervaloDias? }` (defaults 1 e 30) e passa a gerar as parcelas (C1); `PATCH /pedidos/{id}/cancelar` continua sem corpo, mas passa a cancelar as parcelas pendentes por dentro (C6).
-
-- Resposta da listagem: `{ id, pedidoId, clienteNome, numeroParcela, totalParcelas, valor, vencimento, status, dataRecebimento, atrasado }` — `atrasado` é calculado no servidor (nunca confiar no relógio do navegador).
-- Erros: `numeroParcelas`/`intervaloDias` fora da faixa = 400 no campo (`[ApiController]`); receber uma parcela `Cancelado` = 409 (`ConflitoException`).
+Sem parâmetros (mês atual é sempre calculado no servidor, `DateTime.UtcNow`). Sem entrada do cliente, sem erro de validação esperado.
 
 ## Telas
 
-- **`/contas-receber`** (item **Contas a Receber** no menu, em Gestão Comercial): tabela com Cliente, Pedido nº, Parcela (`X/Y`), Valor, Vencimento, Status (tag: Pendente cinza, **Atrasado vermelho**, Recebido verde, Cancelado cinza riscado) e ação **Marcar como recebido**; filtro por status (Segmented: Todas / Pendentes / Atrasadas / Recebidas / Canceladas) e busca por cliente/nº do pedido.
-- **Confirmar pedido** (tela do pedido, `PedidoPage`): a janela de confirmação hoje é um `Modal.confirm` simples; passa a ter um formulário pequeno com **Número de parcelas** (1 a 12, padrão 1) e **Intervalo entre parcelas (dias)** (padrão 30), enviados no `PATCH /confirmar`.
-- Vencimento formatado em `pt-BR` (`dd/mm/aaaa`, sem hora, já que a coluna é `date`).
+- **`/` (nova rota inicial)** — item **Painel** no menu, **fora** da seção "Gestão Comercial" (fica no topo, sozinho — é um resumo entre módulos, não uma ação comercial). A rota desconhecida (`*`) passa a cair em `/` em vez de `/clientes`.
+- Grid de cards: Faturamento do mês, Ticket médio, Pedidos por status (3 números: Rascunho/Confirmado/Cancelado), Contas a receber pendente (com o atrasado destacado), Produtos com saldo baixo.
+- Gráfico de faturamento diário do mês, abaixo dos cards.
+- Cada card mostra seu próprio loading/erro (D7) — um indicador falhando não derruba a tela inteira.
 
 ## Commands
 
 ```
 # Backend (na raiz)
-dotnet build ErpPortfolio.slnx
-dotnet run --project backend/ErpPortfolio.Api --launch-profile http        # API em http://localhost:5065
-dotnet ef migrations add NomeDaMigration --project backend/ErpPortfolio.Api --configuration Release -o Data/Migrations
-dotnet ef database update --project backend/ErpPortfolio.Api --configuration Release
+dotnet build ErpPortfolio.slnx -c Release
+dotnet run --project backend/ErpPortfolio.Api --launch-profile http
 
 # Frontend (em frontend/erp-portfolio-web)
-npm run dev          # http://localhost:5173
+npm install <biblioteca-de-grafico-escolhida>
+npm run dev
 npx tsc -b
 npx oxlint src
 npm run build
@@ -101,55 +88,50 @@ dotnet test backend/ErpPortfolio.Tests
 
 ```
 backend/ErpPortfolio.Api/
-  Models/            ParcelaReceber.cs, StatusParcela.cs
-  DTOs/              ParcelaRespostaDto.cs, ParcelaFiltroDto.cs, PedidoConfirmarDto.cs (numeroParcelas, intervaloDias)
-  Services/          IContasReceberService.cs, ContasReceberService.cs
-  Controllers/       ContasReceberController.cs
-  Controllers/PedidosController.cs  # alterado: Confirmar recebe corpo
-  Services/PedidoService.cs         # alterado: Confirmar gera parcelas, Cancelar cancela pendentes
-  Data/Migrations/   <data>_CriacaoTabelaParcelasReceber.cs
-backend/ErpPortfolio.Tests/         ContasReceberCalculoTests.cs (divisão em parcelas, resto na última)
+  DTOs/              VendasResumoDto.cs, FaturamentoDiaDto.cs, ContasReceberResumoDto.cs, EstoqueResumoDashboardDto.cs
+  Services/          IPedidoService.cs / PedidoService.cs       # + ObterResumoVendasAsync
+                     IContasReceberService.cs / ContasReceberService.cs  # + ObterResumoAsync
+                     IEstoqueService.cs / EstoqueService.cs     # + ObterResumoAsync
+  Controllers/       DashboardController.cs
+backend/ErpPortfolio.Tests/  DashboardResumoTests.cs (agrupamento por dia/status, cálculo de ticket médio)
 frontend/erp-portfolio-web/src/
-  api/contasReceberApi.ts   hooks/useContasReceber.ts   types/contaReceber.ts
-  pages/ContasReceber/ContasReceberListaPage.tsx
-  pages/Pedidos/PedidoPage.tsx        # alterado: modal de confirmação vira formulário (parcelas, intervalo)
+  api/dashboardApi.ts   hooks/useDashboard.ts   types/dashboard.ts
+  pages/Dashboard/DashboardPage.tsx, CardIndicador.tsx, GraficoFaturamento.tsx
+  App.tsx  # rota "/" e item de menu "Painel" fora de Gestão Comercial
 ```
 
 ## Code style
 
-Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS (nome, versão, data, descrição, banco/tabelas/fontes, histórico), nomes em português, mensagens de erro em português.
+Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS, nomes em português, mensagens em português.
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** divisão do valor em N parcelas (1, 2, 3, 12 parcelas; valores que não dividem exato — resto na última; soma sempre bate com o total); cálculo do vencimento por parcela.
-2. **API ponta a ponta (instância temporária):** confirmar com 1/3/12 parcelas gera as parcelas certas (valor e vencimento); confirmar sem informar parcelas usa os padrões (1, 30 dias); marcar como recebida (idempotente); marcar uma `Cancelado` como recebida = 409; cancelar o pedido cancela as parcelas `Pendentes` e não mexe nas `Recebidas`; filtro `Atrasado` acha parcela `Pendente` com vencimento passado; busca por cliente/nº do pedido.
-3. **Tela (revisão de código, sem Playwright nesta sessão se a limitação persistir):** formulário de confirmar com parcelas, lista com status/filtro, marcar como recebido atualizando a tela sem F5.
-4. **Sempre:** `dotnet build` com 0 avisos, `tsc -b` e `oxlint` sem apontamentos; nenhum dado real alterado (cliente, produto, categoria, pedido, estoque existentes intactos).
+1. **Unitário (xUnit):** ticket médio com 0 pedidos (não divide por zero), agrupamento de faturamento por dia preenchendo dias sem venda com 0, contagem de saldo baixo com o limite exato (5 entra, 6 não).
+2. **API ponta a ponta (instância temporária):** os três endpoints batendo com pedidos/parcelas/produtos de teste criados na mesma rodada (faturamento e ticket médio conferem com pedidos confirmados no mês, contas a receber bate com parcelas pendentes/atrasadas, saldo baixo bate com produtos de teste no limite).
+3. **Tela:** revisão de código (mesma limitação das últimas rodadas — sem navegador nesta sessão).
+4. **Sempre:** `dotnet build` 0 avisos, `tsc -b`/`oxlint` sem apontamentos; nenhum dado real alterado (o módulo é só leitura, mas os dados de teste usados para conferir os números precisam ser limpos).
 
 ## Boundaries
 
-- **Sempre:** soma das parcelas de um pedido bate exatamente com `valorTotal`; toda geração/cancelamento de parcela fica na mesma transação do `SaveChangesAsync` de `PedidoService` (como Estoque); cabeçalho em cada arquivo; backup do banco antes de migration; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir (ou já autorizado, como neste módulo).
-- **Perguntar antes:** dependência nova, mudar tabela existente (`pedidos`, `produtos`, `estoque_movimentacoes`), recebimento parcial, juros/multa, editar valor/vencimento de parcela já gerada.
-- **Nunca:** excluir uma parcela, deixar a soma das parcelas divergir do total do pedido, marcar como recebida uma parcela cancelada, commitar segredos, forçar push.
+- **Sempre:** todo cálculo de dinheiro/contagem no servidor (a tela só exibe); cada endpoint independente dos outros; cabeçalho em cada arquivo; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir (ou autorização já dada, como nos módulos anteriores).
+- **Perguntar antes:** dependência nova de gráfico (decidir qual na hora, mas é a única autorizada por esta spec — qualquer outra dependência nova precisa perguntar de novo), seletor de período, estoque mínimo por produto, qualquer ação (não só leitura) no Dashboard.
+- **Nunca:** gravar um valor agregado como se fosse fonte de verdade (sempre recalcular), commitar segredos, forçar push.
 
 ## Success criteria (testáveis)
 
-Conferidos um a um em 22/09/2026 contra o código final (T9), com `dotnet build -c Release` (0 avisos), `dotnet test` (146/146), `tsc -b` e `oxlint` limpos. Evidência: testes unitários (`ContasReceberCalculoTests`, `ModeloParcelaReceberTests`) e verificação manual contra a API real numa instância temporária (porta 5099), com dados de teste isolados (`ZZT…`, SKUs `6700000x`) e os dados reais conferidos idênticos ao final de cada rodada.
-
-1. ✅ Confirmar um pedido de R$ 100,00 com 3 parcelas gera parcelas de R$ 33,33, R$ 33,33 e **R$ 33,34** (resto na última) — soma exatamente R$ 100,00 — `ContasReceberCalculoTests` e pedido de R$ 300,00 ÷ 3 confirmado na API real (T5/T6).
-2. ✅ Confirmar sem informar `numeroParcelas`/`intervaloDias` usa os padrões: **1 parcela**, vencimento em **30 dias** — confirmado sem corpo na API real, vencimento em `hoje + 30 dias` (T5).
-3. ✅ Vencimento da parcela 2 de um pedido com intervalo de 15 dias é **hoje + 30 dias** (2 × 15) — testado exatamente esse cenário (intervalo 15, parcela 2 venceu em +30 dias) na T5.
-4. ✅ Marcar uma parcela `Pendente` como recebida grava `dataRecebimento` e muda o status para `Recebido`; marcar de novo não gera erro nem duplica a data — testado na T4.
-5. ✅ Marcar uma parcela `Cancelado` como recebida retorna **409** — testado na T4.
-6. ✅ Cancelar um pedido `Confirmado` com 3 parcelas (1 já `Recebido`, 2 `Pendentes`) cancela as 2 `Pendentes` e **não mexe** na `Recebido` — testado exatamente esse cenário na T6.
-7. ✅ Uma parcela `Pendente` com vencimento ontem aparece com `atrasado: true`; a mesma parcela com vencimento amanhã aparece com `atrasado: false` — testado na T4 (parcela vencida há 5 dias = `true`; parcelas futuras = `false`).
-8. ✅ A listagem `/contas-receber` acha por nome do cliente ou número do pedido, e o filtro por status (incluindo `Atrasado`) funciona — testado na T4.
-9. ✅ Nenhum registro real (cliente, produto, categoria, pedido, estoque) é alterado pelos testes — contagens conferidas idênticas ao final de cada rodada (T3-T6).
+1. Faturamento do mês soma exatamente o `valorTotal` dos pedidos Confirmados com `dataPedido` no mês atual; pedidos Rascunho/Cancelado não entram.
+2. Ticket médio = faturamento ÷ quantidade de Confirmados no mês; com 0 confirmados, o valor é `0` (sem erro).
+3. Pedidos por status conta certo os três status, só os do mês atual.
+4. Faturamento diário tem um ponto por dia do mês, incluindo dias sem venda (valor 0), sem buraco no gráfico.
+5. Contas a receber pendente/atrasado bate com a soma das parcelas `Pendente`/atrasadas reais, sem filtro de mês.
+6. Produto com saldo exatamente 5 conta como saldo baixo; saldo 6 não conta.
+7. Cada endpoint responde de forma independente; um erro num não impede os outros dois de aparecer na tela.
+8. Nenhum registro real é alterado pelos testes (módulo só leitura; dados de teste usados na verificação são apagados).
 
 ## Open questions
 
 Nenhuma em aberto — as quatro dúvidas da primeira versão foram fechadas em 22/09/2026 (ver "Decisões já tomadas"). Limites conhecidos, aceitos de propósito:
 
-- **Sem recebimento parcial**: uma parcela é tudo ou nada; se precisar, é uma extensão do modelo (`valor_recebido` separado de `valor`) — pergunta antes, ver Boundaries.
-- **Sem juros/multa por atraso**: "Atrasado" é só um rótulo visual/filtro, não altera o valor da parcela.
-- **Sem edição de parcela já gerada**: se o número de parcelas escolhido ao confirmar estava errado, hoje não tem como corrigir (limite aceito, como pedido confirmado que só cancela).
+- **Sem seletor de período**: sempre o mês atual; um filtro de data é uma extensão natural (mais um parâmetro nos três endpoints).
+- **Limite de saldo baixo fixo (5)**: até existir um campo de estoque mínimo por produto.
+- **Biblioteca de gráfico** a escolher na implementação, seguindo a skill de dataviz do projeto.
