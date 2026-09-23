@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IPedidoService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 22/09/2026
 // Descrição..: Contrato do serviço de pedidos de venda (criação, consulta, listagem,
 //              edição do rascunho, confirmação e cancelamento).
@@ -12,6 +12,7 @@
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo (criar e obter).
 //   1.1.0 - 22/09/2026 - ConfirmarAsync recebe numeroParcelas/intervaloDias (gera parcelas).
+//   1.2.0 - 22/09/2026 - ObterResumoVendasAsync, para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -52,4 +53,7 @@ public interface IPedidoService
     /// <summary>Cria um pedido em Rascunho, copiando o preço de cada produto e calculando o total.</summary>
     /// <exception cref="DadoInvalidoException">Cliente/produto inexistente ou inativo, quantidade inválida para a unidade ou total acima do limite.</exception>
     Task<PedidoRespostaDto> CriarAsync(PedidoCriacaoDto dados, CancellationToken cancelamento);
+
+    /// <summary>Faturamento, ticket médio, pedidos por status e faturamento diário do mês atual (D1-D4, Dashboard).</summary>
+    Task<VendasResumoDto> ObterResumoVendasAsync(CancellationToken cancelamento);
 }

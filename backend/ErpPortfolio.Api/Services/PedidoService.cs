@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.6.0
+// Versão.....: 1.7.0
 // Data.......: 22/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
@@ -37,6 +37,8 @@
 //   1.4.0 - 22/09/2026 - Confirmar baixa estoque (E2); cancelar de Confirmado estorna (E3).
 //   1.5.0 - 22/09/2026 - Confirmar gera parcelas a receber (C1).
 //   1.6.0 - 22/09/2026 - Cancelar de Confirmado cancela as parcelas Pendentes (C6).
+//   1.7.0 - 22/09/2026 - ObterResumoVendasAsync (faturamento, ticket médio, por status,
+//                        faturamento diário do mês atual), para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -241,6 +243,39 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         await contexto.SaveChangesAsync(cancelamento);
 
         return true;
+    }
+
+    public async Task<VendasResumoDto> ObterResumoVendasAsync(CancellationToken cancelamento)
+    {
+        var hoje = DateTime.UtcNow;
+        var inicioMes = new DateTime(hoje.Year, hoje.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var inicioProximoMes = inicioMes.AddMonths(1);
+
+        var pedidosDoMes = await contexto.Pedidos.AsNoTracking()
+            .Where(p => p.DataPedido >= inicioMes && p.DataPedido < inicioProximoMes)
+            .Select(p => new { p.Status, p.DataPedido, p.ValorTotal })
+            .ToListAsync(cancelamento);
+
+        var confirmados = pedidosDoMes.Where(p => p.Status == StatusPedido.Confirmado).ToList();
+        var faturamento = confirmados.Sum(p => p.ValorTotal);
+
+        var porStatus = new PedidosPorStatusDto(
+            pedidosDoMes.Count(p => p.Status == StatusPedido.Rascunho),
+            confirmados.Count,
+            pedidosDoMes.Count(p => p.Status == StatusPedido.Cancelado));
+
+        var valoresPorDia = confirmados
+            .GroupBy(p => DateOnly.FromDateTime(p.DataPedido))
+            .Select(g => (Dia: g.Key, Valor: g.Sum(p => p.ValorTotal)));
+
+        var primeiroDia = DateOnly.FromDateTime(inicioMes);
+        var ultimoDia = DateOnly.FromDateTime(inicioProximoMes.AddDays(-1));
+        var faturamentoPorDia = DashboardCalculo.PreencherDias(valoresPorDia, primeiroDia, ultimoDia)
+            .Select(d => new FaturamentoDiaDto(d.Dia, d.Valor))
+            .ToList();
+
+        return new VendasResumoDto(
+            faturamento, DashboardCalculo.TicketMedio(faturamento, confirmados.Count), confirmados.Count, porStatus, faturamentoPorDia);
     }
 
     // Preço copiado do produto agora e congelado no item (R3); o cliente da API não envia preço.

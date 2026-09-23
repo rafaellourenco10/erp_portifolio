@@ -9,15 +9,16 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 1: Resumos por módulo (reaproveitando os services existentes)
 
-- [ ] **T1: Resumo de vendas (`PedidoService`)** (M)
+- [x] **T1: Resumo de vendas (`PedidoService`)** (M) — *concluída em 22/09/2026*
   - Descrição: `ObterResumoVendasAsync()` — faturamento do mês, ticket médio, pedidos por status, faturamento diário (D1-D4).
   - Aceite:
     - Faturamento = soma de `valorTotal` só de pedidos `Confirmado` com `dataPedido` no mês/ano atual (UTC).
     - Ticket médio = faturamento ÷ confirmados no mês; `0` sem erro quando não há nenhum.
     - Faturamento diário tem um ponto por **cada dia** do mês, dias sem venda com `0`.
   - Verificar: `dotnet test` (ticket médio com 0 pedidos, agrupamento por dia sem buraco); `dotnet build` 0 avisos.
+  - Resultado: 150 testes passando (146 anteriores + 4 novos), 0 avisos. `DashboardCalculo` pura (ticket médio, preencher dias) reaproveitável pelos outros resumos se precisar. Pedidos do mês trazidos para memória e agrupados em C# (escala de portfólio, sem necessidade de SQL agregado complexo).
   - Dependências: nenhuma
-  - Arquivos: `DTOs/VendasResumoDto.cs`, `DTOs/FaturamentoDiaDto.cs`, `Services/IPedidoService.cs`, `Services/PedidoService.cs`, `backend/ErpPortfolio.Tests/DashboardResumoTests.cs`
+  - Arquivos: `DTOs/VendasResumoDto.cs`, `DTOs/FaturamentoDiaDto.cs`, `DTOs/PedidosPorStatusDto.cs`, `Services/DashboardCalculo.cs`, `Services/IPedidoService.cs`, `Services/PedidoService.cs`, `backend/ErpPortfolio.Tests/DashboardResumoTests.cs`
 
 - [ ] **T2: Resumo de contas a receber (`ContasReceberService`)** (S)
   - Descrição: `ObterResumoAsync()` — total e quantidade pendente/atrasado (D5), sem filtro de mês.
