@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IContasPagarService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Contrato do serviço de contas a pagar: consulta, marcar pago, geração e
 //              cancelamento de parcelas usados pelo PedidoCompraService, e o resumo do
@@ -13,6 +13,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - CriarAvulsaAsync e CancelarAsync; pagar propaga para comissões (etapa 12).
+//   1.2.0 - 23/09/2026 - ObterVencimentosAsync, para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -50,4 +51,7 @@ public interface IContasPagarService
 
     /// <summary>Total e quantidade pendente/atrasado, sem filtro de mês (Dashboard).</summary>
     Task<ContasPagarResumoDto> ObterResumoAsync(CancellationToken cancelamento);
+
+    /// <summary>Pendentes atrasadas ou que vencem nos próximos 7 dias, mais urgentes primeiro (Dashboard).</summary>
+    Task<VencimentosDto> ObterVencimentosAsync(CancellationToken cancelamento);
 }

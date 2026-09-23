@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: DashboardPage.tsx
- * Versão.....: 1.3.0
+ * Versão.....: 1.4.0
  * Data.......: 23/09/2026
  * Descrição..: Página inicial do Ambition ERP: cards de indicador do mês atual
  *              (faturamento/ticket médio, pedidos por status, contas a receber e
@@ -20,15 +20,24 @@
  *                        por produto, não mais limite fixo).
  *   1.3.0 - 23/09/2026 - Card "Contas a pagar" (etapa 8); cards em duas linhas:
  *                        financeiro (3) e operação (2).
+ *   1.4.0 - 23/09/2026 - Quadros de vencimentos a pagar e a receber (atrasadas e próximos 7 dias).
  * =====================================================================
  */
 
 import { Col, Flex, Row, Typography } from 'antd'
-import { useResumoContasPagar, useResumoContasReceber, useResumoEstoque, useResumoVendas } from '../../hooks/useDashboard'
+import {
+  useResumoContasPagar,
+  useResumoContasReceber,
+  useResumoEstoque,
+  useResumoVendas,
+  useVencimentosPagar,
+  useVencimentosReceber,
+} from '../../hooks/useDashboard'
 import type { ContasReceberResumo } from '../../types/dashboard'
 import { formatarReal } from '../../utils/moeda'
 import { CardIndicador } from './CardIndicador'
 import { GraficoFaturamento } from './GraficoFaturamento'
+import { QuadroVencimentos } from './QuadroVencimentos'
 // A tela reaproveita as classes .painel, .pagina-titulo etc. do módulo de Clientes.
 import '../Clientes/clientes.css'
 
@@ -56,6 +65,8 @@ export function DashboardPage() {
   const vendas = useResumoVendas()
   const contasReceber = useResumoContasReceber()
   const contasPagar = useResumoContasPagar()
+  const vencimentosPagar = useVencimentosPagar()
+  const vencimentosReceber = useVencimentosReceber()
   const estoque = useResumoEstoque()
 
   return (
@@ -143,6 +154,28 @@ export function DashboardPage() {
                 </Flex>
               ))}
           </CardIndicador>
+        </Col>
+      </Row>
+
+      {/* Linha 3: o que vence em breve (ou já venceu), a pagar e a receber. */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <QuadroVencimentos
+            titulo="A pagar: atrasadas e próximos 7 dias"
+            rota="/contas-pagar"
+            dados={vencimentosPagar.data}
+            loading={vencimentosPagar.isLoading}
+            erro={vencimentosPagar.isError}
+          />
+        </Col>
+        <Col xs={24} lg={12}>
+          <QuadroVencimentos
+            titulo="A receber: atrasadas e próximos 7 dias"
+            rota="/contas-receber"
+            dados={vencimentosReceber.data}
+            loading={vencimentosReceber.isLoading}
+            erro={vencimentosReceber.isError}
+          />
         </Col>
       </Row>
 

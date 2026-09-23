@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: useDashboard.ts
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 23/09/2026
  * Descrição..: Hooks do TanStack Query para o Dashboard. Quatro queries
  *              independentes (uma por módulo de origem) — se uma falhar,
@@ -12,6 +12,7 @@
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - useResumoContasPagar (etapa 8).
+ *   1.2.0 - 23/09/2026 - useVencimentosPagar / useVencimentosReceber.
  * =====================================================================
  */
 
@@ -28,6 +29,14 @@ export function useResumoContasReceber() {
 
 export function useResumoContasPagar() {
   return useQuery({ queryKey: ['dashboard', 'contas-pagar'], queryFn: dashboardApi.obterContasPagar })
+}
+
+export function useVencimentosPagar() {
+  return useQuery({ queryKey: ['dashboard', 'vencimentos-pagar'], queryFn: dashboardApi.obterVencimentosPagar })
+}
+
+export function useVencimentosReceber() {
+  return useQuery({ queryKey: ['dashboard', 'vencimentos-receber'], queryFn: dashboardApi.obterVencimentosReceber })
 }
 
 export function useResumoEstoque() {

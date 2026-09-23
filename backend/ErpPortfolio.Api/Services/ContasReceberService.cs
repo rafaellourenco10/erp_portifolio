@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.4.0
+// Versão.....: 1.5.0
 // Data.......: 23/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
 //              no servidor), marcar parcela como recebida, gerar as parcelas ao
@@ -29,6 +29,7 @@
 //   1.2.0 - 22/09/2026 - CancelarPendentesAsync (usado pelo PedidoService ao cancelar).
 //   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 //   1.4.0 - 23/09/2026 - Marcar como recebida gera a comissão do vendedor (etapa 11).
+//   1.5.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -185,5 +186,30 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
         return new ContasReceberResumoDto(
             pendentes.Sum(p => p.Valor), pendentes.Count,
             atrasadas.Sum(p => p.Valor), atrasadas.Count);
+    }
+
+    public async Task<VencimentosDto> ObterVencimentosAsync(CancellationToken cancelamento)
+    {
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var fim = VencimentosCalculo.FimDaJanela(hoje);
+
+        // Pendentes atrasadas (vencimento < hoje) ou que vencem até hoje + 7 dias.
+        var parcelas = await contexto.ParcelasReceber.AsNoTracking()
+            .Where(p => p.Status == StatusParcela.Pendente && p.Vencimento <= fim)
+            .Select(p => new
+            {
+                p.Id,
+                Cliente = p.Pedido!.Cliente!.Nome,
+                p.PedidoId,
+                p.NumeroParcela,
+                TotalParcelas = contexto.ParcelasReceber.Count(x => x.PedidoId == p.PedidoId),
+                p.Valor,
+                p.Vencimento
+            })
+            .ToListAsync(cancelamento);
+
+        return VencimentosCalculo.Montar(
+            parcelas.Select(p => (p.Id, p.Cliente, $"Pedido #{p.PedidoId} · parcela {p.NumeroParcela}/{p.TotalParcelas}", p.Valor, p.Vencimento)),
+            hoje);
     }
 }

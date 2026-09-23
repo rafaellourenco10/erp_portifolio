@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasPagarService.cs
-// Versão.....: 2.0.0
+// Versão.....: 2.1.0
 // Data.......: 23/09/2026
 // Descrição..: Contas a pagar de três origens (Compra, Comissao, Avulsa): listagem com
 //              favorecido/descrição e "atrasado" calculados no servidor, marcar como paga,
@@ -28,6 +28,7 @@
 //   2.0.0 - 23/09/2026 - Origem Compra/Comissao/Avulsa: favorecido e descrição na lista,
 //                        filtro de origem, conta avulsa, cancelar e propagação para as
 //                        comissões (etapa 12).
+//   2.1.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
 // =====================================================================================
 
 using System.Linq.Expressions;
@@ -250,4 +251,36 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
             p.Status,
             p.DataPagamento,
             p.Status == StatusParcelaPagar.Pendente && p.Vencimento < hoje);
+
+    public async Task<VencimentosDto> ObterVencimentosAsync(CancellationToken cancelamento)
+    {
+        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var fim = VencimentosCalculo.FimDaJanela(hoje);
+
+        // Pendentes atrasadas (vencimento < hoje) ou que vencem até hoje + 7 dias.
+        var parcelas = await contexto.ParcelasPagar.AsNoTracking()
+            .Where(p => p.Status == StatusParcelaPagar.Pendente && p.Vencimento <= fim)
+            .Select(p => new
+            {
+                p.Id,
+                Favorecido = p.PedidoCompra != null ? p.PedidoCompra.Fornecedor!.Nome : p.Vendedor != null ? p.Vendedor.Nome : p.Favorecido,
+                p.Origem,
+                p.PedidoCompraId,
+                p.Descricao,
+                p.NumeroParcela,
+                p.TotalParcelas,
+                p.Valor,
+                p.Vencimento
+            })
+            .ToListAsync(cancelamento);
+
+        return VencimentosCalculo.Montar(
+            parcelas.Select(p => (
+                p.Id,
+                p.Favorecido ?? "Sem favorecido",
+                $"{(p.Origem == OrigemContaPagar.Compra ? $"Compra #{p.PedidoCompraId}" : p.Descricao)} · parcela {p.NumeroParcela}/{p.TotalParcelas}",
+                p.Valor,
+                p.Vencimento)),
+            hoje);
+    }
 }

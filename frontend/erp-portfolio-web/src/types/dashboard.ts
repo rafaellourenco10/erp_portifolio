@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: dashboard.ts
- * Versão.....: 1.2.0
+ * Versão.....: 1.3.0
  * Data.......: 23/09/2026
  * Descrição..: Tipos do Dashboard, espelhando os DTOs da API (VendasResumoDto,
  *              PedidosPorStatusDto, FaturamentoDiaDto, ContasReceberResumoDto,
@@ -12,6 +12,7 @@
  *   1.1.0 - 22/09/2026 - EstoqueResumoDashboard troca limiteSaldoBaixo pela
  *                        lista de produtos (estoque mínimo por produto).
  *   1.2.0 - 23/09/2026 - ContasPagarResumo (etapa 8).
+ *   1.3.0 - 23/09/2026 - Vencimentos (quadros de a pagar e a receber).
  * =====================================================================
  */
 
@@ -55,4 +56,26 @@ export interface ProdutoSaldoBaixo {
 export interface EstoqueResumoDashboard {
   quantidadeSaldoBaixo: number
   produtos: ProdutoSaldoBaixo[]
+}
+
+/** Uma parcela pendente atrasada ou que vence nos próximos 7 dias. */
+export interface VencimentoItem {
+  id: number
+  /** Favorecido (a pagar) ou cliente (a receber). */
+  titulo: string
+  /** De onde vem ("Compra #N", descrição, "Pedido #N") com a parcela X/Y. */
+  detalhe: string
+  valor: number
+  /** AAAA-MM-DD. */
+  vencimento: string
+  /** Dias até o vencimento: 0 = hoje, negativo = atrasada. */
+  dias: number
+}
+
+export interface Vencimentos {
+  /** Quantidade e total contam a janela inteira; a lista vem limitada. */
+  quantidade: number
+  total: number
+  quantidadeAtrasadas: number
+  itens: VencimentoItem[]
 }

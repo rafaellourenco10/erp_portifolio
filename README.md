@@ -132,6 +132,7 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - **Saldo baixo de estoque**: quantidade de produtos ativos com saldo ≤ 5 (limite fixo por enquanto; não existe estoque mínimo por produto ainda)
 - **Gráfico de faturamento diário** do mês, com todos os dias presentes (dias sem venda aparecem com R$ 0, sem buraco no gráfico); tooltip por barra, acessível por mouse e teclado
 - Cada card busca seu próprio indicador; se um endpoint falhar, os outros continuam aparecendo normalmente
+- **Vencimentos** (23/09/2026): dois quadros, **A pagar** e **A receber**, com as parcelas pendentes **atrasadas** e as que **vencem nos próximos 7 dias**, mais urgentes primeiro — quem, de onde (compra/pedido/descrição e parcela X/Y), valor e etiqueta "Atrasada há N dias" (vermelha) ou "Vence hoje / em N dias" (amarela); total, quantidade de atrasadas e link "Ver todas". Mostra até 10 linhas por quadro (o total conta todas)
 - Só leitura — nenhuma ação a partir do Dashboard
 - Fora do escopo por enquanto: seletor de período, estoque mínimo por produto, drill-down/exportação
 
@@ -719,6 +720,8 @@ Dashboard:
 | GET | `/dashboard/vendas` | Faturamento, ticket médio, pedidos por status e faturamento diário do **mês atual** (só pedidos Confirmados contam para faturamento/ticket médio) | 200 |
 | GET | `/dashboard/contas-receber` | Total e quantidade de parcelas pendentes/atrasadas, sem filtro de mês | 200 |
 | GET | `/dashboard/contas-pagar` | Mesmo formato, para as parcelas a pagar | 200 |
+| GET | `/dashboard/vencimentos-pagar` | Parcelas a pagar pendentes atrasadas ou que vencem nos próximos 7 dias: `{ quantidade, total, quantidadeAtrasadas, itens: [{ id, titulo, detalhe, valor, vencimento, dias }] }` (`dias` negativo = atrasada; até 10 itens) | 200 |
+| GET | `/dashboard/vencimentos-receber` | Mesmo formato, para as parcelas a receber | 200 |
 | GET | `/dashboard/estoque` | Quantidade de produtos ativos com saldo de estoque ≤ 5 | 200 |
 
 Sem parâmetros — o mês é sempre calculado no servidor (`DateTime.UtcNow`), nunca enviado pelo cliente. Cada rota só delega pro service do módulo de origem (`PedidoService`, `ContasReceberService`, `ContasPagarService`, `EstoqueService`); não existe um "DashboardService" com lógica própria.

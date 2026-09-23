@@ -1,12 +1,14 @@
 // =====================================================================================
 // Arquivo....: DashboardController.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints REST do Dashboard. Cada rota só delega pro service do módulo
 //              de origem (D7) — sem service ou lógica própria do Dashboard.
 //                GET /api/dashboard/vendas          -> PedidoService.ObterResumoVendasAsync
 //                GET /api/dashboard/contas-receber   -> ContasReceberService.ObterResumoAsync
 //                GET /api/dashboard/contas-pagar     -> ContasPagarService.ObterResumoAsync
+//                GET /api/dashboard/vencimentos-pagar   -> ContasPagarService.ObterVencimentosAsync
+//                GET /api/dashboard/vencimentos-receber -> ContasReceberService.ObterVencimentosAsync
 //                GET /api/dashboard/estoque           -> EstoqueService.ObterResumoAsync
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (via IPedidoService, IContasReceberService, IContasPagarService, IEstoqueService)
@@ -16,6 +18,7 @@
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - GET /api/dashboard/contas-pagar (etapa 8).
+//   1.2.0 - 23/09/2026 - GET vencimentos-pagar e vencimentos-receber.
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -48,6 +51,18 @@ public class DashboardController(IPedidoService pedidoService, IContasReceberSer
     [ProducesResponseType<ContasPagarResumoDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<ContasPagarResumoDto>> ObterContasPagar(CancellationToken cancelamento) =>
         Ok(await contasPagarService.ObterResumoAsync(cancelamento));
+
+    /// <summary>Contas a pagar pendentes atrasadas ou que vencem nos próximos 7 dias (mais urgentes primeiro).</summary>
+    [HttpGet("vencimentos-pagar")]
+    [ProducesResponseType<VencimentosDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<VencimentosDto>> ObterVencimentosPagar(CancellationToken cancelamento) =>
+        Ok(await contasPagarService.ObterVencimentosAsync(cancelamento));
+
+    /// <summary>Contas a receber pendentes atrasadas ou que vencem nos próximos 7 dias (mais urgentes primeiro).</summary>
+    [HttpGet("vencimentos-receber")]
+    [ProducesResponseType<VencimentosDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<VencimentosDto>> ObterVencimentosReceber(CancellationToken cancelamento) =>
+        Ok(await contasReceberService.ObterVencimentosAsync(cancelamento));
 
     /// <summary>Quantidade de produtos ativos com saldo de estoque baixo.</summary>
     [HttpGet("estoque")]
