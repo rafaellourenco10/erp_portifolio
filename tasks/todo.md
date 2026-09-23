@@ -9,9 +9,10 @@
   - Verificar: build 0 avisos; `dotnet test` verde.
   - Resultado: build 0 avisos; `dotnet test` 158/158 (8 novos em `RelatorioCalculoTests`: período de 1 dia, invertido, 366/367 dias, resumo vazio e com valores, validação pelo DTO). Teste rápido numa instância temporária (5099): os 3 relatórios devolvem linhas e resumo coerentes com os dados reais; período invertido e datas ausentes → 400 no campo certo. "Abaixo do mínimo" usa a regra do Dashboard (saldo ≤ mínimo).
 
-- [ ] **T2: Exportação Excel** (M)
+- [x] **T2: Exportação Excel** (M) — *concluída em 23/09/2026*
   - Pacote ClosedXML; `ExportadorRelatorio` com modelo genérico → .xlsx (título, gerado em, filtros, resumo, tabela com moeda/data formatadas); `formato=xlsx` com nome de arquivo (R4).
   - Verificar: build; E2E na T3.
+  - Resultado: ClosedXML 0.105.1. Modelo genérico em `Services/RelatorioModelo.cs` (colunas/campos com tipo: texto, inteiro, quantidade, moeda, data-hora, sim/não); `ExportadorRelatorio.GerarXlsx` grava valores tipados (o Excel soma e ordena), cabeçalho destacado, filtro automático e cabeçalho congelado. Datas exibidas no horário de Brasília. Teste rápido: .xlsx de vendas lido com um leitor só de biblioteca padrão (`zipfile`) trouxe título, filtros, resumo (2 / 1400 / 700) e as 2 linhas iguais ao JSON; `Content-Disposition` com `relatorio-vendas-2026-09-01_2026-09-30.xlsx`. `dotnet build` 0 avisos.
 
 - [ ] **T3: Exportação PDF** (M)
   - Pacote QuestPDF (licença Community em `Program.cs`); mesmo modelo → .pdf (A4, cabeçalho, resumo, tabela, rodapé com página).

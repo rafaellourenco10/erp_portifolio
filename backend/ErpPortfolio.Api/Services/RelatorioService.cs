@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: RelatorioService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Consultas dos relatórios (somente leitura): vendas e compras por período
 //              (um pedido por linha + resumo) e posição atual de estoque (saldo, valor em
@@ -19,6 +19,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Modelo*Async: mesma consulta no modelo de exportação (T2).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -101,6 +102,91 @@ public class RelatorioService(ErpPortfolioDbContext contexto) : IRelatorioServic
             .ToList();
 
         return new RelatorioEstoqueDto(linhas, linhas.Count, linhas.Sum(l => l.ValorEstoque), linhas.Count(l => l.AbaixoMinimo));
+    }
+
+    public async Task<RelatorioModelo> ModeloVendasAsync(RelatorioVendasFiltroDto filtro, CancellationToken cancelamento)
+    {
+        var dados = await VendasAsync(filtro, cancelamento);
+        var cliente = filtro.ClienteId is null
+            ? "Todos"
+            : await contexto.Clientes.Where(c => c.Id == filtro.ClienteId).Select(c => c.Nome).FirstOrDefaultAsync(cancelamento) ?? $"#{filtro.ClienteId}";
+        return ModeloPedidos("Relatório de Vendas", "vendas", "Cliente", cliente, filtro, dados);
+    }
+
+    public async Task<RelatorioModelo> ModeloComprasAsync(RelatorioComprasFiltroDto filtro, CancellationToken cancelamento)
+    {
+        var dados = await ComprasAsync(filtro, cancelamento);
+        var fornecedor = filtro.FornecedorId is null
+            ? "Todos"
+            : await contexto.Fornecedores.Where(f => f.Id == filtro.FornecedorId).Select(f => f.Nome).FirstOrDefaultAsync(cancelamento) ?? $"#{filtro.FornecedorId}";
+        return ModeloPedidos("Relatório de Compras", "compras", "Fornecedor", fornecedor, filtro, dados);
+    }
+
+    public async Task<RelatorioModelo> ModeloEstoqueAsync(RelatorioEstoqueFiltroDto filtro, CancellationToken cancelamento)
+    {
+        var dados = await EstoqueAsync(filtro, cancelamento);
+        var categoria = filtro.CategoriaId is null
+            ? "Todas"
+            : await contexto.Categorias.Where(c => c.Id == filtro.CategoriaId).Select(c => c.Nome).FirstOrDefaultAsync(cancelamento) ?? $"#{filtro.CategoriaId}";
+        var agora = FormatoRelatorioTexto.ParaBrasilia(DateTime.UtcNow);
+
+        return new RelatorioModelo(
+            "Relatório de Estoque",
+            $"relatorio-estoque-{agora:yyyy-MM-dd}",
+            agora,
+            [$"Categoria: {categoria}", $"Somente abaixo do mínimo: {(filtro.SomenteAbaixoMinimo ? "Sim" : "Não")}", "Somente produtos ativos"],
+            [
+                new CampoRelatorio("Produtos", dados.QuantidadeProdutos, TipoValor.Inteiro),
+                new CampoRelatorio("Valor total em estoque", dados.ValorTotalEstoque, TipoValor.Moeda),
+                new CampoRelatorio("Abaixo do mínimo", dados.QuantidadeAbaixoMinimo, TipoValor.Inteiro),
+            ],
+            [
+                new ColunaRelatorio("Produto", TipoValor.Texto),
+                new ColunaRelatorio("SKU", TipoValor.Texto),
+                new ColunaRelatorio("Categoria", TipoValor.Texto),
+                new ColunaRelatorio("Unidade", TipoValor.Texto),
+                new ColunaRelatorio("Saldo", TipoValor.Quantidade),
+                new ColunaRelatorio("Estoque mínimo", TipoValor.Quantidade),
+                new ColunaRelatorio("Custo", TipoValor.Moeda),
+                new ColunaRelatorio("Valor em estoque", TipoValor.Moeda),
+                new ColunaRelatorio("Abaixo do mínimo", TipoValor.SimNao),
+            ],
+            dados.Linhas
+                .Select(l => new object?[] { l.Nome, l.Sku, l.CategoriaNome ?? "—", l.Unidade, l.Saldo, l.EstoqueMinimo, l.Custo, l.ValorEstoque, l.AbaixoMinimo })
+                .ToList());
+    }
+
+    private static RelatorioModelo ModeloPedidos(
+        string titulo, string chave, string rotuloParceiro, string parceiro, RelatorioPedidosFiltroDto filtro, RelatorioPedidosDto dados)
+    {
+        var inicio = filtro.DataInicio!.Value;
+        var fim = filtro.DataFim!.Value;
+
+        return new RelatorioModelo(
+            titulo,
+            $"relatorio-{chave}-{inicio:yyyy-MM-dd}_{fim:yyyy-MM-dd}",
+            FormatoRelatorioTexto.ParaBrasilia(DateTime.UtcNow),
+            [
+                $"Período: {inicio:dd/MM/yyyy} a {fim:dd/MM/yyyy}",
+                $"Status: {filtro.Status?.ToString() ?? "Todos"}",
+                $"{rotuloParceiro}: {parceiro}",
+            ],
+            [
+                new CampoRelatorio("Pedidos", dados.QuantidadePedidos, TipoValor.Inteiro),
+                new CampoRelatorio("Valor total", dados.ValorTotal, TipoValor.Moeda),
+                new CampoRelatorio("Ticket médio", dados.TicketMedio, TipoValor.Moeda),
+            ],
+            [
+                new ColunaRelatorio("Nº", TipoValor.Inteiro),
+                new ColunaRelatorio("Data", TipoValor.DataHora),
+                new ColunaRelatorio(rotuloParceiro, TipoValor.Texto),
+                new ColunaRelatorio("Itens", TipoValor.Inteiro),
+                new ColunaRelatorio("Total", TipoValor.Moeda),
+                new ColunaRelatorio("Status", TipoValor.Texto),
+            ],
+            dados.Linhas
+                .Select(l => new object?[] { l.Id, FormatoRelatorioTexto.ParaBrasilia(l.DataPedido), l.Nome, l.QuantidadeItens, l.ValorTotal, l.Status.ToString() })
+                .ToList());
     }
 
     // Datas inclusivas em UTC (R1/R2): o fim vale o dia inteiro, então compara com o dia seguinte exclusivo.
