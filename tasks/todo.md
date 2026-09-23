@@ -14,13 +14,15 @@
   - Verificar: build; E2E de listar/pagar feito na T3 (precisa de parcelas geradas).
   - Resultado: `dotnet build -c Release` 0 avisos. O filtro virou um DTO próprio (`ParcelaPagarFiltroDto`), porque o `ParcelaFiltroDto` usa o enum com "Recebido". Comportamento verificado por E2E na T3.
 
-- [ ] **T3: Pedido de Compra gera/cancela parcelas** (M)
+- [x] **T3: Pedido de Compra gera/cancela parcelas** (M) — *concluída em 23/09/2026*
   - `PedidoCompraService.ConfirmarAsync` recebe nº de parcelas/intervalo e chama `GerarParcelas`; `CancelarAsync` de Confirmado chama `CancelarPendentesAsync` depois da checagem de saldo; controller aceita `PedidoConfirmarDto`.
   - Verificar: E2E dos critérios 1-6 da spec contra a API real.
+  - Resultado: E2E contra instância temporária (Release, porta 5099; a API do Rafael na 5065 ficou intacta) com dados `ZZT…`: 26 verificações OK cobrindo os critérios 1-7 (3x30 → 333,33/333,33/333,34 em +30/+60/+90; sem corpo → 1x30; 0/13 parcelas e 0/181 dias → 400 sem confirmar; busca por nº e fornecedor; filtros Pendente/Pago/Atrasado; pagar idempotente, 404, 409 em cancelada; cancelar compra → Pago intacta e Pendentes canceladas; cancelamento bloqueado por saldo não mexe nas parcelas). Dados de teste apagados, `parcelas_pagar` vazia, pedido #4 intacto. `dotnet test` 150/150.
 
-- [ ] **T4: Resumo no Dashboard (API)** (S)
+- [x] **T4: Resumo no Dashboard (API)** (S) — *concluída em 23/09/2026*
   - `GET /api/dashboard/contas-pagar`.
   - Verificar: E2E do critério 7.
+  - Resultado: testado no mesmo E2E da T3 — resumo (600,00 em 3 pendentes, 100,00 em 1 atrasada) bateu com a soma direto no banco.
 
 ## Fase 2: Frontend
 
