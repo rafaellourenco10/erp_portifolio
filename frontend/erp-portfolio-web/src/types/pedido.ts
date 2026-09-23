@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: pedido.ts
- * Versão.....: 1.0.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 23/09/2026
  * Descrição..: Tipos do módulo de Pedidos, espelhando os DTOs da API
  *              (PedidoRespostaDto, PedidoResumoDto, PedidoCriacaoDto,
  *              PedidoItemEntradaDto e PedidoFiltroDto). Status e forma de
@@ -10,6 +10,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada (etapa 10).
  * =====================================================================
  */
 
@@ -53,6 +54,10 @@ export interface Pedido {
   dataPedido: string
   status: StatusPedido
   formaPagamento: FormaPagamento | null
+  vendedorId: number | null
+  vendedorNome: string | null
+  /** % de comissão do vendedor congelada ao confirmar; nula no rascunho e em pedidos antigos. */
+  percentualComissao: number | null
   descontoPercentual: number
   subtotalItens: number
   valorTotal: number
@@ -81,6 +86,8 @@ export interface PedidoItemEntrada {
 export interface PedidoEntrada {
   clienteId: number
   formaPagamento: FormaPagamento | null
+  /** Opcional no rascunho; obrigatório para confirmar. */
+  vendedorId: number | null
   descontoPercentual: number
   itens: PedidoItemEntrada[]
 }

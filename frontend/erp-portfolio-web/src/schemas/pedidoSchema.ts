@@ -1,8 +1,8 @@
 /**
  * =====================================================================
  * Arquivo....: pedidoSchema.ts
- * Versão.....: 1.0.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 23/09/2026
  * Descrição..: Schema Zod do formulário de pedido (mesmas regras dos DTOs da API e da
  *              SPEC: 1 a 100 itens, quantidade de 0,001 a 999.999,999, UN/CX só inteiro,
  *              descontos de 0 a 100, total até R$ 9.999.999.999,99) e conversões entre o
@@ -13,6 +13,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - vendedorId (opcional no rascunho), etapa 10.
  * =====================================================================
  */
 
@@ -66,6 +67,8 @@ export const pedidoSchema = z
       .nullable()
       .refine((valor) => valor !== null, 'Selecione o cliente.'),
     formaPagamento: z.enum(FORMAS_PAGAMENTO).nullable(),
+    // Opcional no rascunho; a API exige para confirmar (e devolve o erro no campo).
+    vendedorId: z.number().nullable(),
     descontoPercentual: z
       .number()
       .nullable()
@@ -103,6 +106,7 @@ export type PedidoFormValores = z.output<typeof pedidoSchema>
 export const valoresIniciaisPedido: PedidoFormEntrada = {
   clienteId: null,
   formaPagamento: null,
+  vendedorId: null,
   descontoPercentual: 0,
   itens: [],
 }
@@ -125,6 +129,7 @@ export function paraFormulario(pedido: Pedido): PedidoFormEntrada {
   return {
     clienteId: pedido.clienteId,
     formaPagamento: pedido.formaPagamento,
+    vendedorId: pedido.vendedorId,
     descontoPercentual: pedido.descontoPercentual,
     itens: pedido.itens.map((item) => ({
       produtoId: item.produtoId,
@@ -143,6 +148,7 @@ export function paraPayload(valores: PedidoFormValores): PedidoEntrada {
   return {
     clienteId: valores.clienteId as number,
     formaPagamento: valores.formaPagamento as FormaPagamento | null,
+    vendedorId: valores.vendedorId,
     descontoPercentual: valores.descontoPercentual,
     itens: valores.itens.map((item) => ({
       produtoId: item.produtoId,

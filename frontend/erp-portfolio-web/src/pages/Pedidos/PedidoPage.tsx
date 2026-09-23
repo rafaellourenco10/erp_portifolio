@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: PedidoPage.tsx
- * Versão.....: 2.4.0
+ * Versão.....: 2.5.0
  * Data.......: 23/09/2026
  * Descrição..: Página do pedido (rotas /pedidos/novo e /pedidos/:id). Formulário com
  *              cliente (busca no servidor), forma de pagamento, itens (tabela editável;
@@ -29,6 +29,8 @@
  *   2.3.0 - 22/09/2026 - Confirmar abre um modal com número de parcelas e intervalo em
  *                        dias (contas a receber), no lugar do Modal.confirm simples.
  *   2.4.0 - 23/09/2026 - Modal de parcelas extraído para components/ModalParcelas (etapa 8).
+ *   2.5.0 - 23/09/2026 - Campo Vendedor (obrigatório só para confirmar) e % de comissão congelada
+ *                        no pedido confirmado (etapa 10).
  * =====================================================================
  */
 
@@ -45,6 +47,7 @@ import { ItemFormulario } from '../../components/ItemFormulario'
 import { ModalParcelas } from '../../components/ModalParcelas'
 import { SelecaoCliente } from '../../components/SelecaoCliente'
 import { SelecaoProduto } from '../../components/SelecaoProduto'
+import { SelecaoVendedor } from '../../components/SelecaoVendedor'
 import { TagStatusPedido } from '../../components/TagStatusPedido'
 import { useCancelarPedido, useConfirmarPedido, usePedido, useSalvarPedido } from '../../hooks/usePedidos'
 import {
@@ -63,6 +66,8 @@ import { formatarReal } from '../../utils/moeda'
 import '../Clientes/clientes.css'
 import { ItensPedidoTabela } from './ItensPedidoTabela'
 import './pedido.css'
+
+const formatoPercentual = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
 
 const ID_FORMULARIO = 'formulario-pedido'
 
@@ -205,6 +210,10 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
       setError('clienteId', { message: erroApi.errosPorCampo.clienteId })
       mostrouNoCampo = true
     }
+    if (erroApi.errosPorCampo.vendedorId) {
+      setError('vendedorId', { message: erroApi.errosPorCampo.vendedorId })
+      mostrouNoCampo = true
+    }
     if (erroApi.errosPorCampo.formaPagamento) {
       setError('formaPagamento', { message: erroApi.errosPorCampo.formaPagamento })
       mostrouNoCampo = true
@@ -324,6 +333,39 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
               />
             </ItemFormulario>
           </Col>
+          <Col xs={24} md={14}>
+            <ItemFormulario rotulo="Vendedor" erro={errors.vendedorId}>
+              <Controller
+                name="vendedorId"
+                control={control}
+                render={({ field }) => (
+                  <SelecaoVendedor
+                    id="pedido-vendedor"
+                    aria-label="Vendedor"
+                    value={field.value}
+                    onChange={(vendedorId) => field.onChange(vendedorId)}
+                    aoLimpar={() => field.onChange(null)}
+                    vendedorAtual={
+                      pedido?.vendedorId != null && pedido.vendedorNome
+                        ? { id: pedido.vendedorId, nome: pedido.vendedorNome }
+                        : undefined
+                    }
+                    disabled={somenteLeitura}
+                    placeholder="Obrigatório só para confirmar"
+                  />
+                )}
+              />
+            </ItemFormulario>
+          </Col>
+          {pedido?.percentualComissao != null && (
+            <Col xs={24} md={10}>
+              <ItemFormulario rotulo="Comissão do vendedor">
+                <span className="numeros-tabulares" style={{ lineHeight: '40px' }}>
+                  {formatoPercentual.format(pedido.percentualComissao)}% (congelada na confirmação)
+                </span>
+              </ItemFormulario>
+            </Col>
+          )}
         </Row>
       </section>
 

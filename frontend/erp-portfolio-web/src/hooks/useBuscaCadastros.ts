@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: useBuscaCadastros.ts
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 23/09/2026
  * Descrição..: Hooks de busca no SERVIDOR para os seletores do pedido: clientes,
  *              fornecedores e produtos ATIVOS que combinam com o texto digitado, no
@@ -17,6 +17,7 @@
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - useBuscaFornecedores, para o seletor do Pedido de Compra.
+ *   1.2.0 - 23/09/2026 - useBuscaVendedores, para o seletor do Pedido de Venda (etapa 10).
  * =====================================================================
  */
 
@@ -25,10 +26,12 @@ import { useEffect, useState } from 'react'
 import { clientesApi } from '../api/clientesApi'
 import { fornecedoresApi } from '../api/fornecedoresApi'
 import { produtosApi } from '../api/produtosApi'
+import { vendedoresApi } from '../api/vendedoresApi'
 import type { Cliente } from '../types/cliente'
 import type { Fornecedor } from '../types/fornecedor'
 import type { ResultadoPaginado } from '../types/paginacao'
 import type { Produto } from '../types/produto'
+import type { Vendedor } from '../types/vendedor'
 
 const ATRASO_MS = 300
 const LIMITE_RESULTADOS = 20
@@ -45,7 +48,7 @@ export function useValorComAtraso<T>(valor: T, atrasoMs = ATRASO_MS): T {
   return atrasado
 }
 
-function useBusca<T>(cadastro: 'clientes' | 'fornecedores' | 'produtos', texto: string, buscar: (busca: string) => Promise<ResultadoPaginado<T>>) {
+function useBusca<T>(cadastro: 'clientes' | 'fornecedores' | 'vendedores' | 'produtos', texto: string, buscar: (busca: string) => Promise<ResultadoPaginado<T>>) {
   const busca = useValorComAtraso(texto.trim())
   const consulta = useQuery({
     queryKey: [cadastro, 'busca', busca],
@@ -71,6 +74,12 @@ export function useBuscaClientes(texto: string) {
 export function useBuscaFornecedores(texto: string) {
   return useBusca<Fornecedor>('fornecedores', texto, (busca) =>
     fornecedoresApi.listar({ nome: busca || undefined, ativo: true, pagina: 1, tamanhoPagina: LIMITE_RESULTADOS }),
+  )
+}
+
+export function useBuscaVendedores(texto: string) {
+  return useBusca<Vendedor>('vendedores', texto, (busca) =>
+    vendedoresApi.listar({ nome: busca || undefined, ativo: true, pagina: 1, tamanhoPagina: LIMITE_RESULTADOS }),
   )
 }
 

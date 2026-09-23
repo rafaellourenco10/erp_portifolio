@@ -26,9 +26,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: `types/vendedor.ts`, `api/vendedoresApi.ts`, `hooks/useVendedores.ts`, `schemas/vendedorSchema.ts` (só CPF; % 0-100 com 2 casas), `pages/Vendedores/` (lista e drawer gerados a partir dos de Fornecedores: sem cidade/UF, com coluna e campo de comissão `InputNumber` com `%`). Item **Vendedores** em Cadastro (`SolutionOutlined`), rota `/vendedores`. `tsc -b` e `oxlint` limpos.
 
-- [ ] **T5: Vendedor no pedido de venda** (S)
+- [x] **T5: Vendedor no pedido de venda** (S) — *concluída em 23/09/2026*
   - `SelecaoVendedor`; campo no `PedidoPage` + schema; erro da API no campo; confirmado mostra vendedor e % congelada.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: `SelecaoVendedor` (gerado do `SelecaoFornecedor`, com CPF na opção e `aoLimpar`), `useBuscaVendedores`; campo **Vendedor** no `PedidoPage` (placeholder "Obrigatório só para confirmar"; erro `vendedorId` da API vai para o campo); no pedido confirmado aparece "Comissão do vendedor: X% (congelada na confirmação)". Tipos e schema do pedido com `vendedorId`. `tsc -b`, `oxlint` e `npm run build` limpos.
 
 ## Fase 3: Fechamento
 
