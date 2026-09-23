@@ -9,9 +9,10 @@
   - Verificar: `dotnet build` 0 avisos; `dotnet ef database update` sem erro.
   - Resultado: migration `20260923131654_CriacaoTabelaParcelasPagar` gerada e aplicada no banco de dev (com `--configuration Release`, porque a API em Debug estava rodando e travava a DLL). `dotnet build -c Release` 0 avisos.
 
-- [ ] **T2: ContasPagarService + Controller** (M)
+- [x] **T2: ContasPagarService + Controller** (M) — *concluída em 23/09/2026*
   - `IContasPagarService`/`ContasPagarService` (Listar, MarcarPaga, GerarParcelas, CancelarPendentesAsync, ObterResumo), DTOs (`ParcelaPagarRespostaDto`, `FiltroStatusParcelaPagar`, `ContasPagarResumoDto`; filtro reaproveita o formato de `ParcelaFiltroDto`), `ContasPagarController`, registro no DI.
   - Verificar: build; E2E de listar/pagar feito na T3 (precisa de parcelas geradas).
+  - Resultado: `dotnet build -c Release` 0 avisos. O filtro virou um DTO próprio (`ParcelaPagarFiltroDto`), porque o `ParcelaFiltroDto` usa o enum com "Recebido". Comportamento verificado por E2E na T3.
 
 - [ ] **T3: Pedido de Compra gera/cancela parcelas** (M)
   - `PedidoCompraService.ConfirmarAsync` recebe nº de parcelas/intervalo e chama `GerarParcelas`; `CancelarAsync` de Confirmado chama `CancelarPendentesAsync` depois da checagem de saldo; controller aceita `PedidoConfirmarDto`.

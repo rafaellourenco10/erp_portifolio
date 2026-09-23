@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.8.0
-// Data.......: 22/09/2026
+// Versão.....: 1.9.0
+// Data.......: 23/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
 // -------------------------------------------------------------------------------------
@@ -23,6 +23,7 @@
 //   1.6.0 - 22/09/2026 - Registro do IContasReceberService e Contas a Receber no Swagger.
 //   1.7.0 - 22/09/2026 - Registro do IFornecedorService (etapa 7).
 //   1.8.0 - 22/09/2026 - Registro do IPedidoCompraService (etapa 7).
+//   1.9.0 - 23/09/2026 - Registro do IContasPagarService e Contas a Pagar no Swagger (etapa 8).
 // =====================================================================================
 
 using System.Reflection;
@@ -44,6 +45,7 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IPedidoService, PedidoService>();
 builder.Services.AddScoped<IEstoqueService, EstoqueService>();
 builder.Services.AddScoped<IContasReceberService, ContasReceberService>();
+builder.Services.AddScoped<IContasPagarService, ContasPagarService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();
 builder.Services.AddScoped<IPedidoCompraService, PedidoCompraService>();
 
@@ -57,7 +59,7 @@ builder.Services.AddSwaggerGen(opcoes =>
     {
         Title = "Ambition ERP API",
         Version = "v1",
-        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Pedidos, Estoque e Contas a Receber."
+        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Fornecedores, Pedidos (venda e compra), Estoque, Contas a Receber e Contas a Pagar."
     });
 
     var arquivoXml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
