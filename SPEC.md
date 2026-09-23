@@ -1,81 +1,98 @@
-# Spec: Módulo Contas a Pagar (etapa 8)
+# Spec: Módulo Relatórios (etapa 9)
 
-> Status: **implementada e testada em 23/09/2026** (T1 a T8 do plano, ver `tasks/todo.md`). Os 8 critérios abaixo foram conferidos contra a API real numa instância temporária (dados de teste `ZZT…` apagados ao final, dados reais intactos). **Sem verificação visual** das telas — sem navegador nesta sessão.
+> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
 
 ## Objetivo
 
-Espelho do Contas a Receber do lado da compra: confirmar um Pedido de Compra gera as parcelas a pagar ao fornecedor, e uma tela lista essas parcelas para marcar como pagas — fechando o "Fora do escopo" deixado pela etapa 7 ("Forma de pagamento e Contas a Pagar").
+Nova seção **Relatórios** no menu, com três telas — **Vendas**, **Compras** e **Estoque** — que mostram os dados filtrados na tela e exportam para **Excel (.xlsx)** e **PDF** gerados pelo servidor.
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** pedido do Rafael em 23/09/2026, logo depois de fechar Fornecedores + Pedidos de Compra.
-- **Sucesso:** confirmar um pedido de compra escolhendo N parcelas gera N contas a pagar com valores e vencimentos certos; a tela `/contas-pagar` lista, filtra (inclusive Atrasado) e marca como paga; cancelar a compra cancela as parcelas ainda pendentes; o Dashboard mostra o total a pagar.
+- **Por que agora:** escolha do Rafael em 23/09/2026, entre as sugestões de melhoria.
+- **Sucesso:** escolher um período (e filtros), ver o relatório na tela com totais, e baixar o mesmo conteúdo em .xlsx e .pdf.
 
 ### Dentro do escopo
-Tabela de parcelas a pagar ligadas ao pedido de compra; modal de parcelas ao confirmar o pedido de compra; tela `/contas-pagar` no menu **Financeiro**; marcar parcela como paga; cancelar pedido de compra cancela as parcelas pendentes; card "A pagar" no Dashboard.
+Três relatórios (vendas, compras, posição de estoque), cada um com filtros, resumo, tabela e exportação em Excel e PDF. Seção **Relatórios** no menu.
 
 ### Fora do escopo (entram depois)
-Pagamento parcial de parcela; editar valor/vencimento de uma parcela; contas a pagar avulsas (sem pedido de compra — aluguel, luz etc.); estorno/devolução de parcelas já pagas ao cancelar; **gerar parcelas para pedidos de compra que já estavam confirmados antes deste módulo** (ex.: o #4 da Kabum fica sem parcelas — mesmo comportamento que os pedidos de venda antigos tiveram na etapa 5).
+Seletor de período no Dashboard; relatórios de contas a receber/pagar (vencidas); relatório agrupado por produto; itens dos pedidos dentro do relatório; gráficos no PDF; agendamento/envio por e-mail.
 
 ## Decisões já tomadas (com o Rafael, 23/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Geração das parcelas | Modal igual ao do pedido de venda: Nº de parcelas (1-12) e intervalo em dias (1-180), padrão 1 parcela em 30 dias. |
-| Dashboard | Ganha um card "A pagar" (total pendente e atrasado), ao lado do "A receber". |
-| Execução | Aprovada a spec, aplicar todas as tarefas em sequência, um commit por tarefa, sem push. |
+| Geração dos arquivos | **No servidor**: Excel com **ClosedXML** (licença MIT) e PDF com **QuestPDF** (licença Community, gratuita para uso individual e empresas com faturamento < US$ 1 mi — atende um portfólio). São as 2 únicas dependências novas. |
+| Detalhe de Vendas/Compras | **Um pedido por linha + totais** (não lista os itens de cada pedido). |
+| Dashboard | Seletor de período fica para depois. |
 
-## Regras de negócio (P)
+## Relatórios
+
+### Vendas (R-V) e Compras (R-C) — mesmo formato
+
+| Item | Definição |
+|---|---|
+| Filtros | Período (data inicial e final, **obrigatórios**), status (padrão **Confirmado**; opção "Todos"), cliente (vendas) / fornecedor (compras) opcional. |
+| Linhas | Nº, data, cliente/fornecedor, quantidade de itens, total, status. Ordenadas por data (mais antiga primeiro). |
+| Resumo | Quantidade de pedidos, soma dos totais e ticket médio — **das linhas listadas** (se o filtro for "Todos", o resumo inclui os cancelados; o padrão Confirmado evita isso). |
+
+### Estoque (R-E) — posição atual
+
+| Item | Definição |
+|---|---|
+| Filtros | Categoria (opcional), "só abaixo do mínimo" (padrão desligado). Só produtos **ativos**. |
+| Linhas | Produto, SKU, categoria, unidade, saldo, estoque mínimo, custo, **valor em estoque** (saldo × custo), marcação "abaixo do mínimo". Ordenadas por nome. |
+| Resumo | Quantidade de produtos, valor total em estoque, quantidade abaixo do mínimo. |
+
+## Regras (R)
 
 | # | Regra |
 |---|---|
-| P1 | Confirmar um pedido de compra gera N parcelas Pendentes: valor dividido igualmente (arredondado para baixo no centavo, resto na última) e vencimento em `hoje + i × intervalo` dias — mesma fórmula do Contas a Receber (`ContasReceberCalculo.Dividir`, reaproveitada). |
-| P2 | Nº de parcelas 1-12, intervalo 1-180 dias; corpo opcional (ausente = 1 parcela, 30 dias). Reaproveita `PedidoConfirmarDto`. |
-| P3 | Status gravado: Pendente, Pago, Cancelado. **Atrasado** não é gravado: é Pendente com vencimento < hoje, calculado no servidor. |
-| P4 | Marcar como paga: Pendente → Pago (grava a data do pagamento); marcar de novo uma já paga é sucesso (idempotente); parcela Cancelada não pode ser paga (409). |
-| P5 | Cancelar um pedido de compra Confirmado cancela as parcelas ainda Pendentes; as já Pagas não mudam. Tudo na mesma transação do estorno de estoque — se o cancelamento for bloqueado por saldo insuficiente (PC7), nenhuma parcela muda. |
-| P6 | Busca da lista: por número do pedido de compra (`4` ou `#4`) ou nome do fornecedor; ordenada por vencimento. |
-
-## Modelo de dados
-
-- **`public.parcelas_pagar`** — id, pedido_compra_id (FK → pedidos_compra), numero_parcela, valor, vencimento, status, data_pagamento. Espelho de `public.parcelas_receber`.
-- Enum novo **`StatusParcelaPagar`** (Pendente, Pago, Cancelado) — não reaproveita `StatusParcela` porque "Recebido" não faz sentido numa conta a pagar.
+| R1 | Período: data final ≥ data inicial e no máximo **366 dias**; senão 400. Datas inclusivas (a data final vale o dia inteiro). |
+| R2 | As datas do período são comparadas em **UTC**, mesma convenção do Dashboard (um pedido feito às 22h de um dia pode cair no dia seguinte). Limite conhecido, aceito. |
+| R3 | Todo cálculo (totais, ticket médio, saldo, valor em estoque) é feito no servidor; a tela, o .xlsx e o .pdf mostram **os mesmos números** (saem da mesma consulta). |
+| R4 | Exportação usa os mesmos filtros da tela; o arquivo traz título, data de geração, os filtros aplicados, o resumo e a tabela. Nome do arquivo: `relatorio-vendas-AAAA-MM-DD_AAAA-MM-DD.xlsx` (estoque: `relatorio-estoque-AAAA-MM-DD.xlsx`). |
+| R5 | Sem paginação no relatório (é um relatório, não uma lista): o limite de 366 dias mantém o volume sob controle. |
 
 ## API
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/contas-pagar` | Lista paginada (busca, status incl. Atrasado) |
-| PATCH | `/api/contas-pagar/{id}/pagar` | Marca a parcela como paga (P4) |
-| PATCH | `/api/pedidos-compra/{id}/confirmar` | **Passa a aceitar** corpo `{ numeroParcelas, intervaloDias }` (P2) |
-| GET | `/api/dashboard/contas-pagar` | Resumo: total/quantidade pendente e atrasado |
+| GET | `/api/relatorios/vendas?dataInicio=&dataFim=&status=&clienteId=&formato=` | `formato` = `json` (padrão), `xlsx` ou `pdf` |
+| GET | `/api/relatorios/compras?dataInicio=&dataFim=&status=&fornecedorId=&formato=` | idem |
+| GET | `/api/relatorios/estoque?categoriaId=&somenteAbaixoMinimo=&formato=` | idem |
+
+Com `formato=xlsx`/`pdf` a resposta é o arquivo (download); com `json`, os dados para a tela.
 
 ## Telas
 
-- **`/contas-pagar`** — espelho de `/contas-receber` (fornecedor, pedido de compra, parcela X/Y, valor, vencimento, status, ação "Marcar como paga"). Item **Contas a Pagar** no menu **Financeiro**, depois de Contas a Receber.
-- **Pedido de Compra** — "Confirmar pedido" abre o modal de parcelas (igual ao do pedido de venda).
-- **Dashboard** — card "A pagar".
+- Seção **Relatórios** no menu (depois de Financeiro): **Vendas** (`/relatorios/vendas`), **Compras** (`/relatorios/compras`), **Estoque** (`/relatorios/estoque`).
+- Cada tela: filtros no topo + botão **Gerar**; cards de resumo; tabela; botões **Exportar Excel** e **Exportar PDF** (habilitados depois de gerar, usando os mesmos filtros).
+- Vendas e Compras usam **um componente só** (mudam só o rótulo e o seletor de cliente/fornecedor).
+
+## Arquitetura
+
+- `RelatorioService`: as 3 consultas, devolvendo DTOs (linhas + resumo).
+- `ExportadorRelatorio`: recebe um modelo genérico (título, filtros descritos, cards do resumo, colunas, linhas) e gera .xlsx ou .pdf. Os 3 relatórios passam por ele — **um exportador, não três**.
+- `RelatoriosController`: valida os filtros, chama o service e devolve JSON ou `File(...)`.
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** só lógica pura, igual ao resto do projeto (a divisão já é coberta por `ContasReceberCalculoTests`); validação do enum/DTO se houver lógica nova.
-2. **API ponta a ponta (instância local):** confirmar compra com 3 parcelas → valores e vencimentos; marcar paga (e de novo, idempotente); cancelar compra → pendentes canceladas, paga intacta; cancelamento bloqueado por saldo → parcelas intactas; filtro Atrasado; resumo do dashboard. Dados de teste `ZZT…` apagados ao final.
-3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; verificação visual fica com o Rafael (sem navegador nesta sessão).
+1. **Unitário (xUnit):** validação do período (R1) e montagem do resumo (ticket médio com 0 pedidos, soma) — lógica pura.
+2. **API ponta a ponta (instância temporária):** totais do JSON batem com consulta direta no banco; filtros de status/cliente/categoria; 400 para período inválido; .xlsx abre e tem as mesmas linhas/totais; .pdf é um PDF válido com o título e o total.
+3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; verificação visual com o Rafael.
 
 ## Boundaries
 
-- **Sempre:** cálculo de parcelas e de atraso no servidor; reaproveitar `ContasReceberCalculo.Dividir` e `PedidoConfirmarDto`; parcelas geradas/canceladas na mesma transação do pedido; atualizar README e graphify ao terminar.
-- **Perguntar antes:** dependência nova; contas a pagar avulsas; pagamento parcial; backfill de parcelas para compras antigas.
-- **Nunca:** gravar "Atrasado" no banco; alterar parcelas já pagas ao cancelar; commitar segredos; push sem pedido.
+- **Sempre:** números calculados no servidor; mesma consulta para tela e arquivos; reaproveitar seletores (`SelecaoCliente`, `SelecaoFornecedor`) e o cálculo de ticket médio do Dashboard se servir.
+- **Perguntar antes:** qualquer dependência além de ClosedXML/QuestPDF; relatórios além dos três.
+- **Nunca:** calcular totais no front; commitar segredos; push sem pedido.
 
 ## Success criteria (testáveis)
 
-Conferidos em 23/09/2026 por um script E2E (26 verificações) contra a API real; detalhes na seção "Contas a Pagar (23/09/2026)" do README.
-
-1. ✅ Confirmar um pedido de compra com 3 parcelas / 30 dias gera 3 parcelas Pendentes cuja soma é exatamente o total do pedido, vencendo em +30, +60 e +90 dias.
-2. ✅ Confirmar sem corpo gera 1 parcela de 30 dias; valores fora da faixa (0 ou 13 parcelas, 0 ou 181 dias) retornam 400 sem confirmar.
-3. ✅ `/api/contas-pagar` lista com busca por número/fornecedor e filtro por status, incluindo Atrasado calculado.
-4. ✅ Marcar como paga funciona, é idempotente, e em parcela cancelada retorna 409.
-5. ✅ Cancelar um pedido de compra confirmado cancela as parcelas Pendentes e mantém as Pagas.
-6. ✅ Cancelamento bloqueado por saldo insuficiente (PC7) não altera nenhuma parcela.
-7. ✅ Resumo do dashboard bate com as parcelas pendentes/atrasadas no banco.
-8. ✅ Menu Financeiro mostra Contas a Pagar; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde (150/150) — verificação visual não feita (sem navegador).
+1. Relatório de vendas de um período traz só pedidos daquele período e status, com quantidade, soma e ticket médio batendo com o banco.
+2. Mesmo para compras, com filtro por fornecedor.
+3. Relatório de estoque traz saldo, valor em estoque (saldo × custo) e marcação abaixo do mínimo, batendo com o banco; filtros de categoria e "só abaixo do mínimo" funcionam.
+4. Período inválido (final antes do inicial, ou > 366 dias, ou faltando) retorna 400.
+5. `formato=xlsx` devolve um .xlsx válido com as mesmas linhas e totais do JSON.
+6. `formato=pdf` devolve um PDF válido com título, filtros e totais.
+7. Menu Relatórios com as 3 telas; exportar baixa o arquivo com o nome certo.
+8. `dotnet build` 0 avisos, `dotnet test` verde, `tsc -b`/`oxlint`/`npm run build` limpos.
