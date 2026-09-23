@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos, a maioria dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, e **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada. O **Painel/Dashboard** (etapa 6) fica fora dessa área — resume os outros módulos, não é uma ação comercial.
+O projeto é evoluído por módulos, a maioria dentro da área **Gestão Comercial** do menu: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, e **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos. O **Painel/Dashboard** (etapa 6) fica fora dessa área — resume os outros módulos, não é uma ação comercial.
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -14,7 +14,8 @@ O projeto é evoluído por módulos, a maioria dentro da área **Gestão Comerci
 | 4 | Estoque (movimentações, entrada manual, baixa/estorno automáticos) | Back-end testado de ponta a ponta; tela confirmada pelo Rafael (22/09/2026) |
 | 5 | Contas a Receber (parcelas, vencimento, status de recebimento) | Back-end testado de ponta a ponta; tela não verificada visualmente (22/09/2026) |
 | 6 | Painel/Dashboard (indicadores do mês, fora de Gestão Comercial) | Back-end testado com dados reais; tela não verificada visualmente (22/09/2026) |
-| 7+ | Login | Planejada |
+| 7 | Fornecedores e Pedidos de Compra (entrada automática de estoque, custo atualizado) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
+| 8+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -127,6 +128,19 @@ O projeto é evoluído por módulos, a maioria dentro da área **Gestão Comerci
 - Só leitura — nenhuma ação a partir do Dashboard
 - Fora do escopo por enquanto: seletor de período, estoque mínimo por produto, drill-down/exportação
 
+---
+
+## Funcionalidades (etapa 7 — Fornecedores e Pedidos de Compra)
+
+- **Fornecedor**: mesmo formato do Cliente (nome, CPF/CNPJ, e-mail/telefone opcionais, cidade, UF, ativo); documento **único só entre fornecedores** (um CNPJ já usado por um cliente pode ser cadastrado como fornecedor)
+- **Pedido de compra**: fornecedor (seleção com busca no servidor), itens (produto, quantidade, desconto %), desconto no pedido todo e total calculado pelo servidor — reaproveita a mesma fórmula, status e transições do Pedido de Venda; sem forma de pagamento (não há Contas a Pagar ainda)
+- Preço de cada item nasce do **Custo** do produto (não do preço de venda) e fica congelado, do mesmo jeito que o Pedido de Venda congela o preço de venda
+- **Confirmar** dá **entrada automática no estoque** por item, ligada ao pedido de compra, e **atualiza o Custo do produto** para o preço pago em cada item — mesmo que o custo do produto tenha mudado entre montar o rascunho e confirmar
+- **Cancelar um pedido confirmado** exige saldo suficiente em cada item (o que já foi vendido não pode ser estornado): sem saldo, a API recusa com 400 e nada é alterado; com saldo, gera uma saída de estorno por item
+- Cancelar é **idempotente** (cancelar duas vezes também retorna sucesso), mesmo padrão do Pedido de Venda
+- O extrato de estoque (painel "Movimentações" de um produto) ganhou uma coluna **Origem** (Venda #N / Compra #N / Manual)
+- Fora do escopo por enquanto: forma de pagamento e Contas a Pagar, recebimento parcial de mercadoria (o pedido é recebido inteiro ao confirmar)
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -213,18 +227,22 @@ erp_portifolio/
 │       │   ├── PedidosController.cs         # endpoints REST de pedidos
 │       │   ├── EstoqueController.cs         # endpoints REST de estoque
 │       │   ├── ContasReceberController.cs   # endpoints REST de contas a receber
-│       │   └── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
+│       │   ├── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
+│       │   ├── FornecedoresController.cs    # endpoints REST de fornecedores
+│       │   └── PedidosCompraController.cs   # endpoints REST de pedidos de compra
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
 │       │   ├── Produto.cs                   # entidade (CategoriaId + navegação)
 │       │   ├── Categoria.cs                 # entidade
 │       │   ├── Pedido.cs / PedidoItem.cs    # entidades (itens ligados por FK, preco congelado)
-│       │   ├── StatusPedido.cs              # enum: Rascunho, Confirmado, Cancelado
+│       │   ├── StatusPedido.cs              # enum: Rascunho, Confirmado, Cancelado (reaproveitado por PedidoCompra)
 │       │   ├── FormaPagamento.cs            # enum: Dinheiro, Pix, Boleto, Cartao
-│       │   ├── EstoqueMovimentacao.cs       # entidade (FK produto e pedido opcional)
+│       │   ├── EstoqueMovimentacao.cs       # entidade (FK produto, pedido e pedido de compra, opcionais)
 │       │   ├── TipoMovimentacao.cs          # enum: Entrada, Saida
 │       │   ├── ParcelaReceber.cs            # entidade (FK pedido, vencimento como DateOnly)
-│       │   └── StatusParcela.cs             # enum: Pendente, Recebido, Cancelado
+│       │   ├── StatusParcela.cs             # enum: Pendente, Recebido, Cancelado
+│       │   ├── Fornecedor.cs                # entidade (espelho de Cliente)
+│       │   └── PedidoCompra.cs / PedidoCompraItem.cs  # entidades (espelho de Pedido/PedidoItem, sem forma de pagamento)
 │       ├── DTOs/
 │       │   ├── ClienteCriacaoDto.cs         # entrada do POST
 │       │   ├── ClienteAtualizacaoDto.cs     # entrada do PUT (+ campo ativo opcional)
@@ -251,6 +269,12 @@ erp_portifolio/
 │       │   ├── PedidosPorStatusDto.cs       # contagem por status no mês
 │       │   ├── ContasReceberResumoDto.cs    # saída de /dashboard/contas-receber
 │       │   ├── EstoqueResumoDashboardDto.cs # saída de /dashboard/estoque
+│       │   ├── Fornecedor{Criacao,Atualizacao,Resposta,Filtro}Dto.cs  # mesmo desenho, para fornecedores
+│       │   ├── PedidoCompraCriacaoDto.cs    # entrada do POST/PUT (itens sem preço; sem forma de pagamento)
+│       │   ├── PedidoCompraItemEntradaDto.cs # item do POST/PUT: produtoId, quantidade, desconto
+│       │   ├── PedidoCompraRespostaDto.cs   # saída com itens (preço = custo, subtotal)
+│       │   ├── PedidoCompraResumoDto.cs     # linha da listagem (sem itens)
+│       │   ├── PedidoCompraFiltroDto.cs     # query string da listagem
 │       │   └── Validacoes/
 │       │       ├── DocumentoValidador.cs    # regra de CPF/CNPJ
 │       │       ├── CpfCnpjAttribute.cs      # atributo [CpfCnpj]
@@ -269,12 +293,16 @@ erp_portifolio/
 │       │   ├── ConflitoException.cs         # vira HTTP 409
 │       │   ├── DadoInvalidoException.cs     # campo inválido que só o banco sabe (ex.: categoria inativa) -> HTTP 400
 │       │   ├── IEstoqueService.cs
-│       │   ├── EstoqueService.cs            # saldo, extrato, entrada manual, baixa/estorno (usados pelo PedidoService)
+│       │   ├── EstoqueService.cs            # saldo, extrato, entrada manual, baixa/estorno (venda) e receber/estorno (compra)
 │       │   ├── EstoqueCalculo.cs            # saldo = Σ Entrada − Σ Saída, funcao pura (sem banco)
 │       │   ├── IContasReceberService.cs
 │       │   ├── ContasReceberService.cs      # consulta, receber, gerar/cancelar parcelas (usados pelo PedidoService)
 │       │   ├── ContasReceberCalculo.cs      # divisao em N parcelas (resto na ultima), funcao pura (sem banco)
-│       │   └── DashboardCalculo.cs          # ticket medio e preenchimento de dias, funcao pura (sem banco)
+│       │   ├── DashboardCalculo.cs          # ticket medio e preenchimento de dias, funcao pura (sem banco)
+│       │   ├── IFornecedorService.cs
+│       │   ├── FornecedorService.cs         # regras de negócio + acesso a dados (espelho de ClienteService)
+│       │   ├── IPedidoCompraService.cs
+│       │   └── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       ├── Data/
 │       │   ├── ErpPortfolioDbContext.cs     # mapeamento EF Core (snake_case)
 │       │   └── Migrations/                  # migrations geradas pelo EF Core
@@ -308,14 +336,18 @@ erp_portifolio/
             │   ├── categoriasApi.ts         # chamadas da API de categorias
             │   ├── estoqueApi.ts            # chamadas da API de estoque
             │   ├── contasReceberApi.ts      # chamadas da API de contas a receber
-            │   └── dashboardApi.ts          # chamadas da API do Dashboard (3 endpoints)
+            │   ├── dashboardApi.ts          # chamadas da API do Dashboard (3 endpoints)
+            │   ├── fornecedoresApi.ts       # chamadas da API de fornecedores
+            │   └── pedidosCompraApi.ts      # chamadas da API de pedidos de compra
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
             │   ├── useProdutos.ts
             │   ├── useCategorias.ts         # inclui as categorias ativas do seletor de produtos
             │   ├── useEstoque.ts            # lista com saldo, extrato por produto, entrada manual
             │   ├── useContasReceber.ts      # lista paginada e marcar parcela como recebida
-            │   └── useDashboard.ts          # 3 queries independentes (vendas, contas a receber, estoque)
+            │   ├── useDashboard.ts          # 3 queries independentes (vendas, contas a receber, estoque)
+            │   ├── useFornecedores.ts       # useQuery / useMutation
+            │   └── usePedidosCompra.ts      # useQuery / useMutation de pedidos de compra
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
             │   ├── ClienteFormDrawer.tsx    # painel lateral de inclusão/edição
@@ -342,24 +374,35 @@ erp_portifolio/
             │   ├── CardIndicador.tsx        # card com loading/erro próprios (D7)
             │   ├── GraficoFaturamento.tsx   # gráfico de barras em SVG, sem biblioteca
             │   └── dashboard.css
+            ├── pages/Fornecedores/
+            │   ├── FornecedoresListaPage.tsx  # filtros, tabela, paginação, ações (espelho de Clientes)
+            │   └── FornecedorFormDrawer.tsx   # painel lateral de inclusão/edição
+            ├── pages/PedidosCompra/
+            │   ├── PedidosCompraListaPage.tsx # filtro (número/fornecedor + status), tabela, paginação
+            │   ├── PedidoCompraPage.tsx       # formulário: fornecedor, itens, desconto, resumo, ações
+            │   └── ItensPedidoCompraTabela.tsx # tabela de itens (tela larga) / cartões (celular)
             ├── schemas/
             │   ├── clienteSchema.ts         # schema Zod do formulário de cliente
             │   ├── produtoSchema.ts         # schema Zod do formulário de produto
             │   ├── categoriaSchema.ts       # schema Zod do formulário de categoria
             │   ├── pedidoSchema.ts          # schema Zod do formulário de pedido + conversões form/API
-            │   └── estoqueEntradaSchema.ts  # schema Zod do formulário de entrada de estoque
+            │   ├── estoqueEntradaSchema.ts  # schema Zod do formulário de entrada de estoque
+            │   ├── fornecedorSchema.ts      # schema Zod do formulário de fornecedor
+            │   └── pedidoCompraSchema.ts    # schema Zod do formulário de pedido de compra + conversões form/API
             ├── types/
             │   ├── cliente.ts               # tipos (espelham os DTOs)
             │   ├── produto.ts
             │   ├── categoria.ts
             │   ├── pedido.ts                # inclui PedidoConfirmarEntrada (numeroParcelas, intervaloDias)
-            │   ├── estoque.ts
+            │   ├── estoque.ts               # inclui pedidoCompraId na Movimentacao
             │   ├── contaReceber.ts
             │   ├── dashboard.ts
+            │   ├── fornecedor.ts
+            │   ├── pedidoCompra.ts
             │   └── paginacao.ts             # ResultadoPaginado compartilhado
-            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx  # seleção com busca no servidor (usadas no pedido)
-            ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado
-            ├── hooks/useBuscaCadastros.ts    # busca com debounce para os seletores acima
+            ├── components/SelecaoCliente.tsx / SelecaoProduto.tsx / SelecaoFornecedor.tsx  # seleção com busca no servidor (usadas nos pedidos)
+            ├── components/TagStatusPedido.tsx                      # tag Rascunho/Confirmado/Cancelado (reaproveitada pelo Pedido de Compra)
+            ├── hooks/useBuscaCadastros.ts    # busca com debounce para os seletores acima (clientes, fornecedores, produtos)
             ├── hooks/usePedidos.ts           # useQuery / useMutation de pedidos
             ├── api/pedidosApi.ts             # chamadas da API de pedidos
             └── utils/
@@ -553,6 +596,31 @@ Dashboard:
 | GET | `/dashboard/estoque` | Quantidade de produtos ativos com saldo de estoque ≤ 5 | 200 |
 
 Sem parâmetros — o mês é sempre calculado no servidor (`DateTime.UtcNow`), nunca enviado pelo cliente. Cada rota só delega pro service do módulo de origem (`PedidoService`, `ContasReceberService`, `EstoqueService`); não existe um "DashboardService" com lógica própria.
+
+Fornecedores (mesmo desenho de respostas de Clientes):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/fornecedores?nome=&ufs=&ativo=&pagina=1&tamanhoPagina=10` | Lista paginada, ordenada por nome, com filtros opcionais | 200, 400 |
+| GET | `/fornecedores/{id}` | Obtém um fornecedor | 200, 404 |
+| POST | `/fornecedores` | Cadastra um fornecedor | 201, 400, 409 |
+| PUT | `/fornecedores/{id}` | Edita um fornecedor (inclusive o campo `ativo`) | 200, 400, 404, 409 |
+| PATCH | `/fornecedores/{id}/inativar` | Inativa um fornecedor; repetir a chamada também retorna 204 | 204, 404 |
+
+Documento único **num índice próprio**, independente do de Clientes: o mesmo CPF/CNPJ pode estar cadastrado como cliente e como fornecedor.
+
+Pedidos de Compra (mesmo desenho de Pedidos, sem forma de pagamento nem corpo no confirmar):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/pedidos-compra?busca=&status=&pagina=1&tamanhoPagina=10` | Lista paginada, mais recente primeiro; `busca` procura pelo número (com ou sem `#`) **ou** por trecho do nome do fornecedor | 200, 400 |
+| GET | `/pedidos-compra/{id}` | Obtém um pedido de compra com os itens | 200, 404 |
+| POST | `/pedidos-compra` | Cria um **rascunho** com os itens (preço copiado do **Custo** do produto) | 201, 400 |
+| PUT | `/pedidos-compra/{id}` | Substitui fornecedor, itens e desconto (**só em rascunho**) | 200, 400, 404, 409 |
+| PATCH | `/pedidos-compra/{id}/confirmar` | Rascunho → Confirmado; exige fornecedor/produtos ativos; sem corpo | 200, 400, 404, 409 |
+| PATCH | `/pedidos-compra/{id}/cancelar` | Rascunho ou Confirmado → Cancelado; cancelar duas vezes também retorna 204 | 204, 400, 404 |
+
+Confirmar dá entrada de estoque por item (ligada ao pedido de compra) e **atualiza o `custo` do produto** para o preço pago em cada item — tudo por dentro do `PedidoCompraService`, sem rota própria. Cancelar um pedido que estava Confirmado estorna a entrada (uma saída por item), mas **exige saldo suficiente em cada item**: se o que entrou já foi vendido, a API recusa com **400** no campo `Itens` e não altera nada (diferente do cancelamento de um Pedido de Venda, que nunca falha).
 
 ### Filtros da listagem
 
@@ -762,6 +830,50 @@ Tabela `public.parcelas_receber`:
 
 Índice único `ux_parcelas_receber_pedido_numero (pedido_id, numero_parcela)` e índice `ix_parcelas_receber_vencimento`. Migration: `20260922190422_CriacaoTabelaParcelasReceber` (só cria essa tabela; não altera `pedidos`, `produtos`, `clientes`, `categorias` nem `estoque_movimentacoes`).
 
+Tabela `public.fornecedores` (espelho exato de `public.clientes`):
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_fornecedores`, identity (generated always) |
+| `nome` | varchar(150) | obrigatório, índice `ix_fornecedores_nome` |
+| `documento` | varchar(14) | CPF/CNPJ sem máscara, índice **único** `ix_fornecedores_documento` (próprio, independente do de clientes) |
+| `email` | varchar(150) | opcional |
+| `telefone` | varchar(20) | opcional |
+| `cidade` | varchar(100) | obrigatório |
+| `uf` | char(2) | obrigatório, sempre em maiúsculas |
+| `ativo` | boolean | obrigatório |
+| `data_cadastro` | timestamptz | UTC, padrão `now()` |
+
+Tabela `public.pedidos_compra`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_pedidos_compra`, identity (generated always); também é o **número** do pedido de compra |
+| `fornecedor_id` | integer | obrigatório, FK `fk_pedidos_compra_fornecedores` → `fornecedores.id` (restrict), índice `ix_pedidos_compra_fornecedor_id` |
+| `data_pedido` | timestamptz | UTC, padrão `now()`, índice `ix_pedidos_compra_data_pedido` |
+| `status` | varchar(20) | `Rascunho`, `Confirmado` ou `Cancelado` (mesmo enum `StatusPedido` do Pedido de Venda) |
+| `desconto_percentual` | numeric(5,2) | obrigatório, `CHECK` entre 0 e 100 |
+| `valor_total` | numeric(12,2) | gravado por um único método de recálculo (reaproveita `CalculoPedido`) |
+
+Sem `forma_pagamento`: não há Contas a Pagar ainda.
+
+Tabela `public.pedido_compra_itens`:
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_pedido_compra_itens`, identity (generated always) |
+| `pedido_compra_id` | integer | FK `fk_pedido_compra_itens_pedidos_compra` → `pedidos_compra.id` (**cascade**) |
+| `produto_id` | integer | FK `fk_pedido_compra_itens_produtos` → `produtos.id` (restrict) |
+| `quantidade` | numeric(12,3) | `CHECK` > 0 |
+| `preco_unitario` | numeric(12,2) | **copiado do `custo` do produto** ao adicionar o item; nunca muda depois |
+| `desconto_percentual` | numeric(5,2) | `CHECK` entre 0 e 100 |
+
+Índice único `ux_pedido_compra_itens_pedido_produto (pedido_compra_id, produto_id)`, mesmo reforço de `pedido_itens`.
+
+`public.estoque_movimentacoes` ganhou a coluna `pedido_compra_id` (integer, opcional, FK `fk_estoque_movimentacoes_pedidos_compra` → `pedidos_compra.id` restrict, índice `ix_estoque_movimentacoes_pedido_compra_id`), irmã da `pedido_id` já existente — uma movimentação preenche no máximo uma das duas. O `motivo` automático passa a incluir `"Compra pedido #N"` e `"Estorno cancelamento pedido de compra #N"`.
+
+Migration: `20260923020209_AdicionaFornecedoresEPedidosCompra` (cria as 3 tabelas novas e a coluna em `estoque_movimentacoes`; não altera as demais tabelas).
+
 ---
 
 ## Dados de teste
@@ -852,6 +964,13 @@ Documento **inválido** para testar o erro: `123.456.789-00`.
 | Cada card do Dashboard busca seu próprio endpoint, independente dos outros | Se um indicador falhar, os outros continuam aparecendo; também deixa fácil acrescentar um card novo depois sem mexer nos existentes. |
 | Gráfico de faturamento diário em **SVG desenhado à mão**, sem biblioteca de gráfico | Uma série de ~30 barras não justifica o peso de uma lib inteira (o bundle já tem aviso de chunk grande); segue a skill de dataviz do projeto (mark specs, tooltip acessível). |
 | Saldo baixo de estoque com **limite fixo no código** (`≤ 5`), não um campo por produto | Não existe estoque mínimo cadastrado ainda; trocar por um campo por produto é uma extensão natural quando precisar. |
+| Pedido de Compra reaproveita `StatusPedido`, `TransicoesPedido` e `CalculoPedido` do Pedido de Venda, em vez de duplicar | São funções/enum puros, independentes de qual pedido é — reescrever um paralelo só pra ter um nome diferente seria código a mais sem função. |
+| Documento do Fornecedor único **num índice próprio**, separado do de Clientes | Uma mesma empresa pode ser cliente e fornecedora ao mesmo tempo (CNPJ repetido entre as duas tabelas é esperado). |
+| `EstoqueMovimentacao` ganha `pedido_compra_id` **ao lado** de `pedido_id` (não reaproveita a mesma coluna) | São FKs para tabelas diferentes (`pedidos` vs. `pedidos_compra`); uma movimentação preenche no máximo uma das duas. |
+| Confirmar o Pedido de Compra **não checa saldo** ao dar entrada, mas **cancelar checa saldo antes de estornar** | Uma compra sempre pode entrar no estoque; o risco é o oposto — estornar uma entrada cujo saldo já foi consumido por uma venda deixaria o saldo errado. |
+| Preço do item do Pedido de Compra = `Custo` do produto (não `PrecoVenda`), e confirmar **sobrescreve** o `Custo` do produto com o preço congelado no item | Mantém o custo do produto sempre no valor da última compra, mesmo que ele tenha sido editado manualmente entre montar o rascunho e confirmar. |
+| `Produto.Custo` **não volta** ao valor anterior quando um Pedido de Compra é cancelado | Reverter exigiria guardar o custo anterior por item, e o valor "correto" fica ambíguo se houve outra compra no meio; aceito como limite conhecido. |
+| `SelecaoProduto` ganhou a prop `campoPreco` (`'precoVenda' \| 'custo'`) em vez de um componente novo | Mostrar o preço de venda ao montar uma compra seria enganoso; era uma diferença pequena o bastante pra estender o componente existente. |
 
 ---
 
@@ -1020,6 +1139,26 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (15
 
 **Limitação desta rodada:** mesma situação dos módulos anteriores — sem ferramenta de navegador/Playwright nesta sessão, a tela (cards, gráfico, item de menu "Painel") **não foi verificada visualmente**. Os três endpoints foram validados com dados reais e casos de borda isolados, mas ninguém abriu `/` no navegador. Recomenda-se um teste manual.
 
+### Fornecedores e Pedidos de Compra (23/09/2026)
+
+Back-end testado ponta a ponta numa instância local da API (porta 5065), com fornecedor/produto/cliente de teste (`ZZT…`) e dois pedidos de compra + um pedido de venda de apoio, todos apagados via SQL ao final (não há endpoint de exclusão física para nenhum dos dois cadastros, mesmo padrão de Cliente/Produto).
+
+| Verificação | Resultado |
+|---|---|
+| CRUD de Fornecedor: criar, obter, documento duplicado (409), editar, listar com filtro por nome, inativar (204, `ativo=false`) | ✅ |
+| Item do Pedido de Compra nasce com `precoUnitario` = `Custo` atual do produto | ✅ |
+| Confirmar: gera Entrada de estoque por item ligada ao pedido (`"Compra pedido #N"`, `pedidoCompraId` preenchido), saldo sobe, e **atualiza o `Custo` do produto** para o preço congelado no item — testado simulando uma mudança de custo entre montar o item e confirmar (custo mudou pra 15, confirmar voltou pra 10, o preço do item) | ✅ |
+| Confirmar com fornecedor inativo, depois com produto inativo (fornecedor reativado) | 400 no campo certo nos dois casos (`FornecedorId` / `Itens`), pedido continua Rascunho | ✅ |
+| Cancelar um Confirmado com saldo intacto: gera Saída de estorno por item (`"Estorno cancelamento pedido de compra #N"`), saldo volta a 0 | ✅ |
+| Cancelar duas vezes o mesmo pedido: idempotente (204 nas duas, sem duplicar movimentação) | ✅ |
+| **Caso novo (PC7):** confirmar uma segunda compra (saldo 5), vender 3 unidades num Pedido de Venda confirmado (saldo fica 2), tentar cancelar a compra → **400** ("Estoque insuficiente para estornar: ... saldo 2,000, a compra tinha entrado com 5,000"), saldo e status do pedido de compra **inalterados** | ✅ |
+| Extrato de estoque (`GET /estoque/{id}/movimentacoes`) traz `pedidoCompraId` no formato esperado pelo tipo do front | ✅ |
+| Nenhum registro real alterado pelos testes; todos os dados de teste (fornecedor, produto, cliente, 2 pedidos de compra, 1 pedido de venda + parcela) apagados via SQL ao final | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (150 aprovados — o projeto não tem xUnit tocando o `DbContext`, só lógica pura; a regra de negócio do Pedido de Compra foi verificada pelo E2E acima, mesmo padrão do `PedidoService`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros (bundle sem crescer — nenhuma dependência nova).
+
+**Limitação desta rodada:** mesma situação dos módulos anteriores — sem ferramenta de navegador/Playwright nesta sessão, as telas de Fornecedores e Pedidos de Compra (listas, drawer, formulário, celular) **não foram verificadas visualmente**. O back-end foi testado de ponta a ponta contra a API real, e o código das telas segue exatamente os mesmos padrões já usados (e já confirmados funcionando) nos módulos de Clientes e Pedidos. Recomenda-se um teste manual: cadastrar um fornecedor, montar um pedido de compra, confirmar e ver a entrada aparecer no extrato de estoque com "Compra #N" e o custo do produto atualizado.
+
 ---
 
 ## Padrões do projeto
@@ -1106,11 +1245,13 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
 - Filtro por **cliente** e por **faixa de data** na lista de Pedidos
 - Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
-- Verificação visual/Playwright da tela de Contas a Receber e do Dashboard (cards, gráfico, modal de confirmar com parcelas, celular) — não feita na sessão que construiu os módulos
-- Saída manual de estoque (perda/quebra/ajuste); fornecedores e pedido de compra; estoque mínimo/alerta de ruptura (usado também pelo card "saldo baixo" do Dashboard)
-- Recebimento parcial de parcela, juros/multa por atraso, edição de parcela já gerada; contas a pagar
+- Verificação visual/Playwright da tela de Contas a Receber, do Dashboard e das telas novas de Fornecedores/Pedidos de Compra (cards, gráfico, modal de confirmar com parcelas, formulários, celular) — não feita nas sessões que construíram os módulos
+- Saída manual de estoque (perda/quebra/ajuste)
+- Recebimento parcial de parcela, juros/multa por atraso, edição de parcela já gerada
+- **Contas a Pagar**, e então forma de pagamento no Pedido de Compra (mesmo caminho que Pedidos → Contas a Receber)
+- Recebimento parcial de mercadoria no Pedido de Compra (hoje é recebido inteiro ao confirmar)
 - Seletor de período no Dashboard (hoje é sempre o mês atual)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
 - **Autenticação/login**
-- Testes automatizados de integração para a API de Clientes/Produtos/Categorias (Pedidos, Estoque, Contas a Receber e Dashboard já têm testes unitários e/ou scripts de ponta a ponta)
+- Testes automatizados de integração para a API de Clientes/Produtos/Categorias/Fornecedores (Pedidos, Estoque, Contas a Receber, Dashboard e Pedidos de Compra já têm testes unitários e/ou scripts de ponta a ponta)

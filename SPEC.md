@@ -1,6 +1,6 @@
 # Spec: Módulo Fornecedores + Pedidos de Compra (etapa 7)
 
-> Status: **rascunho, aguardando aprovação do Rafael** para virar plano/tarefas. Nenhum código foi escrito ainda.
+> Status: **implementada e testada em 23/09/2026** (T1 a T8 do plano, ver `tasks/todo.md`). Os 8 critérios de sucesso abaixo foram conferidos um a um contra a API real, com dados de teste isolados (apagados ao final) e os dados reais intactos. Backend testado de ponta a ponta; **sem verificação visual/Playwright** das telas de Fornecedores e Pedidos de Compra — sem ferramenta de navegador disponível nesta sessão.
 
 ## Objetivo
 
@@ -155,16 +155,16 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS, nom
 
 ## Success criteria (testáveis)
 
-A conferir um a um ao final da implementação, com `dotnet build -c Release` (0 avisos), `dotnet test`, `tsc -b`/`oxlint` limpos e `npm run build`.
+Conferidos um a um em 23/09/2026 contra a API real (instância local, dados de teste `ZZT…` apagados ao final; dados reais intactos), com `dotnet build -c Release` (0 avisos), `dotnet test` (150/150), `tsc -b`/`oxlint` limpos e `npm run build` (bundle sem crescer).
 
-1. Cadastrar, editar e inativar um fornecedor funciona igual ao Cliente, com documento único **só entre fornecedores** (um CNPJ já usado por um cliente pode ser cadastrado como fornecedor).
-2. Criar um pedido de compra em rascunho com 1+ itens; o preço de cada item nasce igual ao `Custo` atual do produto e é editável enquanto rascunho.
-3. Confirmar um pedido de compra: gera uma Entrada de estoque por item ligada ao pedido (visível no extrato como "Compra #N"), o saldo do produto sobe, e `Produto.Custo` passa a ser o preço pago no item.
-4. Confirmar com fornecedor ou algum produto inativo é bloqueado (400), sem gravar nada.
-5. Cancelar um pedido confirmado com saldo intacto: gera Saída de estorno por item, saldo volta ao valor de antes da compra.
-6. Cancelar um pedido confirmado cujo saldo já foi parcialmente consumido (por uma venda, por exemplo) é bloqueado (400), sem gravar nada e sem mexer no saldo.
-7. Cancelar duas vezes o mesmo pedido é idempotente (a segunda chamada também retorna sucesso, sem gerar movimentação duplicada).
-8. Menu e rotas novas (Fornecedores, Pedidos de Compra) funcionam e não quebram nenhuma rota existente.
+1. ✅ Cadastrar, editar e inativar um fornecedor funciona igual ao Cliente, com documento único **só entre fornecedores** — testado: criar, obter, documento duplicado (409), editar, listar com filtro, inativar (204, `ativo=false`).
+2. ✅ Criar um pedido de compra em rascunho com 1+ itens; o preço de cada item nasce igual ao `Custo` atual do produto e é editável enquanto rascunho — confirmado com item nascendo em R$ 10,00 (custo do produto de teste).
+3. ✅ Confirmar um pedido de compra: gera uma Entrada de estoque por item ligada ao pedido (visível no extrato como "Compra #N"), o saldo do produto sobe, e `Produto.Custo` passa a ser o preço pago no item — testado simulando uma mudança de custo (10 → 15) entre montar o item e confirmar: confirmar devolveu o custo para 10 (o preço congelado no item), não manteve o 15.
+4. ✅ Confirmar com fornecedor ou algum produto inativo é bloqueado (400), sem gravar nada — testado nos dois casos separadamente (400 em `FornecedorId` e em `Itens`), pedido permaneceu Rascunho.
+5. ✅ Cancelar um pedido confirmado com saldo intacto: gera Saída de estorno por item, saldo volta ao valor de antes da compra.
+6. ✅ Cancelar um pedido confirmado cujo saldo já foi parcialmente consumido (por uma venda, por exemplo) é bloqueado (400), sem gravar nada e sem mexer no saldo — testado vendendo 3 de um saldo de 5 e tentando cancelar a compra: bloqueado com a mensagem do saldo insuficiente, saldo e status inalterados.
+7. ✅ Cancelar duas vezes o mesmo pedido é idempotente (a segunda chamada também retorna sucesso, sem gerar movimentação duplicada).
+8. ✅ Menu e rotas novas (Fornecedores, Pedidos de Compra) funcionam e não quebram nenhuma rota existente — `tsc -b`/`oxlint`/`npm run build` limpos; verificação visual/Playwright não feita nesta sessão (sem navegador disponível).
 
 ## Open questions
 

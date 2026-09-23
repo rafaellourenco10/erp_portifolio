@@ -77,13 +77,14 @@
 
 ## Fase 4: Fechamento
 
-- [ ] **T8: README, graphify e verificação final** (S)
+- [x] **T8: README, graphify e verificação final** (S) — *concluída em 23/09/2026*
   - Descrição: README ganha a seção "etapa 7 — Fornecedores e Pedidos de Compra"; tabela de etapas atualizada (Login vira etapa 8+); `SPEC.md` marcada como implementada; graphify atualizado (`graphify update .`, AST-only — nenhum doc/imagem mudou além de SPEC.md/README.md, que entram na próxima extração semântica).
   - Aceite: os **8 critérios de sucesso** da spec conferidos um a um; registros reais intactos; dados de teste apagados.
   - Verificar: `dotnet build`, `dotnet test`, `tsc`, `oxlint`, `npm run build`, E2E completo, `git status` revisado (sem segredos).
+  - Resultado: README ganhou a seção "etapa 7" (funcionalidades, 2 tabelas de endpoints novas, 3 tabelas novas no banco de dados, 8 decisões técnicas novas, estrutura de pastas atualizada, seção "Testes realizados" com o E2E completo, "Próximas etapas" limpa dos itens já entregues). `SPEC.md` marcada como implementada, 8 critérios conferidos com evidência — inclusive o critério 4 (confirmar com fornecedor/produto inativo bloqueado), testado nesta tarefa depois de perceber que ainda não tinha sido coberto isoladamente. Docker Desktop e o container do Postgres precisaram ser religados no início desta tarefa (tinham caído entre a sessão anterior e esta). Verificação final: `dotnet build -c Release` 0 avisos, `dotnet test` 150/150, `tsc -b`/`oxlint` limpos, `git status` revisado (só `README.md`/`SPEC.md`, sem segredos).
   - Dependências: T7.
   - Arquivos: `README.md`, `SPEC.md`.
 
 ### Checkpoint 4: pronto
-- [ ] Todos os critérios da spec atendidos
-- [ ] Commitado (autorização geral do Rafael, 22/09/2026)
+- [x] Todos os critérios da spec atendidos (com a ressalva de verificação visual documentada acima)
+- [x] Commitado (autorização geral do Rafael, 22/09/2026)
