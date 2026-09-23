@@ -1,55 +1,58 @@
-# Plano de implementação: Módulo Dashboard (etapa 6)
+# Plano de implementação: Módulo Fornecedores + Pedidos de Compra (etapa 7)
 
-> Origem: [SPEC.md](../SPEC.md) (aprovada em 22/09/2026). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **aguardando revisão do Rafael**. Nenhum código foi escrito.
+> Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
+> Status: **autorizado a implementar tudo e commitar a cada tarefa, sem pausar para revisão** (autorização do Rafael, 22/09/2026 — mesmo padrão usado no fechamento do módulo Pedidos).
 
 ## Visão geral
 
-Entregar o Dashboard em **8 tarefas pequenas**. Diferente dos módulos anteriores, **não há banco novo**: o módulo só lê dados que já existem (Pedidos, Estoque, Contas a Receber). A ordem: os três endpoints de resumo (um por módulo de origem, reaproveitando os serviços existentes), depois a tela.
+8 tarefas. A ideia central da spec é **reaproveitar** o que já existe (`StatusPedido`, `TransicoesPedido`, `CalculoPedido`, o padrão do Cliente) em vez de duplicar — então o volume de código novo de verdade é: 1 migration, 2 métodos novos no `EstoqueService`, e os CRUDs/telas espelhados.
 
 ## Grafo de dependências
 
 ```
-T1 Resumo de vendas (PedidoService) + xUnit ─┐
-T2 Resumo de contas a receber (ContasReceberService) ─┼─► CP1: API pronta
-T3 Resumo de estoque (EstoqueService) ─────────────────┘
-                                                              │
-T4 DashboardController (3 endpoints)  ◄──────────────────────┘
-                                                              │
-T5 Base do front + cards de número ─► T6 Gráfico de faturamento diário ─► T7 Menu "Painel" + rota inicial ─► T8 Fechamento
+T1 Migration + Models (Fornecedor, PedidoCompra, PedidoCompraItem, +coluna) ──┐
+                                                                                 ├─► T3 EstoqueService: Receber/EstornarCompra
+T2 Fornecedor backend (DTOs, Service, Controller) ◄─── T1 ─────────────────────┘
+                                                                                       │
+                                                                    T4 PedidoCompra backend (Service, Controller) ◄─┘
+                                                                                       │
+                                                                          CP1: API pronta
+                                                                                       │
+              T5 Tela Fornecedores ──┐
+                                       ├─► T7 Estoque mostra "Compra #N" ─► T8 Fechamento
+              T6 Tela Pedidos de Compra ─┘
 ```
 
-**Pode andar em paralelo:** T1, T2 e T3 entre si (cada um só toca o service do seu próprio módulo, sem dependência entre eles). **Precisa ser sequencial:** T1-T3 → T4 (o controller precisa dos três métodos prontos).
+**Sequencial:** T1 → T2/T3 → T4 → (T5, T6 podem andar em paralelo) → T7 → T8.
 
 ## Decisões de arquitetura (além das da spec)
 
 | Decisão | Motivo |
 |---|---|
-| **Sem `DashboardService` novo** — o método de resumo entra no service que já existe de cada módulo | O Dashboard não tem regra de negócio própria, só agrega o que os services já sabem calcular; criar um serviço novo só para orquestrar seria uma camada a mais sem função. |
-| **`DashboardController` só delega**, sem lógica | Os três endpoints chamam um método cada, sem juntar nada — mantém os cards independentes (D7) de verdade, não só na tela. |
-| Faturamento diário preenche **todos os dias do mês**, mesmo sem venda (0) | Um gráfico de linha com buraco (dia faltando) é enganoso; melhor mostrar zero explícito. |
-| Biblioteca de gráfico: decidir na T6, olhando a skill de dataviz do projeto antes de escrever qualquer código de gráfico | Já autorizado pela spec como a única dependência nova permitida sem perguntar de novo. |
-| Rota inicial (`/`) e item de menu fora de "Gestão Comercial" | Dashboard resume módulos, não é uma ação comercial — mesmo raciocínio discutido com o Rafael antes de especificar. |
-| Dados de teste isolados (produto/cliente/pedidos `ZZT…`) para os testes de API, apagados ao final | Mesmo padrão dos módulos anteriores; aqui é ainda mais importante porque os números do Dashboard são somas — um dado de teste esquecido distorceria o card na tela real. |
+| **Uma migration só**, cobrindo as 4 mudanças de schema (2 tabelas novas + 1 coluna) | É uma feature coesa; várias migrations pequenas para a mesma entrega não ganham nada. |
+| **Sem `IPedidoCompraService` duplicando `TransicoesPedido`/`CalculoPedido`** | Já são funções puras independentes de `Pedido`; a spec já decidiu reaproveitar (ver "Decisões já tomadas"). |
+| **Sem testes xUnit para Fornecedor** (só verificação manual via API real) | Mesmo padrão do Cliente, que também não tem xUnit dedicado (README: "Testes automatizados de integração para a API de Clientes... ainda pendente") — CRUD simples, sem regra de negócio própria. |
+| **xUnit só para `PedidoCompraService`** (confirmar/cancelar/custo/saldo insuficiente) | É onde mora a regra de negócio nova de verdade (PC5-PC8); mesmo padrão do `PedidoService`. |
+| Ícones do menu: Fornecedores = `ShopOutlined`, Pedidos de Compra = `ShoppingOutlined` | Distintos dos já usados (`TeamOutlined` Clientes, `ShoppingCartOutlined` Pedidos), decidido na T5/T6. |
 
 ## Fases e checkpoints
 
 | Fase | Tarefas | Entrega |
 |---|---|---|
-| 1. Resumos por módulo | T1, T2, T3 | Três métodos de resumo, testados por xUnit e/ou E2E |
-| 2. API | T4 | `DashboardController` com os 3 endpoints, verificado por E2E |
-| 3. Tela | T5, T6, T7 | Cards, gráfico, menu/rota — Dashboard como página inicial |
+| 1. Schema | T1 | Migration aplicada, models mapeados |
+| 2. Backend | T2, T3, T4 | Fornecedores + Pedidos de Compra completos na API, testados (xUnit + E2E real) |
+| 3. Frontend | T5, T6, T7 | Telas novas + extrato de estoque atualizado |
 | 4. Fechamento | T8 | README, graphify, critérios da spec conferidos |
 
-**Checkpoints:** **CP1** após T4 (API pronta), **CP2** após T7 (tela pronta), **CP3** ao final.
+**Checkpoints:** **CP1** após T4 (API pronta), **CP2** ao final (T8).
 
 ## Riscos e mitigações
 
 | Risco | Impacto | Mitigação |
 |---|---|---|
-| Ticket médio dividindo por zero quando não há pedido confirmado no mês | Médio (erro 500 na tela) | Testado explicitamente em T1 (0 confirmados → ticket médio 0) |
-| Faturamento diário com buraco no gráfico (dia sem venda simplesmente ausente) | Baixo (visual enganoso) | Preencher todos os dias do mês com 0 antes de agrupar (D4), testado em T1 |
-| Mudar a rota `*` para `/` quebrar algum link direto que hoje espera `/clientes` | Baixo (portfólio, sem usuário externo) | Só a rota **desconhecida** muda de destino; todas as rotas existentes (`/clientes`, `/produtos` etc.) continuam iguais |
+| Cancelar um pedido de compra confirmado cujo saldo já foi parcialmente vendido | Médio (estornaria estoque inexistente, saldo ficaria negativo sem querer) | PC7: checar saldo suficiente por item ANTES de enfileirar qualquer estorno; testado em T4 |
+| `Produto.Custo` sendo sobrescrito por engano em pedido ainda rascunho | Baixo | Custo só é escrito em `ConfirmarAsync`, nunca em `CriarAsync`/`AtualizarAsync` |
+| Confundir `PedidoId` (venda) com `PedidoCompraId` (compra) na mesma movimentação | Médio (dado errado no extrato) | Uma movimentação preenche só uma FK das duas; `NovaMovimentacaoCompra` isolado do `NovaMovimentacao` de venda |
 
 ## Comandos de verificação (usados em todas as tarefas)
 

@@ -1,76 +1,104 @@
-# Spec: Módulo Dashboard (etapa 6)
+# Spec: Módulo Fornecedores + Pedidos de Compra (etapa 7)
 
-> Status: **implementada e testada em 22/09/2026** (T1 a T8 do plano, ver `tasks/todo.md`). Os 8 critérios de sucesso abaixo foram conferidos um a um contra o código atual, com dados reais e casos de borda isolados. A tela foi verificada por revisão de código (tipos, lint, build), **sem verificação visual/Playwright** — sem ferramenta de navegador disponível nesta sessão. Ao mudar uma decisão depois disso, atualize esta spec **antes** do código.
+> Status: **rascunho, aguardando aprovação do Rafael** para virar plano/tarefas. Nenhum código foi escrito ainda.
 
 ## Objetivo
 
-Tela inicial com indicadores agregados de Pedidos, Estoque e Contas a Receber, para responder "como estou indo" sem precisar abrir cada módulo.
+Cadastro de Fornecedores e um Pedido de Compra (fornecedor + itens) que, ao ser confirmado, dá entrada automática no estoque e atualiza o custo dos produtos comprados — fechando o lado "compra" do estoque, que hoje só tem entrada manual.
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** Pedidos, Estoque e Contas a Receber existem e têm dado real; antes disso o Dashboard só mostraria número fictício.
-- **Sucesso:** abrir o Dashboard mostra faturamento e ticket médio do mês, pedidos por status, contas a receber pendentes/atrasadas e produtos com saldo baixo, tudo batendo com o que aparece nos módulos de origem.
+- **Por que agora:** combinado com o Rafael em 22/09/2026, como a etapa depois do Dashboard; Estoque e Produtos (com campo `Custo`) já existem e sustentam o módulo.
+- **Sucesso:** cadastrar um fornecedor, montar um pedido de compra com itens, confirmar dá entrada de estoque por item (ligada ao pedido) e atualiza o custo dos produtos comprados; cancelar um pedido confirmado estorna a entrada (vira saída), bloqueando se o saldo já foi consumido.
 
 ### Dentro do escopo
-Cards de indicador (faturamento do mês, ticket médio, pedidos por status, contas a receber pendente/atrasado, produtos com saldo baixo) e um gráfico de faturamento diário do mês atual. Só leitura — nenhuma ação a partir do Dashboard.
+CRUD de Fornecedor (mesmos campos e validações do Cliente). Pedido de Compra: cabeçalho (fornecedor, status Rascunho/Confirmado/Cancelado, desconto) + itens (produto, quantidade, preço unitário = custo do produto, desconto do item), total calculado no servidor — reaproveitando a mesma fórmula do Pedido de Venda. Confirmar dá entrada em estoque e atualiza `Produto.Custo`. Extrato de estoque passa a mostrar também a origem "compra" (hoje só mostra "venda").
 
 ### Fora do escopo (entram depois)
-Seletor de período (o mês é sempre o atual), drill-down/exportação, estoque mínimo configurável por produto (o limite de "saldo baixo" é fixo no código por enquanto), cache/agregação pré-calculada (tudo é consulta direta, sem tabela nova).
+**Forma de pagamento e Contas a Pagar** — o pedido de compra não tem forma de pagamento nem gera parcela; isso só faz sentido quando existir um módulo de Contas a Pagar (mesmo raciocínio do Pedido de Venda com Contas a Receber, que veio numa etapa depois). Edição do pedido depois de confirmado. Recebimento parcial de mercadoria (o pedido é recebido inteiro, de uma vez, ao confirmar). Reverter `Produto.Custo` ao cancelar um pedido de compra (o custo fica com o último valor pago; ver PC7).
 
 ## Decisões já tomadas (com o Rafael, 22/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Indicadores da v1 | Faturamento + ticket médio, pedidos por status, contas a receber pendente/atrasado, produtos com saldo baixo de estoque. |
-| Período | **Mês atual, fixo** — sem seletor de data nesta versão. |
-| Contas a receber no Dashboard | Mostra o **saldo em aberto agora** (não filtrado por mês) — parcelas vencem em datas futuras variadas, filtrar por "mês da venda" não faz sentido para elas. |
-| Visual | Cards de número **+ 1 gráfico**: faturamento diário do mês atual (linha/barra). |
-| Saldo baixo de estoque | Limite **fixo no código** (`saldo ≤ 5`), igual para todos os produtos — não existe estoque mínimo por produto hoje. |
-| Arquitetura dos cards | Cada card **independente**: se um indicador falhar, os outros continuam aparecendo. Endpoints agrupados por módulo de origem (Pedidos, Estoque, Contas a Receber), não um endpoint único. |
+| Campos do Fornecedor | Mesmo padrão do Cliente: Nome, Documento (CPF/CNPJ), Email opcional, Telefone opcional, Cidade, UF, Ativo. |
+| Entrada em estoque | Confirmar o Pedido de Compra dá entrada automática por item, ligada ao pedido de compra (mesma ideia da saída automática do Pedido de Venda). |
+| Preço do item | Nasce com o `Custo` atual do produto (editável no rascunho); confirmar atualiza `Produto.Custo` com o valor pago em cada item — mantém o custo sempre no preço da última compra. |
+| Status do pedido | Reaproveita o mesmo enum e as mesmas regras de transição do Pedido de Venda (`StatusPedido`, `TransicoesPedido`) — não é um fluxo diferente, só um cabeçalho diferente. |
+| Cálculo do total | Reaproveita `CalculoPedido` (mesma fórmula de subtotal/total/desconto do Pedido de Venda) — por isso o Pedido de Compra também tem desconto por item e por pedido, mesmo sem ser um requisito novo: é o preço de reusar o cálculo já testado em vez de escrever um paralelo. |
 
 ## Regras de negócio
 
+### Fornecedor (F)
+
 | # | Regra |
 |---|---|
-| D1 | "Faturamento do mês" = soma de `valorTotal` dos pedidos **Confirmados** com `dataPedido` no mês/ano atual (UTC). Pedidos Rascunho e Cancelado não entram. |
-| D2 | "Ticket médio" = faturamento do mês ÷ quantidade de pedidos Confirmados no mês; `0` se não houver nenhum. |
-| D3 | "Pedidos por status" conta **todos** os pedidos (qualquer status) com `dataPedido` no mês atual, agrupados por status. |
-| D4 | "Faturamento diário" = faturamento (D1) agrupado por dia do mês atual, um ponto por dia (dias sem venda confirmada entram com 0, para o gráfico não ter buracos). |
-| D5 | "Contas a receber pendente" = soma de `valor` das parcelas com status `Pendente` (todas, não só do mês); "atrasado" = subconjunto com `vencimento` no passado (mesmo cálculo do módulo de Contas a Receber). |
-| D6 | "Saldo baixo de estoque" = quantidade de produtos **ativos** cujo saldo (Σ Entrada − Σ Saída) é **≤ 5** (constante `LimiteSaldoBaixo`). |
-| D7 | Cada indicador vem de um endpoint próprio, agrupado por módulo de origem; a tela busca os três em paralelo e mostra cada card assim que a resposta dele chega (não espera todos). |
+| F1 | Mesmos campos e validações do Cliente: Nome (3-150), Documento (CPF/CNPJ, com ou sem máscara), Email opcional, Telefone opcional, Cidade (2-100), UF (sigla válida). |
+| F2 | Documento único **entre fornecedores** (índice próprio, independente do de clientes — um mesmo CNPJ pode ser cliente e fornecedor). Conflito com fornecedor ativo bloqueia; conflito com inativo sugere reativar (mesma mensagem do Cliente). |
+| F3 | Inativar não apaga; só bloqueia novo pedido de compra para esse fornecedor (mesma regra do Cliente/Pedido). |
+
+### Pedido de Compra (PC)
+
+| # | Regra |
+|---|---|
+| PC1 | Rascunho → pode editar, confirmar e cancelar. Confirmado → só cancelar. Cancelado → nada (estado final). Reaproveita `TransicoesPedido`. |
+| PC2 | Preço do item = `Custo` do produto no momento em que o item é adicionado; fica congelado no item, editável enquanto o pedido é rascunho. |
+| PC3 | Total = mesma fórmula do Pedido de Venda (soma dos subtotais com desconto do item, menos desconto do pedido), via `CalculoPedido`. |
+| PC4 | 1 a 100 itens, produto não repetido no mesmo pedido, descontos de 0 a 100 com até 2 casas — mesmas regras do Pedido de Venda (R4/R8). |
+| PC5 | Confirmar exige fornecedor ativo e todos os produtos do pedido ativos (sem exigir forma de pagamento, que não existe aqui). |
+| PC6 | Confirmar gera uma **Entrada** de estoque por item, ligada ao pedido de compra (`EstoqueMovimentacao.PedidoCompraId`), com motivo `"Compra pedido #N"`; e atualiza `Produto.Custo` de cada produto do pedido para o preço pago no item. |
+| PC7 | Cancelar um pedido que estava Confirmado exige saldo suficiente em **cada item** (o que já foi vendido/consumido não pode ser estornado) — senão bloqueia o cancelamento com a lista dos itens sem saldo; se passar, gera uma **Saída** de estorno por item, ligada ao pedido de compra, motivo `"Estorno cancelamento pedido de compra #N"`. O `Produto.Custo` não volta ao valor anterior (reverter seria ambíguo se houve outra compra depois). |
+| PC8 | Cancelar um pedido que já está Cancelado é sucesso (idempotente), igual ao Pedido de Venda (R7). |
 
 ## Tech stack
 
-Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query no front. **Nenhuma dependência nova**: o gráfico de faturamento diário (T6) foi feito em SVG desenhado à mão — uma série de ~30 barras não justifica o peso de uma biblioteca inteira de gráficos (o bundle já tem aviso de chunk grande). Segue a skill de dataviz do projeto (mark specs, hover por barra, cor única por ser 1 série só).
+Igual aos módulos anteriores: ASP.NET Core (.NET 10) + EF Core + PostgreSQL 18 no back; React 19 + Vite + TypeScript + Ant Design 6 + TanStack Query no front. Nenhuma dependência nova.
 
 ## Modelo de dados
 
-**Nenhuma tabela nova.** Tudo consulta agregada sobre `pedidos`, `parcelas_receber`, `produtos` e `estoque_movimentacoes` já existentes.
+Duas tabelas novas + uma coluna nova:
+
+- **`public.fornecedores`** — id, nome, documento, email, telefone, cidade, uf, ativo, data_cadastro. Índice único `ix_fornecedores_documento`. Espelho exato de `public.clientes`.
+- **`public.pedidos_compra`** — id, fornecedor_id (FK → fornecedores), data_pedido, status, desconto_percentual, valor_total. Espelho de `public.pedidos`, sem `forma_pagamento`.
+- **`public.pedido_compra_itens`** — id, pedido_compra_id (FK → pedidos_compra), produto_id (FK → produtos), quantidade, preco_unitario, desconto_percentual. Índice único `(pedido_compra_id, produto_id)`, espelho de `pedido_itens`.
+- **`public.estoque_movimentacoes`** ganha a coluna **`pedido_compra_id`** (nullable, FK → pedidos_compra), irmã da `pedido_id` já existente. Uma movimentação tem no máximo uma das duas preenchidas (nunca as duas).
 
 ## API
 
-Três endpoints pequenos, um por módulo de origem, sem controller/service novo — cada método entra no service que já existe (`PedidoService`, `ContasReceberService`, `EstoqueService`), atrás de um `DashboardController` fino que só delega:
+Fornecedores — espelho exato de `/api/clientes`:
 
-| Método | Rota | Descrição | Respostas |
-|---|---|---|---|
-| GET | `/dashboard/vendas` | Faturamento do mês, ticket médio, pedidos por status, faturamento diário (D1-D4) | 200 |
-| GET | `/dashboard/contas-receber` | Total e quantidade pendente/atrasado (D5) | 200 |
-| GET | `/dashboard/estoque` | Quantidade de produtos com saldo baixo (D6) | 200 |
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/fornecedores` | Listagem paginada (filtros: nome, UFs, ativo) |
+| GET | `/api/fornecedores/{id}` | Consulta por id |
+| POST | `/api/fornecedores` | Inclusão |
+| PUT | `/api/fornecedores/{id}` | Edição |
+| PATCH | `/api/fornecedores/{id}/inativar` | Inativação |
 
-Sem parâmetros (mês atual é sempre calculado no servidor, `DateTime.UtcNow`). Sem entrada do cliente, sem erro de validação esperado.
+Pedidos de Compra — espelho de `/api/pedidos`, sem o corpo de confirmar (não há parcelas):
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/pedidos-compra` | Listagem paginada (filtros: busca por número/fornecedor, status) |
+| GET | `/api/pedidos-compra/{id}` | Consulta por id, com fornecedor e itens |
+| POST | `/api/pedidos-compra` | Cria um rascunho |
+| PUT | `/api/pedidos-compra/{id}` | Edita o rascunho (fornecedor, itens, desconto) |
+| PATCH | `/api/pedidos-compra/{id}/confirmar` | Rascunho → Confirmado (PC5/PC6); sem corpo |
+| PATCH | `/api/pedidos-compra/{id}/cancelar` | Rascunho/Confirmado → Cancelado (PC7/PC8) |
+
+`MovimentacaoRespostaDto` (extrato de estoque) ganha o campo `pedidoCompraId`, ao lado do `pedidoId` já existente.
 
 ## Telas
 
-- **`/` (nova rota inicial)** — item **Painel** no menu, **fora** da seção "Gestão Comercial" (fica no topo, sozinho — é um resumo entre módulos, não uma ação comercial). A rota desconhecida (`*`) passa a cair em `/` em vez de `/clientes`.
-- Grid de cards: Faturamento do mês, Ticket médio, Pedidos por status (3 números: Rascunho/Confirmado/Cancelado), Contas a receber pendente (com o atrasado destacado), Produtos com saldo baixo.
-- Gráfico de faturamento diário do mês, abaixo dos cards.
-- Cada card mostra seu próprio loading/erro (D7) — um indicador falhando não derruba a tela inteira.
+- **`/fornecedores`** — lista + drawer de cadastro/edição, espelho de `/clientes`. Item **Fornecedores** no menu, logo depois de Clientes, dentro de "Gestão Comercial".
+- **`/pedidos-compra`**, **`/pedidos-compra/novo`**, **`/pedidos-compra/:id`** — lista + formulário com tabela de itens, espelho de `/pedidos`. Item **Pedidos de Compra** no menu, logo depois de Pedidos.
+- **Estoque**: o extrato de movimentações passa a exibir "Compra #N" para as linhas com `pedidoCompraId`, do mesmo jeito que já exibe "Venda #N" para `pedidoId`.
 
 ## Commands
 
 ```
 # Backend (na raiz)
 dotnet build ErpPortfolio.slnx -c Release
+dotnet ef migrations add NomeDaMigration --project backend/ErpPortfolio.Api
 dotnet run --project backend/ErpPortfolio.Api --launch-profile http
 
 # Frontend (em frontend/erp-portfolio-web)
@@ -87,16 +115,25 @@ dotnet test backend/ErpPortfolio.Tests
 
 ```
 backend/ErpPortfolio.Api/
-  DTOs/              VendasResumoDto.cs, FaturamentoDiaDto.cs, ContasReceberResumoDto.cs, EstoqueResumoDashboardDto.cs
-  Services/          IPedidoService.cs / PedidoService.cs       # + ObterResumoVendasAsync
-                     IContasReceberService.cs / ContasReceberService.cs  # + ObterResumoAsync
-                     IEstoqueService.cs / EstoqueService.cs     # + ObterResumoAsync
-  Controllers/       DashboardController.cs
-backend/ErpPortfolio.Tests/  DashboardResumoTests.cs (agrupamento por dia/status, cálculo de ticket médio)
+  Models/            Fornecedor.cs, PedidoCompra.cs, PedidoCompraItem.cs
+                      EstoqueMovimentacao.cs  # + PedidoCompraId/PedidoCompra
+  DTOs/               FornecedorCriacaoDto.cs, FornecedorAtualizacaoDto.cs, FornecedorFiltroDto.cs, FornecedorRespostaDto.cs
+                      PedidoCompraCriacaoDto.cs, PedidoCompraItemEntradaDto.cs, PedidoCompraRespostaDto.cs, PedidoCompraResumoDto.cs, PedidoCompraFiltroDto.cs
+                      MovimentacaoRespostaDto.cs  # + PedidoCompraId
+  Services/           IFornecedorService.cs / FornecedorService.cs
+                      IPedidoCompraService.cs / PedidoCompraService.cs
+                      IEstoqueService.cs / EstoqueService.cs  # + ReceberAsync / EstornarCompra
+  Controllers/        FornecedoresController.cs, PedidosCompraController.cs
+  Data/               ErpPortfolioDbContext.cs  # + DbSets e mapeamento das 2 tabelas novas + coluna nova
+  Migrations/         <nova migration>
+backend/ErpPortfolio.Tests/  PedidoCompraServiceTests.cs (ou equivalente) — confirmar/cancelar, custo atualizado, saldo insuficiente ao estornar
 frontend/erp-portfolio-web/src/
-  api/dashboardApi.ts   hooks/useDashboard.ts   types/dashboard.ts
-  pages/Dashboard/DashboardPage.tsx, CardIndicador.tsx, GraficoFaturamento.tsx
-  App.tsx  # rota "/" e item de menu "Painel" fora de Gestão Comercial
+  api/                fornecedoresApi.ts, pedidosCompraApi.ts
+  hooks/              useFornecedores.ts, usePedidosCompra.ts
+  types/              fornecedor.ts, pedidoCompra.ts
+  pages/Fornecedores/ FornecedorFormDrawer.tsx, FornecedoresListaPage.tsx
+  pages/PedidosCompra/ PedidoCompraPage.tsx, PedidosCompraListaPage.tsx, ItensPedidoCompraTabela.tsx
+  App.tsx             # rotas e itens de menu novos
 ```
 
 ## Code style
@@ -105,34 +142,34 @@ Igual ao restante do projeto: cabeçalho obrigatório em todo arquivo C#/TS, nom
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** ticket médio com 0 pedidos (não divide por zero), agrupamento de faturamento por dia preenchendo dias sem venda com 0, contagem de saldo baixo com o limite exato (5 entra, 6 não).
-2. **API ponta a ponta (instância temporária):** os três endpoints batendo com pedidos/parcelas/produtos de teste criados na mesma rodada (faturamento e ticket médio conferem com pedidos confirmados no mês, contas a receber bate com parcelas pendentes/atrasadas, saldo baixo bate com produtos de teste no limite).
-3. **Tela:** revisão de código (mesma limitação das últimas rodadas — sem navegador nesta sessão).
-4. **Sempre:** `dotnet build` 0 avisos, `tsc -b`/`oxlint` sem apontamentos; nenhum dado real alterado (o módulo é só leitura, mas os dados de teste usados para conferir os números precisam ser limpos).
+1. **Unitário (xUnit):** confirmar gera entrada por item e atualiza `Produto.Custo`; cancelar de Confirmado com saldo suficiente gera saída de estorno; cancelar de Confirmado sem saldo suficiente bloqueia (DadoInvalidoException) e não altera nada.
+2. **API ponta a ponta (instância temporária):** fluxo completo — cria fornecedor, cria pedido de compra, confirma (saldo sobe, custo do produto muda), cancela (saldo volta), com dados de teste isolados e apagados ao final.
+3. **Tela:** revisão de código (sem navegador nesta sessão, mesma limitação dos módulos anteriores) — recomendo verificação visual do Rafael antes de considerar pronto de verdade.
+4. **Sempre:** `dotnet build` 0 avisos, `tsc -b`/`oxlint` sem apontamentos.
 
 ## Boundaries
 
-- **Sempre:** todo cálculo de dinheiro/contagem no servidor (a tela só exibe); cada endpoint independente dos outros; cabeçalho em cada arquivo; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir (ou autorização já dada, como nos módulos anteriores).
-- **Perguntar antes:** qualquer dependência nova (o gráfico acabou sendo feito sem nenhuma, ver Tech stack), seletor de período, estoque mínimo por produto, qualquer ação (não só leitura) no Dashboard.
-- **Nunca:** gravar um valor agregado como se fosse fonte de verdade (sempre recalcular), commitar segredos, forçar push.
+- **Sempre:** todo cálculo (total, custo atualizado) no servidor; reaproveitar `StatusPedido`, `TransicoesPedido` e `CalculoPedido` em vez de duplicar; testar em instância temporária e limpar os dados de teste; atualizar README e graphify ao terminar; `git commit` só quando o Rafael pedir.
+- **Perguntar antes:** qualquer dependência nova; forma de pagamento/Contas a Pagar no Pedido de Compra; recebimento parcial de mercadoria.
+- **Nunca:** editar um pedido de compra depois de confirmado; reverter `Produto.Custo` automaticamente ao cancelar; commitar segredos; forçar push.
 
 ## Success criteria (testáveis)
 
-Conferidos um a um em 22/09/2026 contra o código final (T8), com `dotnet build -c Release` (0 avisos), `dotnet test` (150/150), `tsc -b`/`oxlint` limpos e `npm run build` (bundle sem crescer, confirmando que nenhuma dependência nova entrou). Evidência: testes unitários (`DashboardResumoTests`) e verificação manual contra a API real, combinando os **dados reais existentes** (2 pedidos confirmados do Rafael) com dados de teste isolados para os casos de borda.
+A conferir um a um ao final da implementação, com `dotnet build -c Release` (0 avisos), `dotnet test`, `tsc -b`/`oxlint` limpos e `npm run build`.
 
-1. ✅ Faturamento do mês soma exatamente o `valorTotal` dos pedidos Confirmados com `dataPedido` no mês atual; pedidos Rascunho/Cancelado não entram — confirmado com os 2 pedidos confirmados reais (R$ 1.400) e um Rascunho de teste que não alterou o valor.
-2. ✅ Ticket médio = faturamento ÷ quantidade de Confirmados no mês; com 0 confirmados, o valor é `0` (sem erro) — caso real (2 confirmados, R$ 700 de ticket médio) via API; caso de 0 confirmados coberto por `DashboardResumoTests`.
-3. ✅ Pedidos por status conta certo os três status, só os do mês atual — o Rascunho de teste subiu só a contagem de Rascunho.
-4. ✅ Faturamento diário tem um ponto por dia do mês, incluindo dias sem venda (valor 0), sem buraco no gráfico — os 30 dias de setembro vieram na resposta real, com os dias sem venda em 0.
-5. ✅ Contas a receber pendente/atrasado bate com a soma das parcelas `Pendente`/atrasadas reais, sem filtro de mês — parcela de teste vencida há 3 dias refletiu certo em `totalAtrasado`/`quantidadeAtrasado`.
-6. ✅ Produto com saldo exatamente 5 conta como saldo baixo; saldo 6 não conta — testado com produtos de teste nos dois valores exatos.
-7. ✅ Cada endpoint responde de forma independente; um erro num não impede os outros dois de aparecer na tela — por desenho (cada rota do `DashboardController` só chama um service, sem depender das outras); a tela trata loading/erro por card (`CardIndicador`).
-8. ✅ Nenhum registro real é alterado pelos testes (módulo só leitura; dados de teste usados na verificação são apagados) — conferido que os três endpoints voltaram exatamente ao valor de antes dos testes, após a limpeza.
+1. Cadastrar, editar e inativar um fornecedor funciona igual ao Cliente, com documento único **só entre fornecedores** (um CNPJ já usado por um cliente pode ser cadastrado como fornecedor).
+2. Criar um pedido de compra em rascunho com 1+ itens; o preço de cada item nasce igual ao `Custo` atual do produto e é editável enquanto rascunho.
+3. Confirmar um pedido de compra: gera uma Entrada de estoque por item ligada ao pedido (visível no extrato como "Compra #N"), o saldo do produto sobe, e `Produto.Custo` passa a ser o preço pago no item.
+4. Confirmar com fornecedor ou algum produto inativo é bloqueado (400), sem gravar nada.
+5. Cancelar um pedido confirmado com saldo intacto: gera Saída de estorno por item, saldo volta ao valor de antes da compra.
+6. Cancelar um pedido confirmado cujo saldo já foi parcialmente consumido (por uma venda, por exemplo) é bloqueado (400), sem gravar nada e sem mexer no saldo.
+7. Cancelar duas vezes o mesmo pedido é idempotente (a segunda chamada também retorna sucesso, sem gerar movimentação duplicada).
+8. Menu e rotas novas (Fornecedores, Pedidos de Compra) funcionam e não quebram nenhuma rota existente.
 
 ## Open questions
 
-Nenhuma em aberto — as quatro dúvidas da primeira versão foram fechadas em 22/09/2026 (ver "Decisões já tomadas"). Limites conhecidos, aceitos de propósito:
+Nenhuma em aberto — as três decisões da primeira versão foram fechadas com o Rafael em 22/09/2026 (ver "Decisões já tomadas"). Limites conhecidos, aceitos de propósito:
 
-- **Sem seletor de período**: sempre o mês atual; um filtro de data é uma extensão natural (mais um parâmetro nos três endpoints).
-- **Limite de saldo baixo fixo (5)**: até existir um campo de estoque mínimo por produto.
-- ~~Biblioteca de gráfico a escolher na implementação~~ — decidido: sem biblioteca, SVG à mão (ver Tech stack).
+- **Sem forma de pagamento / Contas a Pagar**: entra quando esse módulo existir (mesmo caminho que Pedidos → Contas a Receber).
+- **Sem recebimento parcial**: o pedido de compra é recebido inteiro ao confirmar; recebimento em partes é uma extensão natural (viraria um novo status ou um saldo "a receber" por item).
+- **Custo não reverte ao cancelar**: aceito porque reverter exigiria guardar o custo anterior por item, e o valor "correto" depois de outra compra no meio é ambíguo.
