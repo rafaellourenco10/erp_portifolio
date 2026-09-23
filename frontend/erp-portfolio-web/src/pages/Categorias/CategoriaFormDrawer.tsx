@@ -1,17 +1,20 @@
 /**
  * =====================================================================
  * Arquivo....: CategoriaFormDrawer.tsx
- * Versão.....: 1.0.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 22/09/2026
  * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
  *              de categoria (React Hook Form + Zod). Erros de validação
  *              (400) e de nome duplicado (409) da API aparecem no campo.
+ *              Ao incluir, avisa o chamador (prop aoCriar) com a categoria
+ *              nova — usado pelo atalho "Nova categoria" do seletor de Produtos.
  * ---------------------------------------------------------------------
  * Fontes.....: POST /api/categorias e PUT /api/categorias/{id}
  *              (via useSalvarCategoria)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 22/09/2026 - Prop aoCriar, para o atalho "Nova categoria" em Produtos.
  * =====================================================================
  */
 
@@ -36,9 +39,11 @@ interface CategoriaFormDrawerProps {
   /** Categoria em edição; null para inclusão. */
   categoria: Categoria | null
   aoFechar: () => void
+  /** Chamado só na inclusão, com a categoria recém-criada (ex.: para selecioná-la em outro formulário). */
+  aoCriar?: (categoria: Categoria) => void
 }
 
-export function CategoriaFormDrawer({ aberto, categoria, aoFechar }: CategoriaFormDrawerProps) {
+export function CategoriaFormDrawer({ aberto, categoria, aoFechar, aoCriar }: CategoriaFormDrawerProps) {
   const { message } = App.useApp()
   const telas = Grid.useBreakpoint()
   const salvarCategoria = useSalvarCategoria()
@@ -62,8 +67,9 @@ export function CategoriaFormDrawer({ aberto, categoria, aoFechar }: CategoriaFo
 
   async function salvar(valores: CategoriaFormValores) {
     try {
-      await salvarCategoria.mutateAsync({ id: categoria?.id, dados: valores })
+      const salva = await salvarCategoria.mutateAsync({ id: categoria?.id, dados: valores })
       message.success(emEdicao ? 'Categoria atualizada com sucesso.' : 'Categoria cadastrada com sucesso.')
+      if (!emEdicao) aoCriar?.(salva)
       aoFechar()
     } catch (erro) {
       const erroApi = lerErroApi(erro)

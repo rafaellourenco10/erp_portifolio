@@ -1,12 +1,14 @@
 /**
  * =====================================================================
  * Arquivo....: ProdutoFormDrawer.tsx
- * Versão.....: 1.2.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.3.0
+ * Data.......: 22/09/2026
  * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
  *              de produto (React Hook Form + Zod), no mesmo layout do
  *              painel de clientes. Erros de validação (400) e de SKU
- *              duplicado (409) da API são exibidos nos campos.
+ *              duplicado (409) da API são exibidos nos campos. O seletor de
+ *              categoria tem um atalho "Nova categoria" que abre o
+ *              CategoriaFormDrawer por cima e já seleciona a categoria criada.
  * ---------------------------------------------------------------------
  * Fontes.....: POST /api/produtos e PUT /api/produtos/{id}
  *              (via useSalvarProduto)
@@ -15,13 +17,14 @@
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 21/09/2026 - Campo SKU só aceita dígitos.
  *   1.2.0 - 21/09/2026 - Categoria vira uma seleção das categorias ativas.
+ *   1.3.0 - 22/09/2026 - Atalho "Nova categoria" no seletor.
  * =====================================================================
  */
 
-import { CheckOutlined } from '@ant-design/icons'
+import { CheckOutlined, PlusOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { App, Button, Col, Drawer, Flex, Form, Grid, Input, InputNumber, Row, Select, Switch } from 'antd'
-import { useEffect, useMemo } from 'react'
+import { App, Button, Col, Divider, Drawer, Flex, Form, Grid, Input, InputNumber, Row, Select, Switch } from 'antd'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { lerErroApi } from '../../api/axiosClient'
 import { ItemFormulario } from '../../components/ItemFormulario'
@@ -36,7 +39,9 @@ import {
   type ProdutoFormEntrada,
   type ProdutoFormValores,
 } from '../../schemas/produtoSchema'
+import type { Categoria } from '../../types/categoria'
 import type { Produto } from '../../types/produto'
+import { CategoriaFormDrawer } from '../Categorias/CategoriaFormDrawer'
 // O painel reaproveita as classes .drawer-cliente*, .caixa-status* etc. do módulo de Clientes.
 import '../Clientes/clientes.css'
 
@@ -55,6 +60,9 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
   const salvarProduto = useSalvarProduto()
   const { data: categorias, isLoading: carregandoCategorias } = useCategoriasAtivas()
   const emEdicao = produto !== null
+  const [novaCategoriaAberta, setNovaCategoriaAberta] = useState(false)
+  // Guardada localmente: a busca de "categorias ativas" pode levar um instante para refletir a inclusão.
+  const [categoriaRecemCriada, setCategoriaRecemCriada] = useState<Categoria | null>(null)
 
   // A categoria atual do produto entra na lista mesmo se foi inativada depois: senão sumiria da edição.
   const opcoesCategoria = useMemo(() => {
@@ -62,19 +70,28 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
     if (produto?.categoriaId != null && !opcoes.some((opcao) => opcao.value === produto.categoriaId)) {
       opcoes.unshift({ value: produto.categoriaId, label: `${produto.categoriaNome} (inativa)` })
     }
+    if (categoriaRecemCriada && !opcoes.some((opcao) => opcao.value === categoriaRecemCriada.id)) {
+      opcoes.unshift({ value: categoriaRecemCriada.id, label: categoriaRecemCriada.nome })
+    }
     return opcoes
-  }, [categorias, produto])
+  }, [categorias, produto, categoriaRecemCriada])
 
   const {
     control,
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<ProdutoFormEntrada, unknown, ProdutoFormValores>({
     resolver: zodResolver(produtoSchema),
     defaultValues: valoresIniciaisProduto,
   })
+
+  function aoCriarCategoria(categoria: Categoria) {
+    setCategoriaRecemCriada(categoria)
+    setValue('categoriaId', categoria.id)
+  }
 
   useEffect(() => {
     if (!aberto) return
@@ -119,6 +136,7 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
   }
 
   return (
+    <>
     <Drawer
       open={aberto}
       onClose={aoFechar}
@@ -223,7 +241,16 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
                     allowClear
                     showSearch={{ optionFilterProp: 'label' }}
                     placeholder="Sem categoria"
-                    notFoundContent="Nenhuma categoria ativa. Cadastre em Categorias, no menu."
+                    notFoundContent="Nenhuma categoria ativa."
+                    popupRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
+                        <Button type="text" icon={<PlusOutlined />} block onClick={() => setNovaCategoriaAberta(true)}>
+                          Nova categoria
+                        </Button>
+                      </>
+                    )}
                   />
                 )}
               />
@@ -296,5 +323,13 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
         )}
       </Form>
     </Drawer>
+
+    <CategoriaFormDrawer
+      aberto={novaCategoriaAberta}
+      categoria={null}
+      aoFechar={() => setNovaCategoriaAberta(false)}
+      aoCriar={aoCriarCategoria}
+    />
+    </>
   )
 }

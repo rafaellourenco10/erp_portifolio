@@ -1,14 +1,14 @@
 // =====================================================================================
 // Arquivo....: ProdutoService.cs
-// Versão.....: 1.1.0
-// Data.......: 21/09/2026
+// Versão.....: 1.2.0
+// Data.......: 22/09/2026
 // Descrição..: Regras de negócio e persistência de produtos.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.produtos
-//                - SELECT : listagem (ILIKE em nome ou sku, ativo = @ativo, LEFT JOIN em
-//                           categorias, ORDER BY nome, id, LIMIT/OFFSET),
-//                           consulta por id e checagem de SKU duplicado
+//                - SELECT : listagem (ILIKE em nome ou sku, ativo = @ativo, categoria_id
+//                           = @categoriaId, LEFT JOIN em categorias, ORDER BY nome, id,
+//                           LIMIT/OFFSET), consulta por id e checagem de SKU duplicado
 //                - INSERT : inclusão
 //                - UPDATE : edição e inativação (ativo = false)
 //              public.categorias
@@ -21,6 +21,7 @@
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
 //   1.1.0 - 21/09/2026 - Categoria como registro: valida o CategoriaId (DadoInvalidoException)
 //                        e devolve o nome da categoria nas consultas.
+//   1.2.0 - 22/09/2026 - Filtro por categoriaId na listagem.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -51,6 +52,11 @@ public class ProdutoService(ErpPortfolioDbContext contexto) : IProdutoService
         if (filtro.Ativo is bool ativo)
         {
             consulta = consulta.Where(p => p.Ativo == ativo);
+        }
+
+        if (filtro.CategoriaId is int categoriaId)
+        {
+            consulta = consulta.Where(p => p.CategoriaId == categoriaId);
         }
 
         var totalItens = await consulta.CountAsync(cancelamento);

@@ -1,29 +1,31 @@
 /**
  * =====================================================================
  * Arquivo....: ProdutosListaPage.tsx
- * Versão.....: 1.1.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.2.0
+ * Data.......: 22/09/2026
  * Descrição..: Tela de listagem de produtos: filtros (busca por nome ou
- *              SKU e status) num painel que abre a partir do botão
- *              "Filtrar", tabela com paginação no servidor, inclusão,
+ *              SKU, status e categoria) num painel que abre a partir do
+ *              botão "Filtrar", tabela com paginação no servidor, inclusão,
  *              edição e inativação. Mostra a margem (preço x custo).
  * ---------------------------------------------------------------------
- * Fontes.....: GET   /api/produtos?busca=&ativo=&pagina=&tamanhoPagina=
+ * Fontes.....: GET   /api/produtos?busca=&ativo=&categoriaId=&pagina=&tamanhoPagina=
  *              PATCH /api/produtos/{id}/inativar
  *              (via useListaProdutos / useInativarProduto)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 21/09/2026 - Coluna Categoria mostra o nome da categoria cadastrada.
+ *   1.2.0 - 22/09/2026 - Filtro por categoria no painel Filtrar.
  * =====================================================================
  */
 
 import { CheckOutlined, EditOutlined, FilterOutlined, PlusOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons'
-import { Alert, App, Badge, Button, Flex, Grid, Input, Popconfirm, Popover, Segmented, Table, Tag, Tooltip, Typography } from 'antd'
+import { Alert, App, Badge, Button, Flex, Grid, Input, Popconfirm, Popover, Segmented, Select, Table, Tag, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import { useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
 import { TagStatus } from '../../components/TagStatus'
+import { useCategoriasAtivas } from '../../hooks/useCategorias'
 import { useInativarProduto, useListaProdutos } from '../../hooks/useProdutos'
 import type { Produto, ProdutoFiltro } from '../../types/produto'
 import { calcularMargem, formatarPercentual, formatarReal } from '../../utils/moeda'
@@ -36,9 +38,10 @@ type StatusFiltro = 'todos' | 'ativos' | 'inativos'
 interface FiltrosTela {
   busca: string
   status: StatusFiltro
+  categoriaId: number | undefined
 }
 
-const FILTROS_VAZIOS: FiltrosTela = { busca: '', status: 'todos' }
+const FILTROS_VAZIOS: FiltrosTela = { busca: '', status: 'todos', categoriaId: undefined }
 
 const opcoesStatus = [
   { label: 'Todos', value: 'todos' },
@@ -75,9 +78,13 @@ export function ProdutosListaPage() {
 
   const { data, isFetching, isError, error } = useListaProdutos(filtro)
   const inativarProduto = useInativarProduto()
+  const { data: categorias } = useCategoriasAtivas()
+  const opcoesCategoriaFiltro = (categorias?.itens ?? []).map((categoria) => ({ value: categoria.id, label: categoria.nome }))
 
-  const quantidadeFiltros = (filtro.busca ? 1 : 0) + (filtro.ativo !== undefined ? 1 : 0)
-  const quantidadeFiltrosNaTela = (filtrosTela.busca.trim() ? 1 : 0) + (filtrosTela.status !== 'todos' ? 1 : 0)
+  const quantidadeFiltros =
+    (filtro.busca ? 1 : 0) + (filtro.ativo !== undefined ? 1 : 0) + (filtro.categoriaId !== undefined ? 1 : 0)
+  const quantidadeFiltrosNaTela =
+    (filtrosTela.busca.trim() ? 1 : 0) + (filtrosTela.status !== 'todos' ? 1 : 0) + (filtrosTela.categoriaId !== undefined ? 1 : 0)
 
   function aplicarFiltros(valores: FiltrosTela) {
     setFiltro((atual) => ({
@@ -85,6 +92,7 @@ export function ProdutosListaPage() {
       pagina: 1,
       busca: valores.busca.trim() || undefined,
       ativo: valores.status === 'todos' ? undefined : valores.status === 'ativos',
+      categoriaId: valores.categoriaId,
     }))
     setFiltroAberto(false)
   }
@@ -100,6 +108,7 @@ export function ProdutosListaPage() {
       setFiltrosTela({
         busca: filtro.busca ?? '',
         status: filtro.ativo === undefined ? 'todos' : filtro.ativo ? 'ativos' : 'inativos',
+        categoriaId: filtro.categoriaId,
       })
     }
     setFiltroAberto(aberto)
@@ -260,6 +269,19 @@ export function ProdutosListaPage() {
         />
       </div>
 
+      <div>
+        <span className="rotulo-filtro">Categoria</span>
+        <Select
+          className="campo-cheio"
+          value={filtrosTela.categoriaId}
+          onChange={(categoriaId: number | undefined) => setFiltrosTela((atual) => ({ ...atual, categoriaId }))}
+          options={opcoesCategoriaFiltro}
+          allowClear
+          showSearch={{ optionFilterProp: 'label' }}
+          placeholder="Todas as categorias"
+        />
+      </div>
+
       <Flex justify="space-between" align="center" gap={12} className="popover-filtros-rodape">
         <span className="texto-discreto">{textoFiltrosAplicados(quantidadeFiltrosNaTela)}</span>
         <Flex gap={8}>
@@ -312,6 +334,12 @@ export function ProdutosListaPage() {
           {filtro.ativo !== undefined && (
             <Tag closable onClose={() => setFiltro((atual) => ({ ...atual, ativo: undefined, pagina: 1 }))}>
               {filtro.ativo ? 'Ativos' : 'Inativos'}
+            </Tag>
+          )}
+          {filtro.categoriaId !== undefined && (
+            <Tag closable onClose={() => setFiltro((atual) => ({ ...atual, categoriaId: undefined, pagina: 1 }))}>
+              Categoria:{' '}
+              {opcoesCategoriaFiltro.find((opcao) => opcao.value === filtro.categoriaId)?.label ?? filtro.categoriaId}
             </Tag>
           )}
           <Button type="link" size="small" onClick={limparFiltros}>

@@ -1,16 +1,17 @@
 // =====================================================================================
 // Arquivo....: ProdutoFiltroDto.cs
-// Versão.....: 1.0.0
-// Data.......: 21/09/2026
+// Versão.....: 1.1.0
+// Data.......: 22/09/2026
 // Descrição..: Parâmetros de consulta (query string) da listagem de produtos:
-//              busca por nome ou SKU, status e paginação.
+//              busca por nome ou SKU, status, categoria e paginação.
 // -------------------------------------------------------------------------------------
 // Banco......: Não acessa banco diretamente.
 // Tabelas....: Usado pelo ProdutoService para filtrar public.produtos.
-// Fontes.....: Query string de GET /api/produtos (?busca=&ativo=true&pagina=&tamanhoPagina=).
+// Fontes.....: Query string de GET /api/produtos (?busca=&ativo=true&categoriaId=&pagina=&tamanhoPagina=).
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
+//   1.1.0 - 22/09/2026 - Filtro por categoriaId.
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;
@@ -25,6 +26,9 @@ public class ProdutoFiltroDto
 
     /// <summary>true = só ativos, false = só inativos, ausente = todos.</summary>
     public bool? Ativo { get; set; }
+
+    /// <summary>Id da categoria; ausente = todas.</summary>
+    public int? CategoriaId { get; set; }
 
     /// <summary>Número da página, começando em 1.</summary>
     [Range(1, 100_000, ErrorMessage = "A página deve estar entre 1 e 100000.")]
