@@ -1,27 +1,32 @@
 /**
  * =====================================================================
  * Arquivo....: useBuscaCadastros.ts
- * Versão.....: 1.0.0
- * Data.......: 21/09/2026
- * Descrição..: Hooks de busca no SERVIDOR para os seletores do pedido: clientes e
- *              produtos ATIVOS que combinam com o texto digitado, no máximo 20 por
- *              consulta. A consulta só dispara 300 ms depois da última tecla, para não
- *              chamar a API a cada letra. As chaves ficam sob "clientes" e "produtos",
- *              então cadastrar ou inativar em Clientes/Produtos atualiza as buscas.
+ * Versão.....: 1.1.0
+ * Data.......: 23/09/2026
+ * Descrição..: Hooks de busca no SERVIDOR para os seletores do pedido: clientes,
+ *              fornecedores e produtos ATIVOS que combinam com o texto digitado, no
+ *              máximo 20 por consulta. A consulta só dispara 300 ms depois da última
+ *              tecla, para não chamar a API a cada letra. As chaves ficam sob
+ *              "clientes", "fornecedores" e "produtos", então cadastrar ou inativar
+ *              em Clientes/Fornecedores/Produtos atualiza as buscas.
  * ---------------------------------------------------------------------
  * Fontes.....: GET /api/clientes?nome=&ativo=true&tamanhoPagina=20
+ *              GET /api/fornecedores?nome=&ativo=true&tamanhoPagina=20
  *              GET /api/produtos?busca=&ativo=true&tamanhoPagina=20
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - useBuscaFornecedores, para o seletor do Pedido de Compra.
  * =====================================================================
  */
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { clientesApi } from '../api/clientesApi'
+import { fornecedoresApi } from '../api/fornecedoresApi'
 import { produtosApi } from '../api/produtosApi'
 import type { Cliente } from '../types/cliente'
+import type { Fornecedor } from '../types/fornecedor'
 import type { ResultadoPaginado } from '../types/paginacao'
 import type { Produto } from '../types/produto'
 
@@ -40,7 +45,7 @@ export function useValorComAtraso<T>(valor: T, atrasoMs = ATRASO_MS): T {
   return atrasado
 }
 
-function useBusca<T>(cadastro: 'clientes' | 'produtos', texto: string, buscar: (busca: string) => Promise<ResultadoPaginado<T>>) {
+function useBusca<T>(cadastro: 'clientes' | 'fornecedores' | 'produtos', texto: string, buscar: (busca: string) => Promise<ResultadoPaginado<T>>) {
   const busca = useValorComAtraso(texto.trim())
   const consulta = useQuery({
     queryKey: [cadastro, 'busca', busca],
@@ -60,6 +65,12 @@ function useBusca<T>(cadastro: 'clientes' | 'produtos', texto: string, buscar: (
 export function useBuscaClientes(texto: string) {
   return useBusca<Cliente>('clientes', texto, (busca) =>
     clientesApi.listar({ nome: busca || undefined, ativo: true, pagina: 1, tamanhoPagina: LIMITE_RESULTADOS }),
+  )
+}
+
+export function useBuscaFornecedores(texto: string) {
+  return useBusca<Fornecedor>('fornecedores', texto, (busca) =>
+    fornecedoresApi.listar({ nome: busca || undefined, ativo: true, pagina: 1, tamanhoPagina: LIMITE_RESULTADOS }),
   )
 }
 

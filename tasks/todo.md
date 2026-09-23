@@ -56,12 +56,13 @@
   - Dependências: T2.
   - Arquivos: `types/fornecedor.ts`, `api/fornecedoresApi.ts`, `hooks/useFornecedores.ts`, `schemas/fornecedorSchema.ts`, `pages/Fornecedores/*`, `App.tsx`.
 
-- [ ] **T6: Tela Pedidos de Compra** (L)
-  - Descrição: `types/pedidoCompra.ts`, `api/pedidosCompraApi.ts`, `hooks/usePedidosCompra.ts`, `pages/PedidosCompra/PedidoCompraPage.tsx`, `pages/PedidosCompra/PedidosCompraListaPage.tsx`, `pages/PedidosCompra/ItensPedidoCompraTabela.tsx` (espelho de Pedidos, reaproveitando `pedido.css`); rotas `/pedidos-compra`, `/pedidos-compra/novo`, `/pedidos-compra/:id` e item de menu (ícone `ShoppingOutlined`), logo depois de Pedidos.
+- [x] **T6: Tela Pedidos de Compra** (L) — *concluída em 23/09/2026*
+  - Descrição: `types/pedidoCompra.ts`, `api/pedidosCompraApi.ts`, `hooks/usePedidosCompra.ts`, `schemas/pedidoCompraSchema.ts`, `pages/PedidosCompra/PedidoCompraPage.tsx`, `pages/PedidosCompra/PedidosCompraListaPage.tsx`, `pages/PedidosCompra/ItensPedidoCompraTabela.tsx` (espelho de Pedidos, reaproveitando `pedido.css`); `components/SelecaoFornecedor.tsx` (espelho de `SelecaoCliente`); `useBuscaFornecedores` em `useBuscaCadastros.ts`; rotas `/pedidos-compra`, `/pedidos-compra/novo`, `/pedidos-compra/:id` e item de menu (ícone `ShoppingOutlined`), logo depois de Pedidos.
   - Aceite: cria rascunho com itens, edita, confirma, cancela pela tela.
   - Verificar: `npx tsc -b`, `npx oxlint src`.
+  - Resultado: espelho fiel do módulo de Pedidos, sem forma de pagamento nem modal de parcelas (confirmar/cancelar usam `modal.confirm` simples, como o cancelar do Pedido de Venda). `SelecaoProduto` ganhou a prop `campoPreco` (`'precoVenda' | 'custo'`) para mostrar o Custo do produto na busca em vez do preço de venda — pequena extensão do componente existente em vez de duplicá-lo. `tsc -b`, `oxlint` e `npm run build` limpos (bundle sem crescer, nenhuma dependência nova). Verificação visual/Playwright não feita nesta sessão; API já validada de ponta a ponta na T4.
   - Dependências: T4.
-  - Arquivos: `types/pedidoCompra.ts`, `api/pedidosCompraApi.ts`, `hooks/usePedidosCompra.ts`, `pages/PedidosCompra/*`, `App.tsx`.
+  - Arquivos: `types/pedidoCompra.ts`, `api/pedidosCompraApi.ts`, `hooks/usePedidosCompra.ts`, `hooks/useBuscaCadastros.ts`, `schemas/pedidoCompraSchema.ts`, `components/SelecaoFornecedor.tsx`, `components/SelecaoProduto.tsx`, `pages/PedidosCompra/*`, `App.tsx`.
 
 - [ ] **T7: Estoque mostra "Compra #N"** (S)
   - Descrição: componente(s) do extrato de estoque passam a exibir a origem "Compra #N" quando `pedidoCompraId` estiver preenchido (hoje só mostram "Venda #N" via `pedidoId`).

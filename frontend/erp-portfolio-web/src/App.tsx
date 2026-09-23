@@ -1,15 +1,15 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.8.0
+ * Versão.....: 1.9.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
- *              /pedidos, /estoque, /contas-receber) com o React Router. O
- *              Painel (/) fica fora da seção "Gestão Comercial": resume
- *              vários módulos, não é uma ação comercial.
+ *              /pedidos, /pedidos-compra, /estoque, /contas-receber) com o
+ *              React Router. O Painel (/) fica fora da seção "Gestão
+ *              Comercial": resume vários módulos, não é uma ação comercial.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
@@ -25,6 +25,8 @@
  *   1.7.0 - 22/09/2026 - Painel (Dashboard) como rota inicial "/", fora de
  *                        "Gestão Comercial"; rota desconhecida cai em "/" (era /clientes).
  *   1.8.0 - 23/09/2026 - Rota e item de menu de Fornecedores (etapa 7).
+ *   1.9.0 - 23/09/2026 - Item de menu e rotas de Pedidos de Compra (/pedidos-compra,
+ *                        /pedidos-compra/novo, /pedidos-compra/:id), etapa 7.
  * =====================================================================
  */
 
@@ -38,6 +40,7 @@ import {
   MenuUnfoldOutlined,
   ShopOutlined,
   ShoppingCartOutlined,
+  ShoppingOutlined,
   TagsOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
@@ -54,6 +57,8 @@ import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
 import { FornecedoresListaPage } from './pages/Fornecedores/FornecedoresListaPage'
 import { PedidoPage } from './pages/Pedidos/PedidoPage'
 import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
+import { PedidoCompraPage } from './pages/PedidosCompra/PedidoCompraPage'
+import { PedidosCompraListaPage } from './pages/PedidosCompra/PedidosCompraListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
 
 // O Painel fica fora de "Gestão Comercial": resume vários módulos, não é uma ação comercial.
@@ -66,6 +71,7 @@ const itensMenu = [
   { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
   { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
   { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos' },
+  { key: '/pedidos-compra', icon: <ShoppingOutlined />, label: 'Pedidos de Compra' },
   { key: '/estoque', icon: <DatabaseOutlined />, label: 'Estoque' },
   { key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' },
 ] satisfies MenuProps['items']
@@ -79,7 +85,11 @@ function ehRotaDoItem(chave: string, pathname: string): boolean {
 function tituloDaSubpagina(pathname: string): string | undefined {
   if (pathname === '/pedidos/novo') return 'Novo pedido'
   const numero = /^\/pedidos\/(\d+)$/.exec(pathname)?.[1]
-  return numero ? `Pedido nº ${numero}` : undefined
+  if (numero) return `Pedido nº ${numero}`
+
+  if (pathname === '/pedidos-compra/novo') return 'Novo pedido de compra'
+  const numeroCompra = /^\/pedidos-compra\/(\d+)$/.exec(pathname)?.[1]
+  return numeroCompra ? `Pedido de compra nº ${numeroCompra}` : undefined
 }
 
 export default function App() {
@@ -161,6 +171,9 @@ export default function App() {
             <Route path="/pedidos" element={<PedidosListaPage />} />
             <Route path="/pedidos/novo" element={<PedidoPage />} />
             <Route path="/pedidos/:id" element={<PedidoPage />} />
+            <Route path="/pedidos-compra" element={<PedidosCompraListaPage />} />
+            <Route path="/pedidos-compra/novo" element={<PedidoCompraPage />} />
+            <Route path="/pedidos-compra/:id" element={<PedidoCompraPage />} />
             <Route path="/estoque" element={<EstoqueListaPage />} />
             <Route path="/contas-receber" element={<ContasReceberListaPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

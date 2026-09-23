@@ -1,19 +1,23 @@
 /**
  * =====================================================================
  * Arquivo....: SelecaoProduto.tsx
- * Versão.....: 1.0.0
- * Data.......: 21/09/2026
+ * Versão.....: 1.1.0
+ * Data.......: 23/09/2026
  * Descrição..: Seleção de produto com BUSCA NO SERVIDOR (por nome ou SKU; só produtos
  *              ativos, 20 por consulta, com espera de 300 ms após digitar). Cada opção
  *              mostra o SKU, o preço e a unidade; o onChange devolve o produto inteiro
  *              (preço e unidade alimentam o cálculo do pedido). `desabilitados` marca
  *              produtos que já estão no pedido (o mesmo produto não pode repetir).
  *              Para um item já salvo, passe `produtoAtual` (pode estar inativo).
+ *              `campoPreco` escolhe qual preço mostrar na opção: preço de venda (pedido
+ *              de venda, padrão) ou custo (pedido de compra).
  * ---------------------------------------------------------------------
  * Fontes.....: useBuscaProdutos (GET /api/produtos?busca=&ativo=true&tamanhoPagina=20)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - campoPreco, para o Pedido de Compra mostrar o Custo em vez do
+ *                        preço de venda (etapa 7).
  * =====================================================================
  */
 
@@ -31,6 +35,8 @@ interface SelecaoProdutoProps {
   produtoAtual?: { id: number; nome: string }
   /** Ids de produtos que já estão no pedido: aparecem, mas não podem ser escolhidos de novo. */
   desabilitados?: number[]
+  /** Qual preço mostrar na opção. Padrão: preço de venda. */
+  campoPreco?: 'precoVenda' | 'custo'
   disabled?: boolean
   placeholder?: string
   id?: string
@@ -49,6 +55,7 @@ export function SelecaoProduto({
   onChange,
   produtoAtual,
   desabilitados = [],
+  campoPreco = 'precoVenda',
   disabled,
   placeholder = 'Buscar produto por nome ou SKU',
   id,
@@ -105,7 +112,7 @@ export function SelecaoProduto({
               {opcao.data.disabled && <span className="texto-discreto"> (já no pedido)</span>}
             </span>
             <span className="texto-discreto numeros-tabulares">
-              {opcao.data.produto.sku} · {formatarReal(opcao.data.produto.precoVenda)} / {opcao.data.produto.unidade}
+              {opcao.data.produto.sku} · {formatarReal(opcao.data.produto[campoPreco])} / {opcao.data.produto.unidade}
             </span>
           </Flex>
         ) : (
