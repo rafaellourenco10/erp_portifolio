@@ -1,6 +1,6 @@
 # Spec: Comissão como conta a pagar + contas avulsas (etapa 12)
 
-> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
+> Status: **implementada e testada em 23/09/2026** (T1 a T6, ver `tasks/todo.md`). Critérios 1-6 conferidos por E2E (28 verificações, dados `ZZT…` apagados, dados reais intactos); **telas sem verificação visual** (sem navegador nesta sessão).
 
 ## Objetivo
 
@@ -88,10 +88,12 @@ Contas recorrentes automáticas (todo mês); categorias/plano de contas; editar 
 
 ## Success criteria (testáveis)
 
-1. O fluxo de compra continua igual (parcelas com X/Y certo, pagar, cancelar compra cancela pendentes).
-2. Conta avulsa em N parcelas soma exatamente o valor, com os vencimentos certos; validações → 400.
-3. Cancelar avulsa/comissão pendente funciona e é idempotente; compra ou paga → 409.
-4. Gerar conta de comissões cria 1 conta com a soma e deixa as comissões Em pagamento; vendedores misturados, comissão não pendente ou id inexistente → 400 sem alterar nada.
-5. Pagar a conta de comissão deixa as comissões Pagas; cancelar devolve para Pendente.
-6. Lista de contas a pagar traz origem/favorecido/descrição e filtra por origem; busca por favorecido.
-7. Telas ajustadas; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde.
+Conferidos em 23/09/2026; detalhes na seção "Comissão vira conta a pagar + contas avulsas (23/09/2026)" do README.
+
+1. ✅ O fluxo de compra continua igual (parcelas com X/Y certo, pagar, cancelar compra cancela pendentes).
+2. ✅ Conta avulsa em N parcelas soma exatamente o valor, com os vencimentos certos; validações → 400.
+3. ✅ Cancelar avulsa/comissão pendente funciona e é idempotente; compra ou paga → 409.
+4. ✅ Gerar conta de comissões cria 1 conta com a soma e deixa as comissões Em pagamento; vendedores misturados, comissão não pendente ou id inexistente → 400 sem alterar nada.
+5. ✅ Pagar a conta de comissão deixa as comissões Pagas; cancelar devolve para Pendente.
+6. ✅ Lista de contas a pagar traz origem/favorecido/descrição e filtra por origem; busca por favorecido.
+7. ✅ Telas ajustadas; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` 185/185 — verificação visual não feita (sem navegador).

@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, e **Comissões** (etapa 11), geradas quando o cliente paga cada parcela e controladas até o repasse ao vendedor. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, e a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz. O **Dashboard** (etapa 6) resume os outros módulos.
 
 O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
 
@@ -20,8 +20,9 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 8 | Contas a Pagar (parcelas da compra, vencimento, status de pagamento, card no Dashboard) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
 | 9 | Relatórios (vendas, compras, estoque) com exportação Excel/PDF | Back-end testado de ponta a ponta e PDFs conferidos; telas confirmadas pelo Rafael (23/09/2026) |
 | 10 | Vendedores (cadastro + vendedor no pedido de venda, % de comissão congelada) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
-| 11 | Comissões (geradas no recebimento da parcela, pagamento ao vendedor) | Back-end testado de ponta a ponta; tela não verificada visualmente (23/09/2026) |
-| 12+ | Login | Planejada |
+| 11 | Comissões (geradas no recebimento da parcela, pagamento ao vendedor) | Back-end testado de ponta a ponta; tela confirmada pelo Rafael (23/09/2026) |
+| 12 | Comissão vira conta a pagar + contas avulsas (origem Compra/Comissão/Avulsa, cancelar) | Back-end testado de ponta a ponta; telas não verificadas visualmente (23/09/2026) |
+| 13+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -191,9 +192,21 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - Uma comissão por parcela: receber de novo não duplica; pedido sem vendedor (anterior à etapa 10) ou com 0% não gera nada
 - Parcelas que já estavam recebidas antes deste módulo, de pedidos com vendedor, ganharam a comissão na migration
 - Tela **Comissões** (menu Financeiro): filtros por vendedor, período (data do recebimento) e status; cards **Gerado / A pagar / Pago** (somas do vendedor/período, calculadas no servidor); tabela com pedido e parcela, cliente, valor recebido, %, comissão, datas e status
-- **Pagar ao vendedor**: por linha ou selecionando várias pendentes ("Marcar como pagas"); a comissão passa a **Paga** com a data. Pagar de novo não muda nada
+- **Pagar ao vendedor**: na etapa 11 era por linha ou em lote ("Marcar como pagas"); **desde a etapa 12 é pelo Contas a Pagar** (ver abaixo)
 - Cancelar um pedido não mexe nas comissões (as parcelas já recebidas continuam recebidas)
-- Fora do escopo por enquanto: gerar conta a pagar da comissão, estorno de comissão, exportação da tela para Excel/PDF, metas/faixas de comissão
+- Fora do escopo por enquanto: estorno de comissão, exportação da tela para Excel/PDF, metas/faixas de comissão (a conta a pagar da comissão veio na etapa 12)
+
+---
+
+## Funcionalidades (etapa 12 — Comissão vira conta a pagar + contas avulsas)
+
+- O **Contas a Pagar** passa a ter três **origens**: **Compra** (como antes), **Comissão** e **Avulsa**. A lista mostra o **favorecido** (fornecedor, vendedor ou o nome digitado) e a **descrição** (Compra #N, "Comissões — Vendedor (N)" ou o texto), com filtro por origem e busca por favorecido/descrição
+- **Nova conta** (avulsa): descrição, favorecido opcional, valor, 1º vencimento, 1 a 12 parcelas e intervalo em dias — para aluguel, luz, salários etc.
+- **Cancelar** uma parcela pendente avulsa ou de comissão (a de compra continua sendo cancelada pelo pedido de compra; parcela paga não cancela)
+- **Comissões → conta a pagar**: em Comissões, selecione as comissões **A pagar de um vendedor** e clique **Gerar conta a pagar** (escolhendo o vencimento): nasce **uma** conta com a soma, e as comissões ficam **Em pagamento**
+- Pagar essa conta em Contas a Pagar deixa as comissões **Pagas** (mesma data); cancelar a conta devolve as comissões para **A pagar**, para gerar de novo
+- O "Marcar como paga" direto em Comissões saiu: todo pagamento de comissão passa pelo Contas a Pagar. Comissões já pagas antes continuam pagas (sem conta ligada)
+- Fora do escopo por enquanto: contas recorrentes automáticas, categorias/plano de contas, editar conta lançada (cancele e lance de novo), anexos, juros e pagamento parcial
 
 ## Stack e versões
 
@@ -382,7 +395,8 @@ erp_portifolio/
 │       │   ├── IPedidoCompraService.cs
 │       │   ├── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       │   ├── IContasPagarService.cs
-│       │   ├── ContasPagarService.cs        # consulta, pagar, gerar/cancelar parcelas (usados pelo PedidoCompraService)
+│       │   ├── ContasPagarService.cs        # lista (origem/favorecido), pagar, cancelar, conta avulsa, parcelas da compra; propaga para comissões
+│       │   ├── ContasPagarCalculo.cs        # parcelas da conta avulsa (valor e vencimento), função pura
 │       │   ├── IRelatorioService.cs
 │       │   ├── RelatorioService.cs          # consultas dos relatórios + montagem do modelo de exportação
 │       │   ├── RelatorioCalculo.cs          # período válido e resumo (funções puras, com xUnit)
@@ -422,7 +436,7 @@ erp_portifolio/
             │   ├── categoriasApi.ts         # chamadas da API de categorias
             │   ├── estoqueApi.ts            # chamadas da API de estoque
             │   ├── contasReceberApi.ts      # chamadas da API de contas a receber
-            │   ├── contasPagarApi.ts        # chamadas da API de contas a pagar
+            │   ├── contasPagarApi.ts        # chamadas da API de contas a pagar (inclui conta avulsa e cancelar)
             │   ├── relatoriosApi.ts         # dados dos relatórios + download do arquivo (nome do Content-Disposition)
             │   ├── dashboardApi.ts          # chamadas da API do Dashboard (4 endpoints)
             │   ├── fornecedoresApi.ts       # chamadas da API de fornecedores
@@ -464,7 +478,8 @@ erp_portifolio/
             ├── pages/ContasReceber/
             │   └── ContasReceberListaPage.tsx  # busca, filtro de status, tabela, marcar como recebido
             ├── pages/ContasPagar/
-            │   └── ContasPagarListaPage.tsx    # busca, filtro de status, tabela, marcar como paga
+            │   ├── ContasPagarListaPage.tsx    # busca, filtros de origem/status, tabela, pagar, cancelar
+            │   └── NovaContaModal.tsx          # lançamento de conta avulsa em parcelas
             ├── pages/Relatorios/
             │   ├── RelatorioPedidosPage.tsx    # Vendas e Compras (prop tipo): filtros, resumo, tabela, exportar
             │   └── RelatorioEstoquePage.tsx    # posição de estoque: filtros, resumo, tabela, exportar
@@ -493,6 +508,7 @@ erp_portifolio/
             │   ├── estoqueEntradaSchema.ts  # schema Zod do formulário de entrada de estoque
             │   ├── fornecedorSchema.ts      # schema Zod do formulário de fornecedor
             │   ├── vendedorSchema.ts        # schema Zod do formulário de vendedor (só CPF, % 0-100)
+            │   ├── contaAvulsaSchema.ts     # schema Zod da conta avulsa
             │   └── pedidoCompraSchema.ts    # schema Zod do formulário de pedido de compra + conversões form/API
             ├── types/
             │   ├── cliente.ts               # tipos (espelham os DTOs)
@@ -736,9 +752,9 @@ Comissões:
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
 | GET | `/comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=1&tamanhoPagina=10` | `{ resultado: <lista paginada, mais recente primeiro>, totais: { totalGerado, totalPendente, totalPago } }`; `status` = `Pendente`/`Paga`; datas = data do recebimento, inclusivas; os totais são do vendedor/período (não dependem do status) | 200, 400 |
-| POST | `/comissoes/pagar` | Corpo `{ "ids": [1, 2] }` (1 a 500): marca como pagas; as já pagas não mudam; algum id inexistente → 400 em `Ids` e nada muda | 204, 400 |
+| POST | `/comissoes/gerar-conta` | Corpo `{ "ids": [1, 2], "vencimento": "2026-10-10" }`: comissões **Pendentes de um vendedor** viram **uma** conta a pagar com a soma e ficam `EmPagamento`; id inexistente, comissão não pendente ou vendedores misturados → 400 em `Ids` e nada muda (etapa 12; substitui o antigo `POST /comissoes/pagar`) | 201, 400 |
 
-`PATCH /contas-receber/{id}/receber` passou a gerar a comissão por dentro (mesma transação).
+`PATCH /contas-receber/{id}/receber` passou a gerar a comissão por dentro (mesma transação). Status da comissão: `Pendente` → `EmPagamento` (conta gerada) → `Paga` (conta paga); os totais incluem `totalEmPagamento`.
 
 Pedidos de Compra (mesmo desenho de Pedidos, sem forma de pagamento):
 
@@ -757,8 +773,10 @@ Contas a Pagar (espelho de Contas a Receber):
 
 | Método | Rota | Descrição | Respostas |
 |---|---|---|---|
-| GET | `/contas-pagar?busca=&status=&pagina=1&tamanhoPagina=10` | Lista paginada, vencimento mais próximo primeiro; `busca` = nº do pedido de compra ou nome do fornecedor; `status` = `Pendente`/`Pago`/`Cancelado`/**`Atrasado`** (calculado) | 200, 400 |
-| PATCH | `/contas-pagar/{id}/pagar` | Marca a parcela como paga; repetir é idempotente; parcela cancelada retorna 409 | 200, 404, 409 |
+| GET | `/contas-pagar?busca=&status=&origem=&pagina=1&tamanhoPagina=10` | Lista paginada, vencimento mais próximo primeiro; cada linha traz `origem` (`Compra`/`Comissao`/`Avulsa`), `favorecido` e `descricao`; `busca` = nº da compra ou trecho do favorecido/descrição; `status` = `Pendente`/`Pago`/`Cancelado`/**`Atrasado`** (calculado) | 200, 400 |
+| PATCH | `/contas-pagar/{id}/pagar` | Marca a parcela como paga; repetir é idempotente; parcela cancelada retorna 409; se for de comissão, as comissões ligadas ficam Pagas | 200, 404, 409 |
+| POST | `/contas-pagar` | Conta **avulsa**: `{ descricao, favorecido?, valorTotal, primeiroVencimento, numeroParcelas (1-12), intervaloDias (1-180) }`; devolve as parcelas criadas | 201, 400 |
+| PATCH | `/contas-pagar/{id}/cancelar` | Cancela parcela pendente avulsa ou de comissão (de comissão devolve as comissões para Pendente); repetir retorna 200; de compra ou paga → 409 | 200, 404, 409 |
 
 Confirmar um pedido de compra gera as parcelas (mesmas regras de `numeroParcelas`/`intervaloDias` do Pedido de Venda); cancelar um que estava Confirmado cancela as parcelas **Pendentes** depois da checagem de saldo — se o cancelamento for recusado por saldo, nenhuma parcela muda.
 
@@ -1067,6 +1085,8 @@ Tabela `public.parcelas_pagar` (espelho de `public.parcelas_receber`):
 | `data_pagamento` | timestamptz | nulo até ser marcada como paga |
 
 Índice único `ux_parcelas_pagar_pedido_compra_numero (pedido_compra_id, numero_parcela)` e índice `ix_parcelas_pagar_vencimento`. Migration: `20260923131654_CriacaoTabelaParcelasPagar` (só cria essa tabela).
+
+Na etapa 12 (migration `20260923184154_ContasPagarOrigemEComissoes`), `parcelas_pagar` ganhou `origem` (varchar(20), padrão `Compra`), `vendedor_id` (FK `fk_parcelas_pagar_vendedores`, restrict, índice `ix_parcelas_pagar_vendedor_id`), `descricao` (varchar(200)), `favorecido` (varchar(150)) e `total_parcelas` (preenchido para as existentes); `pedido_compra_id` passou a ser opcional. O CHECK `ck_parcelas_pagar_origem` exige o vínculo de cada origem (Compra → pedido de compra; Comissao → vendedor; Avulsa → descrição) e `ck_parcelas_pagar_total_parcelas` exige `total_parcelas >= numero_parcela`. `comissoes` ganhou `parcela_pagar_id` (FK `fk_comissoes_parcelas_pagar`, restrict, índice `ix_comissoes_parcela_pagar_id`) e o status `EmPagamento`.
 
 ---
 
@@ -1424,6 +1444,24 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (17
 
 **Limitação desta rodada:** sem navegador nesta sessão, a tela de Comissões **não foi verificada visualmente**. Recomenda-se: confirmar um pedido com vendedor, receber uma parcela em Contas a Receber, abrir Financeiro → Comissões, filtrar pelo vendedor e marcar como paga (uma e depois várias).
 
+### Comissão vira conta a pagar + contas avulsas (23/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script Python com 28 verificações, usando fornecedor/cliente/vendedores/produto de teste (`ZZT…`), todos apagados via SQL ao final; as contas e comissões reais ficaram intactas (a migration preencheu as 2 parcelas reais da compra #12 com `Compra`, 1/2 e 2/2).
+
+| Verificação | Resultado |
+|---|---|
+| Regressão da compra: 3 parcelas com origem Compra, favorecido = fornecedor, 1/3..3/3 e valores certos; pagar funciona; cancelar parcela de compra direto → 409; cancelar o pedido de compra cancela as pendentes | ✅ |
+| Conta avulsa de R$ 1.000 em 3x a partir de 05/10: 333,33 / 333,33 / 333,34, vencimentos 05/10, 04/11, 04/12; descrição curta, valor 0, sem vencimento e 13 parcelas → 400 no campo | ✅ |
+| Busca pelo favorecido, filtro de origem, e busca por número não traz avulsas/comissões por engano | ✅ |
+| Cancelar avulsa pendente (e de novo, idempotente); paga → 409; inexistente → 404 | ✅ |
+| Gerar conta: vendedores misturados / id inexistente / sem vencimento → 400 sem alterar nada; 3 comissões de um vendedor → 1 conta de R$ 25,00 (1/1, favorecido = vendedor, descrição "Comissões — … (3)"), comissões Em pagamento e ligadas; gerar de novo → 400; totais com Em pagamento | ✅ |
+| Pagar a conta de comissão → as 3 comissões Pagas com a mesma data; cancelar outra conta de comissão → comissão volta a Pendente, desligada, e gera conta de novo | ✅ |
+| `POST /comissoes/pagar` não existe mais (404) | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (185 aprovados, 8 novos em `ContasPagarCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
+**Limitação desta rodada:** sem navegador nesta sessão, as telas de Contas a Pagar (Nova conta, colunas, filtro, cancelar) e de Comissões (Gerar conta a pagar) **não foram verificadas visualmente**. Recomenda-se: lançar uma conta avulsa em 2 parcelas; em Comissões, gerar a conta de um vendedor; pagar essa conta em Contas a Pagar e ver as comissões virarem Pagas; gerar outra e cancelar para vê-las voltar a "A pagar".
+
 ---
 
 ## Padrões do projeto
@@ -1517,7 +1555,8 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Gerar parcelas para pedidos (venda ou compra) confirmados antes dos módulos de Contas a Receber/Pagar
 - Recebimento parcial de mercadoria no Pedido de Compra (hoje é recebido inteiro ao confirmar)
 - Seletor de período no Dashboard (hoje é sempre o mês atual)
-- Comissões: gerar conta a pagar ao fechar a comissão do vendedor, exportação Excel/PDF da tela, estorno de comissão
+- Comissões: exportação Excel/PDF da tela, estorno de comissão
+- Contas a pagar: recorrência automática (todo mês), categorias/plano de contas, editar conta lançada, anexos
 - Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)

@@ -33,5 +33,6 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T6: Documentação e verificação final** (S)
+- [x] **T6: Documentação e verificação final** (S) — *concluída em 23/09/2026*
   - README (etapa 12), SPEC marcada como implementada, `python -m graphify update .`, memória.
+  - Resultado: README com a seção da etapa 12, API (contas a pagar e gerar-conta), colunas novas no banco, testes e próximas etapas; a etapa 11 aponta para o novo fluxo e está marcada como tela confirmada pelo Rafael. SPEC 7/7 ✅. Grafo atualizado.
