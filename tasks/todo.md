@@ -44,18 +44,19 @@ Comandos (raiz): `dotnet build ErpPortfolio.slnx -c Release` · `dotnet test bac
 
 ## Fase 2: API
 
-- [ ] **T4: `DashboardController`** (S)
+- [x] **T4: `DashboardController`** (S) — *concluída em 22/09/2026*
   - Descrição: três endpoints finos (`/dashboard/vendas`, `/dashboard/contas-receber`, `/dashboard/estoque`), cada um só delegando pro service correspondente (D7).
   - Aceite: os três endpoints respondem 200 com os números certos, testados contra dados de teste isolados (cliente/produto/pedidos `ZZT…`).
   - Verificar: E2E temporário (pedidos confirmados e rascunho no mês, parcela atrasada, produto com saldo baixo — os três endpoints conferidos com esses dados); `dotnet build` 0 avisos.
+  - Resultado: **os dados reais do Rafael já validaram o caso comum** (2 pedidos confirmados = R$1.400, ticket médio R$700, 1 parcela pendente, 1 produto com saldo baixo — tudo sem erro, sem divisão por zero, todos os 30 dias do mês presentes no gráfico). Casos de borda testados com dados isolados: pedido Rascunho novo subiu `porStatus.rascunho` sem mexer no faturamento; parcela atrasada inserida (venceu há 3 dias) refletiu certo em `totalAtrasado`/`quantidadeAtrasado`; produto com saldo **exatamente 5** contou como baixo, produto com saldo **6** não contou (limite exato confirmado). Dados de teste apagados; conferido que os três endpoints voltaram exatamente ao valor de antes dos testes. `dotnet build` 0 avisos.
   - Dependências: T1, T2, T3
   - Arquivos: `Controllers/DashboardController.cs`
 
 ### Checkpoint 2 (CP1 do plano): API pronta
-- [ ] Critérios 1 a 8 da spec verificados por E2E na API real
-- [ ] `dotnet test` verde, `dotnet build` sem avisos
-- [ ] Dados reais intactos; dados de teste apagados
-- [ ] Revisão do Rafael antes de começar a tela
+- [x] Critérios 1 a 8 da spec verificados por E2E na API real
+- [x] `dotnet test` verde, `dotnet build` sem avisos
+- [x] Dados reais intactos; dados de teste apagados
+- [ ] Revisão do Rafael antes de começar a tela *(dispensada — continuação da autorização geral)*
 
 ---
 
