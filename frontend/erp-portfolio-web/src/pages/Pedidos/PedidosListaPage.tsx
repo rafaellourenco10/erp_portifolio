@@ -214,7 +214,7 @@ export function PedidosListaPage() {
     <div className="pagina-pedidos">
       <Flex justify="space-between" align="flex-end" wrap gap={16} className="pagina-cabecalho">
         <div>
-          <h1 className="pagina-titulo">Pedidos</h1>
+          <h1 className="pagina-titulo">Pedidos de Venda</h1>
           <p className="pagina-subtitulo">Acompanhe as vendas: monte rascunhos, confirme ou cancele pedidos.</p>
         </div>
         <Flex gap={12}>
@@ -232,7 +232,7 @@ export function PedidosListaPage() {
             </Badge>
           </Popover>
           <Button type="primary" size="large" icon={<PlusOutlined />} onClick={() => navegar('/pedidos/novo')}>
-            Novo pedido
+            Novo pedido de venda
           </Button>
         </Flex>
       </Flex>

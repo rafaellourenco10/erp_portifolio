@@ -36,7 +36,7 @@ export function DashboardPage() {
   return (
     <div className="pagina-dashboard">
       <div className="pagina-cabecalho">
-        <h1 className="pagina-titulo">Painel</h1>
+        <h1 className="pagina-titulo">Dashboard</h1>
         <p className="pagina-subtitulo">Indicadores do mês atual.</p>
       </div>
 

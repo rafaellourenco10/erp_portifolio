@@ -93,7 +93,7 @@ export function PedidoPage() {
       <Flex justify="space-between" align="flex-end" wrap gap={16} className="pagina-cabecalho">
         <div>
           <Flex align="center" gap={16} wrap>
-            <h1 className="pagina-titulo">{id === undefined ? 'Novo pedido' : `Pedido nº ${id}`}</h1>
+            <h1 className="pagina-titulo">{id === undefined ? 'Novo pedido de venda' : `Pedido de venda nº ${id}`}</h1>
             {pedido && <TagStatusPedido status={pedido.status} />}
           </Flex>
           <p className="pagina-subtitulo">Cliente, itens, descontos e total do pedido.</p>
@@ -233,7 +233,7 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
     try {
       await salvarPedido.mutateAsync({ id: pedido.id, dados: paraPayload(confirmando) })
       await confirmarPedido.mutateAsync({ id: pedido.id, dados: { numeroParcelas, intervaloDias } })
-      message.success(`Pedido nº ${pedido.id} confirmado com sucesso.`)
+      message.success(`Pedido de venda nº ${pedido.id} confirmado com sucesso.`)
       setConfirmando(null)
     } catch (erro) {
       mostrarErroApi(erro)
@@ -251,7 +251,7 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
       onOk: async () => {
         try {
           await cancelarPedido.mutateAsync(pedido.id)
-          message.success(`Pedido nº ${pedido.id} cancelado.`)
+          message.success(`Pedido de venda nº ${pedido.id} cancelado.`)
         } catch (erro) {
           mostrarErroApi(erro)
         }

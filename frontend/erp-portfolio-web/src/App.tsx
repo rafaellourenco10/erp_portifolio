@@ -1,15 +1,16 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.9.0
+ * Versão.....: 1.10.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
  *              /pedidos, /pedidos-compra, /estoque, /contas-receber) com o
- *              React Router. O Painel (/) fica fora da seção "Gestão
- *              Comercial": resume vários módulos, não é uma ação comercial.
+ *              React Router. O menu é dividido por departamento (Cadastro,
+ *              Ordem Vendas/Compras, Depósito, Financeiro); o Dashboard (/)
+ *              fica fora das seções: resume vários módulos.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
@@ -27,6 +28,9 @@
  *   1.8.0 - 23/09/2026 - Rota e item de menu de Fornecedores (etapa 7).
  *   1.9.0 - 23/09/2026 - Item de menu e rotas de Pedidos de Compra (/pedidos-compra,
  *                        /pedidos-compra/novo, /pedidos-compra/:id), etapa 7.
+ *   1.10.0 - 23/09/2026 - "Painel" vira "Dashboard"; "Gestão Comercial" dividida nas
+ *                         seções Cadastro, Ordem Vendas/Compras, Depósito e Financeiro.
+ *                         "Pedidos" vira "Pedidos de Venda" (menu, breadcrumb e títulos).
  * =====================================================================
  */
 
@@ -61,20 +65,30 @@ import { PedidoCompraPage } from './pages/PedidosCompra/PedidoCompraPage'
 import { PedidosCompraListaPage } from './pages/PedidosCompra/PedidosCompraListaPage'
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
 
-// O Painel fica fora de "Gestão Comercial": resume vários módulos, não é uma ação comercial.
-const itensPainel = [{ key: '/', icon: <HomeOutlined />, label: 'Painel' }] satisfies MenuProps['items']
+// O Dashboard fica fora das seções: resume vários módulos, não pertence a um departamento.
+const itensPainel = [{ key: '/', icon: <HomeOutlined />, label: 'Dashboard' }] satisfies MenuProps['items']
 
-// A chave de cada item é o caminho da rota.
-const itensMenu = [
-  { key: '/clientes', icon: <TeamOutlined />, label: 'Clientes' },
-  { key: '/fornecedores', icon: <ShopOutlined />, label: 'Fornecedores' },
-  { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
-  { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
-  { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos' },
-  { key: '/pedidos-compra', icon: <ShoppingOutlined />, label: 'Pedidos de Compra' },
-  { key: '/estoque', icon: <DatabaseOutlined />, label: 'Estoque' },
-  { key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' },
-] satisfies MenuProps['items']
+// Telas agrupadas por departamento. A chave de cada item é o caminho da rota.
+const secoes = [
+  {
+    titulo: 'Cadastro',
+    itens: [
+      { key: '/clientes', icon: <TeamOutlined />, label: 'Clientes' },
+      { key: '/fornecedores', icon: <ShopOutlined />, label: 'Fornecedores' },
+      { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
+      { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
+    ],
+  },
+  {
+    titulo: 'Ordem Vendas/Compras',
+    itens: [
+      { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos de Venda' },
+      { key: '/pedidos-compra', icon: <ShoppingOutlined />, label: 'Pedidos de Compra' },
+    ],
+  },
+  { titulo: 'Depósito', itens: [{ key: '/estoque', icon: <DatabaseOutlined />, label: 'Estoque' }] },
+  { titulo: 'Financeiro', itens: [{ key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' }] },
+] satisfies { titulo: string; itens: MenuProps['items'] }[]
 
 /** true se a rota atual pertence a este item de menu (a raiz "/" só bate exata, nunca por prefixo). */
 function ehRotaDoItem(chave: string, pathname: string): boolean {
@@ -83,9 +97,9 @@ function ehRotaDoItem(chave: string, pathname: string): boolean {
 
 /** Título da subpágina de um módulo (a última parte do breadcrumb), ou undefined na página principal. */
 function tituloDaSubpagina(pathname: string): string | undefined {
-  if (pathname === '/pedidos/novo') return 'Novo pedido'
+  if (pathname === '/pedidos/novo') return 'Novo pedido de venda'
   const numero = /^\/pedidos\/(\d+)$/.exec(pathname)?.[1]
-  if (numero) return `Pedido nº ${numero}`
+  if (numero) return `Pedido de venda nº ${numero}`
 
   if (pathname === '/pedidos-compra/novo') return 'Novo pedido de compra'
   const numeroCompra = /^\/pedidos-compra\/(\d+)$/.exec(pathname)?.[1]
@@ -99,14 +113,17 @@ export default function App() {
   const { pathname } = useLocation()
   const navegar = useNavigate()
   // O item do menu vale também nas subpáginas (/pedidos/novo, /pedidos/12 continuam marcando "Pedidos").
-  const itemAtual = [...itensPainel, ...itensMenu].find((item) => ehRotaDoItem(String(item.key), pathname))
+  const secaoAtual = secoes.find((secao) => secao.itens.some((item) => ehRotaDoItem(item.key, pathname)))
+  const itemAtual = [...itensPainel, ...secoes.flatMap((secao) => secao.itens)].find((item) =>
+    ehRotaDoItem(String(item.key), pathname),
+  )
   const chavesSelecionadas = itemAtual ? [String(itemAtual.key)] : []
   const subpagina = tituloDaSubpagina(pathname)
   const trilha =
     itemAtual?.key === '/'
-      ? [{ title: 'Painel' }]
+      ? [{ title: 'Dashboard' }]
       : [
-          { title: 'Gestão Comercial' },
+          { title: secaoAtual?.titulo },
           { title: subpagina && itemAtual ? <Link to={String(itemAtual.key)}>{itemAtual.label}</Link> : itemAtual?.label },
           ...(subpagina ? [{ title: subpagina }] : []),
         ]
@@ -131,8 +148,12 @@ export default function App() {
             <LogoAmbition compacto={recolhido} />
           </div>
           <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensPainel} onClick={({ key }) => navegar(key)} />
-          {!recolhido && <div className="app-secao-menu">Gestão comercial</div>}
-          <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensMenu} onClick={({ key }) => navegar(key)} />
+          {secoes.map((secao) => (
+            <div key={secao.titulo}>
+              {!recolhido && <div className="app-secao-menu">{secao.titulo}</div>}
+              <Menu mode="inline" selectedKeys={chavesSelecionadas} items={secao.itens} onClick={({ key }) => navegar(key)} />
+            </div>
+          ))}
         </Layout.Sider>
       )}
 
@@ -198,16 +219,20 @@ export default function App() {
             setMenuCelularAberto(false)
           }}
         />
-        <div className="app-secao-menu">Gestão comercial</div>
-        <Menu
-          mode="inline"
-          selectedKeys={chavesSelecionadas}
-          items={itensMenu}
-          onClick={({ key }) => {
-            navegar(key)
-            setMenuCelularAberto(false)
-          }}
-        />
+        {secoes.map((secao) => (
+          <div key={secao.titulo}>
+            <div className="app-secao-menu">{secao.titulo}</div>
+            <Menu
+              mode="inline"
+              selectedKeys={chavesSelecionadas}
+              items={secao.itens}
+              onClick={({ key }) => {
+                navegar(key)
+                setMenuCelularAberto(false)
+              }}
+            />
+          </div>
+        ))}
       </Drawer>
     </Layout>
   )
