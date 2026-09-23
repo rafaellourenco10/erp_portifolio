@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ContasReceberListaPage.tsx
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 22/09/2026
  * Descrição..: Tela de contas a receber: busca por cliente ou número do pedido,
  *              filtro de status (incluindo "Atrasado", calculado), tabela com
@@ -16,6 +16,8 @@
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
  *   1.1.0 - 22/09/2026 - Colunas compactas no celular (T9).
+ *   1.2.0 - 22/09/2026 - Corrige Tooltip sobrepondo o botão do Popconfirm ao
+ *                        marcar como recebido (Tooltip só aparece desabilitado).
  * =====================================================================
  */
 
@@ -72,25 +74,32 @@ export function ContasReceberListaPage() {
     key: 'acoes',
     width: 72,
     align: 'center',
-    render: (_, parcela) => (
-      <Popconfirm
-        title="Marcar como recebido"
-        description={`Confirmar o recebimento da parcela ${parcela.numeroParcela}/${parcela.totalParcelas} (${formatarReal(parcela.valor)})?`}
-        okText="Marcar recebido"
-        cancelText="Cancelar"
-        onConfirm={() => receber(parcela)}
-        disabled={parcela.status !== 'Pendente'}
-      >
-        <Tooltip title={parcela.status === 'Pendente' ? 'Marcar como recebido' : 'Só parcelas pendentes podem ser recebidas'}>
-          <Button
-            type="text"
-            icon={<CheckOutlined />}
-            aria-label={`Marcar como recebido a parcela ${parcela.numeroParcela} do pedido ${parcela.pedidoId}`}
-            disabled={parcela.status !== 'Pendente'}
-          />
-        </Tooltip>
-      </Popconfirm>
-    ),
+    render: (_, parcela) => {
+      const botao = (
+        <Button
+          type="text"
+          icon={<CheckOutlined />}
+          aria-label={`Marcar como recebido a parcela ${parcela.numeroParcela} do pedido ${parcela.pedidoId}`}
+          disabled={parcela.status !== 'Pendente'}
+        />
+      )
+
+      // Tooltip e Popconfirm no mesmo botão abririam os dois balões ao mesmo tempo (um por cima do outro);
+      // o Popconfirm já explica a ação no título, então o Tooltip só entra quando o botão está desabilitado.
+      return parcela.status === 'Pendente' ? (
+        <Popconfirm
+          title="Marcar como recebido"
+          description={`Confirmar o recebimento da parcela ${parcela.numeroParcela}/${parcela.totalParcelas} (${formatarReal(parcela.valor)})?`}
+          okText="Marcar recebido"
+          cancelText="Cancelar"
+          onConfirm={() => receber(parcela)}
+        >
+          {botao}
+        </Popconfirm>
+      ) : (
+        <Tooltip title="Só parcelas pendentes podem ser recebidas">{botao}</Tooltip>
+      )
+    },
   }
 
   // No celular, cliente/pedido/parcela/valor/vencimento/status ficam empilhados numa única coluna.
