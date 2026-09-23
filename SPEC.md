@@ -1,101 +1,88 @@
-# Spec: Módulo Relatórios (etapa 9)
+# Spec: Módulo Vendedores (etapa 10)
 
-> Status: **implementada e testada em 23/09/2026** (T1 a T7, ver `tasks/todo.md`). Critérios 1-6 conferidos por E2E contra os dados reais (25 verificações) e os PDFs abertos visualmente; **telas sem verificação visual** (sem navegador nesta sessão).
+> Status: **rascunho, aguardando aprovação do Rafael** (23/09/2026).
 
 ## Objetivo
 
-Nova seção **Relatórios** no menu, com três telas — **Vendas**, **Compras** e **Estoque** — que mostram os dados filtrados na tela e exportam para **Excel (.xlsx)** e **PDF** gerados pelo servidor.
+Cadastro de **Vendedores** e o vendedor no **Pedido de Venda**, deixando pronta a base para o módulo de **Comissão** (próxima etapa): ao confirmar, o pedido guarda a % de comissão do vendedor naquele momento.
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** escolha do Rafael em 23/09/2026, entre as sugestões de melhoria.
-- **Sucesso:** escolher um período (e filtros), ver o relatório na tela com totais, e baixar o mesmo conteúdo em .xlsx e .pdf.
+- **Por que agora:** pedido do Rafael em 23/09/2026, como passo antes da comissão.
+- **Sucesso:** cadastrar vendedores com % de comissão; escolher o vendedor no pedido de venda; confirmar exige vendedor ativo e congela a % no pedido.
 
 ### Dentro do escopo
-Três relatórios (vendas, compras, posição de estoque), cada um com filtros, resumo, tabela e exportação em Excel e PDF. Seção **Relatórios** no menu.
+CRUD de Vendedor (tela em **Cadastro**), vendedor no pedido de venda (seleção com busca), regra de confirmar e % congelada.
 
 ### Fora do escopo (entram depois)
-Seletor de período no Dashboard; relatórios de contas a receber/pagar (vencidas); relatório agrupado por produto; itens dos pedidos dentro do relatório; gráficos no PDF; agendamento/envio por e-mail.
+**Cálculo/relatório de comissão** (próxima etapa); vendedor no pedido de compra; filtro/coluna de vendedor nos relatórios e na lista de pedidos; login do vendedor; metas.
 
 ## Decisões já tomadas (com o Rafael, 23/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Geração dos arquivos | **No servidor**: Excel com **ClosedXML** (licença MIT) e PDF com **QuestPDF** (licença Community, gratuita para uso individual e empresas com faturamento < US$ 1 mi — atende um portfólio). São as 2 únicas dependências novas. |
-| Detalhe de Vendas/Compras | **Um pedido por linha + totais** (não lista os itens de cada pedido). |
-| Dashboard | Seletor de período fica para depois. |
-| Datas no front | `dayjs` declarado no `package.json` para o seletor de período do Ant Design — já vinha instalado como dependência do próprio Ant Design (nada novo baixado nem no bundle). |
+| Campos | Nome, CPF, e-mail e telefone opcionais, **% de comissão padrão** (0 a 100) e ativo. Sem endereço. |
+| Vendedor no pedido | **Obrigatório só para confirmar** (igual à forma de pagamento): o rascunho pode ficar sem; pedidos antigos continuam sem vendedor. |
+| Comissão | **Congelar a % no pedido ao confirmar**; mudar a % do vendedor depois não altera vendas já confirmadas. |
 
-## Relatórios
+## Regras de negócio
 
-### Vendas (R-V) e Compras (R-C) — mesmo formato
-
-| Item | Definição |
-|---|---|
-| Filtros | Período (data inicial e final, **obrigatórios**), status (padrão **Confirmado**; opção "Todos"), cliente (vendas) / fornecedor (compras) opcional. |
-| Linhas | Nº, data, cliente/fornecedor, quantidade de itens, total, status. Ordenadas por data (mais antiga primeiro). |
-| Resumo | Quantidade de pedidos, soma dos totais e ticket médio — **das linhas listadas** (se o filtro for "Todos", o resumo inclui os cancelados; o padrão Confirmado evita isso). |
-
-### Estoque (R-E) — posição atual
-
-| Item | Definição |
-|---|---|
-| Filtros | Categoria (opcional), "só abaixo do mínimo" (padrão desligado). Só produtos **ativos**. |
-| Linhas | Produto, SKU, categoria, unidade, saldo, estoque mínimo, custo, **valor em estoque** (saldo × custo), marcação "abaixo do mínimo". Ordenadas por nome. |
-| Resumo | Quantidade de produtos, valor total em estoque, quantidade abaixo do mínimo. |
-
-## Regras (R)
+### Vendedor (V)
 
 | # | Regra |
 |---|---|
-| R1 | Período: data final ≥ data inicial e no máximo **366 dias**; senão 400. Datas inclusivas (a data final vale o dia inteiro). |
-| R2 | As datas do período são comparadas em **UTC**, mesma convenção do Dashboard (um pedido feito às 22h de um dia pode cair no dia seguinte). Limite conhecido, aceito. |
-| R3 | Todo cálculo (totais, ticket médio, saldo, valor em estoque) é feito no servidor; a tela, o .xlsx e o .pdf mostram **os mesmos números** (saem da mesma consulta). |
-| R4 | Exportação usa os mesmos filtros da tela; o arquivo traz título, data de geração, os filtros aplicados, o resumo e a tabela. Nome do arquivo: `relatorio-vendas-AAAA-MM-DD_AAAA-MM-DD.xlsx` (estoque: `relatorio-estoque-AAAA-MM-DD.xlsx`). |
-| R5 | Sem paginação no relatório (é um relatório, não uma lista): o limite de 366 dias mantém o volume sob controle. |
+| V1 | Nome 3-150; **CPF** obrigatório e válido (só CPF, não CNPJ; com ou sem máscara, gravado só com dígitos); e-mail opcional (válido, até 150); telefone opcional (mesmo formato do Cliente); % de comissão de 0 a 100 com até 2 casas (padrão 0). |
+| V2 | CPF único **entre vendedores**. Conflito com vendedor ativo bloqueia (409); com inativo, sugere reativar (mesma mensagem do Cliente/Fornecedor). |
+| V3 | Inativar não apaga; só impede escolher o vendedor em novos pedidos e confirmar pedidos com ele. |
+
+### Vendedor no pedido de venda (PV)
+
+| # | Regra |
+|---|---|
+| PV1 | Rascunho aceita vendedor vazio. Se informado ao salvar, o vendedor precisa existir e estar **ativo** (senão 400 no campo `VendedorId`) — mesma regra já usada para o cliente. |
+| PV2 | Confirmar exige vendedor informado e **ativo** (400 no campo `VendedorId`, pedido continua Rascunho) — junto das outras exigências já existentes (forma de pagamento, cliente/produtos ativos, estoque). |
+| PV3 | Ao confirmar, o pedido grava `percentual_comissao` = % atual do vendedor. Depois disso, não muda mais (nem se a % do vendedor for alterada). |
+| PV4 | Rascunho não guarda % (fica vazio); pedidos confirmados antes deste módulo ficam sem vendedor e sem %. |
+
+## Modelo de dados
+
+- **`public.vendedores`** — id, nome, cpf (índice único), email, telefone, percentual_comissao numeric(5,2) (CHECK 0-100), ativo, data_cadastro.
+- **`public.pedidos`** ganha `vendedor_id` (nullable, FK → vendedores, restrict) e `percentual_comissao` numeric(5,2) (nullable, CHECK 0-100).
+- Uma migration só.
 
 ## API
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/relatorios/vendas?dataInicio=&dataFim=&status=&clienteId=&formato=` | `formato` = `json` (padrão), `xlsx` ou `pdf` |
-| GET | `/api/relatorios/compras?dataInicio=&dataFim=&status=&fornecedorId=&formato=` | idem |
-| GET | `/api/relatorios/estoque?categoriaId=&somenteAbaixoMinimo=&formato=` | idem |
-
-Com `formato=xlsx`/`pdf` a resposta é o arquivo (download); com `json`, os dados para a tela.
+| GET | `/api/vendedores?nome=&ativo=&pagina=&tamanhoPagina=` | Lista paginada |
+| GET | `/api/vendedores/{id}` | Consulta |
+| POST | `/api/vendedores` | Inclusão |
+| PUT | `/api/vendedores/{id}` | Edição |
+| PATCH | `/api/vendedores/{id}/inativar` | Inativação |
+| POST/PUT | `/api/pedidos` | Passam a aceitar `vendedorId` (opcional) |
+| GET | `/api/pedidos/{id}` | Passa a devolver `vendedorId`, `vendedorNome` e `percentualComissao` |
 
 ## Telas
 
-- Seção **Relatórios** no menu (depois de Financeiro): **Vendas** (`/relatorios/vendas`), **Compras** (`/relatorios/compras`), **Estoque** (`/relatorios/estoque`).
-- Cada tela: filtros no topo + botão **Gerar**; cards de resumo; tabela; botões **Exportar Excel** e **Exportar PDF** (habilitados depois de gerar, usando os mesmos filtros).
-- Vendas e Compras usam **um componente só** (mudam só o rótulo e o seletor de cliente/fornecedor).
-
-## Arquitetura
-
-- `RelatorioService`: as 3 consultas, devolvendo DTOs (linhas + resumo).
-- `ExportadorRelatorio`: recebe um modelo genérico (título, filtros descritos, cards do resumo, colunas, linhas) e gera .xlsx ou .pdf. Os 3 relatórios passam por ele — **um exportador, não três**.
-- `RelatoriosController`: valida os filtros, chama o service e devolve JSON ou `File(...)`.
+- **Cadastro → Vendedores** (`/vendedores`): lista + drawer de cadastro/edição, no padrão de Fornecedores (sem cidade/UF, com % de comissão).
+- **Pedido de Venda**: campo **Vendedor** (seleção com busca, só ativos) ao lado do cliente; no pedido confirmado, mostra o vendedor e a % de comissão congelada.
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** validação do período (R1) e montagem do resumo (ticket médio com 0 pedidos, soma) — lógica pura.
-2. **API ponta a ponta (instância temporária):** totais do JSON batem com consulta direta no banco; filtros de status/cliente/categoria; 400 para período inválido; .xlsx abre e tem as mesmas linhas/totais; .pdf é um PDF válido com o título e o total.
+1. **Unitário (xUnit):** validação de CPF só-CPF (aceita CPF válido com/sem máscara, recusa CNPJ e CPF inválido) e do DTO do vendedor (% fora de 0-100).
+2. **API ponta a ponta (instância temporária, dados `ZZT…` apagados ao final):** CRUD do vendedor (CPF duplicado 409, inativar); rascunho com e sem vendedor; vendedor inativo no rascunho → 400; confirmar sem vendedor → 400; confirmar com vendedor → % gravada; mudar a % do vendedor depois não altera o pedido.
 3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; verificação visual com o Rafael.
 
 ## Boundaries
 
-- **Sempre:** números calculados no servidor; mesma consulta para tela e arquivos; reaproveitar seletores (`SelecaoCliente`, `SelecaoFornecedor`) e o cálculo de ticket médio do Dashboard se servir.
-- **Perguntar antes:** qualquer dependência além de ClosedXML/QuestPDF; relatórios além dos três.
-- **Nunca:** calcular totais no front; commitar segredos; push sem pedido.
+- **Sempre:** espelhar o padrão de Fornecedor (DTOs, service, controller, tela); % congelada só no confirmar, calculada no servidor.
+- **Perguntar antes:** dependência nova; qualquer coisa de cálculo de comissão.
+- **Nunca:** recalcular a % de pedidos já confirmados; commitar segredos; push sem pedido.
 
 ## Success criteria (testáveis)
 
-Conferidos em 23/09/2026; detalhes na seção "Relatórios (23/09/2026)" do README.
-
-1. ✅ Relatório de vendas de um período traz só pedidos daquele período e status, com quantidade, soma e ticket médio batendo com o banco.
-2. ✅ Mesmo para compras, com filtro por fornecedor.
-3. ✅ Relatório de estoque traz saldo, valor em estoque (saldo × custo) e marcação abaixo do mínimo, batendo com o banco; filtros de categoria e "só abaixo do mínimo" funcionam.
-4. ✅ Período inválido (final antes do inicial, ou > 366 dias, ou faltando) retorna 400.
-5. ✅ `formato=xlsx` devolve um .xlsx válido com as mesmas linhas e totais do JSON.
-6. ✅ `formato=pdf` devolve um PDF válido com título, filtros e totais.
-7. ✅ Menu Relatórios com as 3 telas; o servidor manda o nome certo no `Content-Disposition` (conferido no E2E) e o CORS o expõe — o clique de download no navegador não foi verificado visualmente.
-8. ✅ `dotnet build` 0 avisos, `dotnet test` 158/158, `tsc -b`/`oxlint`/`npm run build` limpos.
+1. CRUD de vendedor funciona; CPF inválido, CNPJ ou % fora de 0-100 → 400; CPF repetido → 409.
+2. Rascunho salva com ou sem vendedor; vendedor inativo ou inexistente → 400 em `VendedorId`.
+3. Confirmar sem vendedor (ou com vendedor inativo) → 400 em `VendedorId`, pedido continua Rascunho.
+4. Confirmar com vendedor grava a % de comissão dele no pedido; alterar a % do vendedor depois não muda o pedido confirmado.
+5. `GET /api/pedidos/{id}` traz vendedor e % congelada; pedidos antigos continuam abrindo (sem vendedor).
+6. Tela Vendedores no menu Cadastro; campo Vendedor no pedido de venda; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` verde.

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.8.0
+// Versão.....: 1.9.0
 // Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -30,9 +30,17 @@
 //                - IDX : ix_clientes_nome (nome)
 //              public.pedidos
 //                - PK  : pk_pedidos (id, identity)
-//                - IDX : ix_pedidos_cliente_id (cliente_id), ix_pedidos_data_pedido (data_pedido)
-//                - FK  : fk_pedidos_clientes (cliente_id -> clientes.id, restrict)
-//                - CK  : ck_pedidos_desconto_percentual, ck_pedidos_valor_total
+//                - IDX : ix_pedidos_cliente_id (cliente_id), ix_pedidos_data_pedido (data_pedido),
+//                        ix_pedidos_vendedor_id (vendedor_id)
+//                - FK  : fk_pedidos_clientes (cliente_id -> clientes.id, restrict),
+//                        fk_pedidos_vendedores (vendedor_id -> vendedores.id, restrict)
+//                - CK  : ck_pedidos_desconto_percentual, ck_pedidos_valor_total,
+//                        ck_pedidos_percentual_comissao
+//              public.vendedores
+//                - PK  : pk_vendedores (id, identity)
+//                - UK  : ix_vendedores_cpf (cpf)
+//                - IDX : ix_vendedores_nome (nome)
+//                - CK  : ck_vendedores_percentual_comissao
 //              public.pedido_itens
 //                - PK  : pk_pedido_itens (id, identity)
 //                - UK  : ux_pedido_itens_pedido_produto (pedido_id, produto_id)
@@ -86,6 +94,7 @@
 //   1.7.0 - 22/09/2026 - Mapeamento de Fornecedor, PedidoCompra e PedidoCompraItem;
 //                        estoque_movimentacoes.pedido_compra_id (etapa 7).
 //   1.8.0 - 23/09/2026 - Mapeamento de ParcelaPagar (tabela parcelas_pagar, etapa 8).
+//   1.9.0 - 23/09/2026 - Mapeamento de Vendedor; pedidos.vendedor_id e percentual_comissao (etapa 10).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -116,6 +125,8 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
     public DbSet<PedidoCompraItem> PedidoCompraItens => Set<PedidoCompraItem>();
 
     public DbSet<ParcelaPagar> ParcelasPagar => Set<ParcelaPagar>();
+
+    public DbSet<Vendedor> Vendedores => Set<Vendedor>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -317,6 +328,7 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
             {
                 tabela.HasCheckConstraint("ck_pedidos_desconto_percentual", "desconto_percentual >= 0 AND desconto_percentual <= 100");
                 tabela.HasCheckConstraint("ck_pedidos_valor_total", "valor_total >= 0");
+                tabela.HasCheckConstraint("ck_pedidos_percentual_comissao", "percentual_comissao >= 0 AND percentual_comissao <= 100");
             });
 
             entidade.HasKey(p => p.Id).HasName("pk_pedidos");
@@ -353,6 +365,20 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasConversion<string>()
                 .HasMaxLength(20);
 
+            entidade.Property(p => p.VendedorId)
+                .HasColumnName("vendedor_id");
+
+            // Restrict: o vendedor não pode ser apagado enquanto tiver pedidos (só inativado).
+            entidade.HasOne(p => p.Vendedor)
+                .WithMany()
+                .HasForeignKey(p => p.VendedorId)
+                .HasConstraintName("fk_pedidos_vendedores")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(p => p.PercentualComissao)
+                .HasColumnName("percentual_comissao")
+                .HasColumnType("numeric(5,2)");
+
             entidade.Property(p => p.DescontoPercentual)
                 .HasColumnName("desconto_percentual")
                 .HasColumnType("numeric(5,2)")
@@ -366,6 +392,9 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
             entidade.HasIndex(p => p.ClienteId)
                 .HasDatabaseName("ix_pedidos_cliente_id");
+
+            entidade.HasIndex(p => p.VendedorId)
+                .HasDatabaseName("ix_pedidos_vendedor_id");
 
             entidade.HasIndex(p => p.DataPedido)
                 .HasDatabaseName("ix_pedidos_data_pedido");
@@ -590,6 +619,59 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
             entidade.HasIndex(c => c.Nome)
                 .HasDatabaseName("ix_clientes_nome");
+        });
+
+        modelBuilder.Entity<Vendedor>(entidade =>
+        {
+            entidade.ToTable("vendedores", tabela =>
+                tabela.HasCheckConstraint("ck_vendedores_percentual_comissao", "percentual_comissao >= 0 AND percentual_comissao <= 100"));
+
+            entidade.HasKey(v => v.Id).HasName("pk_vendedores");
+
+            entidade.Property(v => v.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(v => v.Nome)
+                .HasColumnName("nome")
+                .HasMaxLength(150)
+                .IsRequired();
+
+            entidade.Property(v => v.Cpf)
+                .HasColumnName("cpf")
+                .HasColumnType("char(11)")
+                .IsRequired();
+
+            entidade.Property(v => v.Email)
+                .HasColumnName("email")
+                .HasMaxLength(150);
+
+            entidade.Property(v => v.Telefone)
+                .HasColumnName("telefone")
+                .HasMaxLength(20);
+
+            entidade.Property(v => v.PercentualComissao)
+                .HasColumnName("percentual_comissao")
+                .HasColumnType("numeric(5,2)")
+                .HasDefaultValue(0m)
+                .IsRequired();
+
+            entidade.Property(v => v.Ativo)
+                .HasColumnName("ativo")
+                .IsRequired();
+
+            entidade.Property(v => v.DataCadastro)
+                .HasColumnName("data_cadastro")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
+                .IsRequired();
+
+            entidade.HasIndex(v => v.Cpf)
+                .IsUnique()
+                .HasDatabaseName("ix_vendedores_cpf");
+
+            entidade.HasIndex(v => v.Nome)
+                .HasDatabaseName("ix_vendedores_nome");
         });
 
         modelBuilder.Entity<Fornecedor>(entidade =>

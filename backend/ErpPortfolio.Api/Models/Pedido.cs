@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Pedido.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 21/09/2026
 // Descrição..: Entidade de domínio que representa um pedido de venda: cabeçalho com cliente,
 //              status, forma de pagamento, desconto do pedido e o total calculado.
@@ -14,6 +14,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada ao confirmar (etapa 10).
 // =====================================================================================
 
 namespace ErpPortfolio.Api.Models;
@@ -34,6 +35,14 @@ public class Pedido
 
     /// <summary>Opcional no rascunho; obrigatória para confirmar.</summary>
     public FormaPagamento? FormaPagamento { get; set; }
+
+    /// <summary>Opcional no rascunho; obrigatório (e ativo) para confirmar. Pedidos antigos ficam sem.</summary>
+    public int? VendedorId { get; set; }
+
+    public Vendedor? Vendedor { get; set; }
+
+    /// <summary>% de comissão do vendedor copiada ao confirmar; nula no rascunho e nunca muda depois.</summary>
+    public decimal? PercentualComissao { get; set; }
 
     /// <summary>Desconto em % sobre a soma dos itens (0 a 100).</summary>
     public decimal DescontoPercentual { get; set; }
