@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.13.0
+ * Versão.....: 1.14.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
@@ -34,6 +34,8 @@
  *   1.11.0 - 23/09/2026 - Rota e item de menu de Contas a Pagar (Financeiro), etapa 8.
  *   1.12.0 - 23/09/2026 - Seção Relatórios: Vendas e Compras (etapa 9).
  *   1.13.0 - 23/09/2026 - Relatório de Estoque (etapa 9).
+ *   1.14.0 - 23/09/2026 - Seções do menu abrem/fecham clicando no título; o estado
+ *                         fica salvo no navegador (localStorage).
  * =====================================================================
  */
 
@@ -43,6 +45,7 @@ import {
   ContainerOutlined,
   DatabaseOutlined,
   DollarOutlined,
+  DownOutlined,
   HomeOutlined,
   LineChartOutlined,
   MenuFoldOutlined,
@@ -114,6 +117,28 @@ const secoes = [
   },
 ] satisfies { titulo: string; itens: MenuProps['items'] }[]
 
+const CHAVE_SECOES_FECHADAS = 'ambition.menu.secoesFechadas'
+
+/** Seções que o usuário deixou fechadas; storage indisponível (modo privado etc.) = todas abertas. */
+function lerSecoesFechadas(): string[] {
+  try {
+    const salvo: unknown = JSON.parse(localStorage.getItem(CHAVE_SECOES_FECHADAS) ?? '[]')
+    return Array.isArray(salvo) ? salvo.filter((item): item is string => typeof item === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+/** Título de uma seção do menu: clicar abre/fecha a lista de telas dela. */
+function TituloSecao({ titulo, aberta, aoAlternar }: { titulo: string; aberta: boolean; aoAlternar: () => void }) {
+  return (
+    <button type="button" className="app-secao-menu" aria-expanded={aberta} onClick={aoAlternar}>
+      <span>{titulo}</span>
+      <DownOutlined className={aberta ? 'app-secao-seta' : 'app-secao-seta app-secao-seta-fechada'} />
+    </button>
+  )
+}
+
 /** true se a rota atual pertence a este item de menu (a raiz "/" só bate exata, nunca por prefixo). */
 function ehRotaDoItem(chave: string, pathname: string): boolean {
   return chave === '/' ? pathname === '/' : pathname === chave || pathname.startsWith(`${chave}/`)
@@ -154,6 +179,19 @@ export default function App() {
 
   const [recolhido, setRecolhido] = useState(false)
   const [menuCelularAberto, setMenuCelularAberto] = useState(false)
+  const [secoesFechadas, setSecoesFechadas] = useState(lerSecoesFechadas)
+
+  function alternarSecao(titulo: string) {
+    const novas = secoesFechadas.includes(titulo)
+      ? secoesFechadas.filter((t) => t !== titulo)
+      : [...secoesFechadas, titulo]
+    setSecoesFechadas(novas)
+    try {
+      localStorage.setItem(CHAVE_SECOES_FECHADAS, JSON.stringify(novas))
+    } catch {
+      // Sem storage: vale só até recarregar a página.
+    }
+  }
 
   return (
     <Layout className="app">
@@ -174,8 +212,17 @@ export default function App() {
           <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensPainel} onClick={({ key }) => navegar(key)} />
           {secoes.map((secao) => (
             <div key={secao.titulo}>
-              {!recolhido && <div className="app-secao-menu">{secao.titulo}</div>}
-              <Menu mode="inline" selectedKeys={chavesSelecionadas} items={secao.itens} onClick={({ key }) => navegar(key)} />
+              {!recolhido && (
+                <TituloSecao
+                  titulo={secao.titulo}
+                  aberta={!secoesFechadas.includes(secao.titulo)}
+                  aoAlternar={() => alternarSecao(secao.titulo)}
+                />
+              )}
+              {/* Recolhido não mostra títulos, então os ícones ficam sempre visíveis. */}
+              {(recolhido || !secoesFechadas.includes(secao.titulo)) && (
+                <Menu mode="inline" selectedKeys={chavesSelecionadas} items={secao.itens} onClick={({ key }) => navegar(key)} />
+              )}
             </div>
           ))}
         </Layout.Sider>
@@ -250,16 +297,22 @@ export default function App() {
         />
         {secoes.map((secao) => (
           <div key={secao.titulo}>
-            <div className="app-secao-menu">{secao.titulo}</div>
-            <Menu
-              mode="inline"
-              selectedKeys={chavesSelecionadas}
-              items={secao.itens}
-              onClick={({ key }) => {
-                navegar(key)
-                setMenuCelularAberto(false)
-              }}
+            <TituloSecao
+              titulo={secao.titulo}
+              aberta={!secoesFechadas.includes(secao.titulo)}
+              aoAlternar={() => alternarSecao(secao.titulo)}
             />
+            {!secoesFechadas.includes(secao.titulo) && (
+              <Menu
+                mode="inline"
+                selectedKeys={chavesSelecionadas}
+                items={secao.itens}
+                onClick={({ key }) => {
+                  navegar(key)
+                  setMenuCelularAberto(false)
+                }}
+              />
+            )}
           </div>
         ))}
       </Drawer>

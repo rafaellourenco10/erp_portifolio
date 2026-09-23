@@ -11,6 +11,13 @@
   height: 100vh;
 }
 
+/* Menu maior que a tela (telas baixas ou muitas seções): rola dentro da barra lateral em vez de vazar. */
+.app-menu-lateral .ant-layout-sider-children {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--cor-borda) transparent;
+}
+
 .app-logo {
   height: 64px;
   display: flex;
@@ -25,13 +32,43 @@
   padding: 0;
 }
 
+/* Título da seção: um botão que abre/fecha a lista de telas (App.tsx, TituloSecao). */
 .app-secao-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   padding: 20px 24px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+  text-align: left;
   color: var(--cor-texto-secundario);
+  transition: color 0.2s;
+}
+
+.app-secao-menu:hover {
+  color: var(--cor-texto);
+}
+
+.app-secao-menu:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.app-secao-seta {
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+
+.app-secao-seta-fechada {
+  transform: rotate(-90deg);
 }
 
 .ant-layout-sider-collapsed .ant-menu {
