@@ -1,13 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.14.0
+ * Versão.....: 1.15.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
- *              /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /relatorios/*) com o
+ *              /vendedores, /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /relatorios/*) com o
  *              React Router. O menu é dividido por departamento (Cadastro,
  *              Ordem Vendas/Compras, Depósito, Financeiro); o Dashboard (/)
  *              fica fora das seções: resume vários módulos.
@@ -36,6 +36,7 @@
  *   1.13.0 - 23/09/2026 - Relatório de Estoque (etapa 9).
  *   1.14.0 - 23/09/2026 - Seções do menu abrem/fecham clicando no título; o estado
  *                         fica salvo no navegador (localStorage).
+ *   1.15.0 - 23/09/2026 - Rota e item de menu de Vendedores (Cadastro), etapa 10.
  * =====================================================================
  */
 
@@ -52,6 +53,7 @@ import {
   MenuOutlined,
   MenuUnfoldOutlined,
   ShopOutlined,
+  SolutionOutlined,
   ShoppingCartOutlined,
   ShoppingOutlined,
   TagsOutlined,
@@ -77,6 +79,7 @@ import { PedidosCompraListaPage } from './pages/PedidosCompra/PedidosCompraLista
 import { ProdutosListaPage } from './pages/Produtos/ProdutosListaPage'
 import { RelatorioEstoquePage } from './pages/Relatorios/RelatorioEstoquePage'
 import { RelatorioPedidosPage } from './pages/Relatorios/RelatorioPedidosPage'
+import { VendedoresListaPage } from './pages/Vendedores/VendedoresListaPage'
 
 // O Dashboard fica fora das seções: resume vários módulos, não pertence a um departamento.
 const itensPainel = [{ key: '/', icon: <HomeOutlined />, label: 'Dashboard' }] satisfies MenuProps['items']
@@ -88,6 +91,7 @@ const secoes = [
     itens: [
       { key: '/clientes', icon: <TeamOutlined />, label: 'Clientes' },
       { key: '/fornecedores', icon: <ShopOutlined />, label: 'Fornecedores' },
+      { key: '/vendedores', icon: <SolutionOutlined />, label: 'Vendedores' },
       { key: '/produtos', icon: <TagsOutlined />, label: 'Produtos' },
       { key: '/categorias', icon: <AppstoreOutlined />, label: 'Categorias' },
     ],
@@ -258,6 +262,7 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/clientes" element={<ClientesListaPage />} />
             <Route path="/fornecedores" element={<FornecedoresListaPage />} />
+            <Route path="/vendedores" element={<VendedoresListaPage />} />
             <Route path="/produtos" element={<ProdutosListaPage />} />
             <Route path="/categorias" element={<CategoriasListaPage />} />
             <Route path="/pedidos" element={<PedidosListaPage />} />

@@ -21,9 +21,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T4: Tela Vendedores** (M)
+- [x] **T4: Tela Vendedores** (M) — *concluída em 23/09/2026*
   - Tipos, api, hooks, schema Zod, lista + drawer (espelho de Fornecedores, sem cidade/UF, com %), item **Vendedores** em Cadastro.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: `types/vendedor.ts`, `api/vendedoresApi.ts`, `hooks/useVendedores.ts`, `schemas/vendedorSchema.ts` (só CPF; % 0-100 com 2 casas), `pages/Vendedores/` (lista e drawer gerados a partir dos de Fornecedores: sem cidade/UF, com coluna e campo de comissão `InputNumber` com `%`). Item **Vendedores** em Cadastro (`SolutionOutlined`), rota `/vendedores`. `tsc -b` e `oxlint` limpos.
 
 - [ ] **T5: Vendedor no pedido de venda** (S)
   - `SelecaoVendedor`; campo no `PedidoPage` + schema; erro da API no campo; confirmado mostra vendedor e % congelada.
