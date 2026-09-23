@@ -1,62 +1,45 @@
-# Plano de implementação: Módulo Fornecedores + Pedidos de Compra (etapa 7)
+# Plano de implementação: Módulo Contas a Pagar (etapa 8)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **autorizado a implementar tudo e commitar a cada tarefa, sem pausar para revisão** (autorização do Rafael, 22/09/2026 — mesmo padrão usado no fechamento do módulo Pedidos).
+> Status: **aguardando aprovação**. Aprovado, aplicar tudo em sequência com um commit por tarefa, sem push (decisão do Rafael, 23/09/2026).
 
 ## Visão geral
 
-8 tarefas. A ideia central da spec é **reaproveitar** o que já existe (`StatusPedido`, `TransicoesPedido`, `CalculoPedido`, o padrão do Cliente) em vez de duplicar — então o volume de código novo de verdade é: 1 migration, 2 métodos novos no `EstoqueService`, e os CRUDs/telas espelhados.
+8 tarefas, todas espelhando o Contas a Receber (etapa 5). Código novo de verdade: 1 tabela/migration, 1 service/controller, 1 tela; o resto é ligar o que já existe (divisão em parcelas, DTO de confirmar, modal, card do dashboard).
 
 ## Grafo de dependências
 
 ```
-T1 Migration + Models (Fornecedor, PedidoCompra, PedidoCompraItem, +coluna) ──┐
-                                                                                 ├─► T3 EstoqueService: Receber/EstornarCompra
-T2 Fornecedor backend (DTOs, Service, Controller) ◄─── T1 ─────────────────────┘
-                                                                                       │
-                                                                    T4 PedidoCompra backend (Service, Controller) ◄─┘
-                                                                                       │
-                                                                          CP1: API pronta
-                                                                                       │
-              T5 Tela Fornecedores ──┐
-                                       ├─► T7 Estoque mostra "Compra #N" ─► T8 Fechamento
-              T6 Tela Pedidos de Compra ─┘
+T1 Enum + Model + Migration
+  └─► T2 ContasPagarService + Controller (/api/contas-pagar)
+        ├─► T3 Pedido de Compra: confirmar gera / cancelar cancela parcelas   ── CP1: API pronta
+        └─► T4 Resumo no /api/dashboard/contas-pagar
+              T5 Tela /contas-pagar + menu Financeiro   (depende de T2)
+              T6 Modal de parcelas ao confirmar compra  (depende de T3)
+              T7 Card "A pagar" no Dashboard            (depende de T4)
+                    └─► T8 Fechamento (README, spec, graphify)
 ```
 
-**Sequencial:** T1 → T2/T3 → T4 → (T5, T6 podem andar em paralelo) → T7 → T8.
-
-## Decisões de arquitetura (além das da spec)
+## Decisões de arquitetura
 
 | Decisão | Motivo |
 |---|---|
-| **Uma migration só**, cobrindo as 4 mudanças de schema (2 tabelas novas + 1 coluna) | É uma feature coesa; várias migrations pequenas para a mesma entrega não ganham nada. |
-| **Sem `IPedidoCompraService` duplicando `TransicoesPedido`/`CalculoPedido`** | Já são funções puras independentes de `Pedido`; a spec já decidiu reaproveitar (ver "Decisões já tomadas"). |
-| **Sem xUnit tocando banco** (Fornecedor e PedidoCompra, verificados por E2E real) | Confirmado ao revisar o projeto: nenhum service (Cliente, Pedido, Estoque, ContasReceber) tem xUnit batendo no `DbContext` — xUnit aqui é só para lógica pura (`CalculoPedido`, `TransicoesPedido`, `EstoqueCalculo`, validação de DTO). Regra de negócio ligada a banco (confirmar/cancelar/saldo) sempre foi verificada por E2E contra a API real, e PedidoCompra segue o mesmo padrão. |
-| Ícones do menu: Fornecedores = `ShopOutlined`, Pedidos de Compra = `ShoppingOutlined` | Distintos dos já usados (`TeamOutlined` Clientes, `ShoppingCartOutlined` Pedidos), decidido na T5/T6. |
-
-## Fases e checkpoints
-
-| Fase | Tarefas | Entrega |
-|---|---|---|
-| 1. Schema | T1 | Migration aplicada, models mapeados |
-| 2. Backend | T2, T3, T4 | Fornecedores + Pedidos de Compra completos na API, testados (xUnit + E2E real) |
-| 3. Frontend | T5, T6, T7 | Telas novas + extrato de estoque atualizado |
-| 4. Fechamento | T8 | README, graphify, critérios da spec conferidos |
-
-**Checkpoints:** **CP1** após T4 (API pronta), **CP2** ao final (T8).
+| Tabela e enum próprios (`parcelas_pagar`, `StatusParcelaPagar`) em vez de uma tabela única com "tipo" | Receber liga a `pedidos`, pagar liga a `pedidos_compra`: uma tabela única precisaria de duas FKs nullable e de um "Recebido/Pago" ambíguo. Mesmo raciocínio usado para `pedidos_compra` x `pedidos`. |
+| Reaproveitar `ContasReceberCalculo.Dividir` e `PedidoConfirmarDto` | Fórmula e validação idênticas; duplicar criaria duas versões para manter. |
+| Modal de parcelas: extrair do `PedidoPage` para um componente usado pelas duas telas (se o código permitir sem mudar o comportamento da venda) | Evita duas cópias do mesmo modal; decidido na T6 olhando o código. |
+| Sem xUnit tocando banco | Padrão do projeto: regra ligada a banco é verificada por E2E contra a API real. |
 
 ## Riscos e mitigações
 
-| Risco | Impacto | Mitigação |
-|---|---|---|
-| Cancelar um pedido de compra confirmado cujo saldo já foi parcialmente vendido | Médio (estornaria estoque inexistente, saldo ficaria negativo sem querer) | PC7: checar saldo suficiente por item ANTES de enfileirar qualquer estorno; testado em T4 |
-| `Produto.Custo` sendo sobrescrito por engano em pedido ainda rascunho | Baixo | Custo só é escrito em `ConfirmarAsync`, nunca em `CriarAsync`/`AtualizarAsync` |
-| Confundir `PedidoId` (venda) com `PedidoCompraId` (compra) na mesma movimentação | Médio (dado errado no extrato) | Uma movimentação preenche só uma FK das duas; `NovaMovimentacaoCompra` isolado do `NovaMovimentacao` de venda |
+| Risco | Mitigação |
+|---|---|
+| Cancelamento bloqueado por saldo (PC7) deixar parcelas já canceladas | Cancelar parcelas só depois da checagem de saldo, sem `SaveChanges` intermediário (mesma transação) — testado no critério 6. |
+| Mudar o modal compartilhado e quebrar o confirmar da venda | T6 revalida o fluxo da venda via `tsc`/build e revisão; se extrair ficar arriscado, duplica-se o modal. |
 
-## Comandos de verificação (usados em todas as tarefas)
+## Comandos de verificação
 
 ```
 dotnet build ErpPortfolio.slnx -c Release
 dotnet test backend/ErpPortfolio.Tests -c Release
-cd frontend/erp-portfolio-web; npx tsc -b; npx oxlint src
+cd frontend/erp-portfolio-web; npx tsc -b; npx oxlint src; npm run build
 ```

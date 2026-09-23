@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.7.0
-// Data.......: 22/09/2026
+// Versão.....: 1.8.0
+// Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
 // -------------------------------------------------------------------------------------
@@ -66,6 +66,12 @@
 //                - IDX : ix_parcelas_receber_vencimento (vencimento)
 //                - FK  : fk_parcelas_receber_pedidos (pedido_id -> pedidos.id, restrict)
 //                - CK  : ck_parcelas_receber_valor, ck_parcelas_receber_numero_parcela
+//              public.parcelas_pagar
+//                - PK  : pk_parcelas_pagar (id, identity)
+//                - UK  : ux_parcelas_pagar_pedido_compra_numero (pedido_compra_id, numero_parcela)
+//                - IDX : ix_parcelas_pagar_vencimento (vencimento)
+//                - FK  : fk_parcelas_pagar_pedidos_compra (pedido_compra_id -> pedidos_compra.id, restrict)
+//                - CK  : ck_parcelas_pagar_valor, ck_parcelas_pagar_numero_parcela
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -79,6 +85,7 @@
 //   1.6.0 - 22/09/2026 - produtos.estoque_minimo (usado pelo card "saldo baixo" do Dashboard).
 //   1.7.0 - 22/09/2026 - Mapeamento de Fornecedor, PedidoCompra e PedidoCompraItem;
 //                        estoque_movimentacoes.pedido_compra_id (etapa 7).
+//   1.8.0 - 23/09/2026 - Mapeamento de ParcelaPagar (tabela parcelas_pagar, etapa 8).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -107,6 +114,8 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
     public DbSet<PedidoCompra> PedidosCompra => Set<PedidoCompra>();
 
     public DbSet<PedidoCompraItem> PedidoCompraItens => Set<PedidoCompraItem>();
+
+    public DbSet<ParcelaPagar> ParcelasPagar => Set<ParcelaPagar>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -165,6 +174,63 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
 
             entidade.HasIndex(p => p.Vencimento)
                 .HasDatabaseName("ix_parcelas_receber_vencimento");
+        });
+
+        modelBuilder.Entity<ParcelaPagar>(entidade =>
+        {
+            entidade.ToTable("parcelas_pagar", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_parcelas_pagar_valor", "valor > 0");
+                tabela.HasCheckConstraint("ck_parcelas_pagar_numero_parcela", "numero_parcela > 0");
+            });
+
+            entidade.HasKey(p => p.Id).HasName("pk_parcelas_pagar");
+
+            entidade.Property(p => p.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(p => p.PedidoCompraId)
+                .HasColumnName("pedido_compra_id");
+
+            // Restrict: o histórico de parcelas nunca é apagado, então o pedido de compra também não pode ser.
+            entidade.HasOne(p => p.PedidoCompra)
+                .WithMany()
+                .HasForeignKey(p => p.PedidoCompraId)
+                .HasConstraintName("fk_parcelas_pagar_pedidos_compra")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(p => p.NumeroParcela)
+                .HasColumnName("numero_parcela")
+                .IsRequired();
+
+            entidade.Property(p => p.Valor)
+                .HasColumnName("valor")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(p => p.Vencimento)
+                .HasColumnName("vencimento")
+                .HasColumnType("date")
+                .IsRequired();
+
+            // Enum gravado como texto ("Pendente"/"Pago"/"Cancelado"), legível no banco.
+            entidade.Property(p => p.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasMaxLength(20)
+                .IsRequired();
+
+            entidade.Property(p => p.DataPagamento)
+                .HasColumnName("data_pagamento")
+                .HasColumnType("timestamp with time zone");
+
+            entidade.HasIndex(p => new { p.PedidoCompraId, p.NumeroParcela })
+                .IsUnique()
+                .HasDatabaseName("ux_parcelas_pagar_pedido_compra_numero");
+
+            entidade.HasIndex(p => p.Vencimento)
+                .HasDatabaseName("ix_parcelas_pagar_vencimento");
         });
 
         modelBuilder.Entity<EstoqueMovimentacao>(entidade =>
