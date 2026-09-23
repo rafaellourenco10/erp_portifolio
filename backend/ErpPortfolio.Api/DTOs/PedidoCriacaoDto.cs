@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: PedidoCriacaoDto.cs
-// Versão.....: 1.0.0
-// Data.......: 21/09/2026
+// Versão.....: 1.1.0
+// Data.......: 23/09/2026
 // Descrição..: DTO de entrada do pedido: serve para o POST /api/pedidos e também para o
 //              PUT /api/pedidos/{id} (que substitui cliente, itens, desconto e pagamento
 //              de um rascunho). Regras R4 e R8 da SPEC.md: 1 a 100 itens, sem produto
@@ -14,6 +14,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - VendedorId opcional (etapa 10).
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;
@@ -33,6 +34,11 @@ public class PedidoCriacaoDto : IValidatableObject
     // O conversor de JSON aceita números (99 viraria um valor inexistente), por isso a validação do enum.
     [EnumDataType(typeof(FormaPagamento), ErrorMessage = "Forma de pagamento inválida.")]
     public FormaPagamento? FormaPagamento { get; set; }
+
+    /// <summary>Opcional no rascunho; obrigatório (e ativo) para confirmar (SPEC.md, PV1/PV2).</summary>
+    /// <example>1</example>
+    [Range(1, int.MaxValue, ErrorMessage = "Vendedor inválido.")]
+    public int? VendedorId { get; set; }
 
     /// <summary>Desconto sobre a soma dos itens, em %, de 0 a 100, com até 2 casas.</summary>
     /// <example>5</example>

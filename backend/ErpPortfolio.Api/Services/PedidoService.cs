@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.7.0
-// Data.......: 22/09/2026
+// Versão.....: 1.8.0
+// Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
 //              aceita preço nem total vindos do cliente. Confirmar baixa o estoque dos
@@ -12,12 +12,13 @@
 // Tabelas....: public.pedidos, public.pedido_itens
 //                - SELECT : listagem (busca por id ou ILIKE no nome do cliente, status,
 //                           ORDER BY data_pedido DESC, id DESC, LIMIT/OFFSET),
-//                           consulta por id (JOIN com clientes e produtos) e validação
-//                           de cliente e produtos (existem e estão ativos)
+//                           consulta por id (JOIN com clientes, vendedores e produtos) e
+//                           validação de cliente, vendedor e produtos (existem e estão ativos)
 //                - INSERT : criação do rascunho com os itens
 //                - UPDATE : edição do rascunho (cabeçalho, valor_total e itens existentes)
 //                - INSERT / DELETE em pedido_itens: itens novos e itens removidos na edição
-//                - UPDATE : status (Rascunho -> Confirmado; Rascunho/Confirmado -> Cancelado)
+//                - UPDATE : status (Rascunho -> Confirmado; Rascunho/Confirmado -> Cancelado) e
+//                           percentual_comissao (copiado do vendedor ao confirmar)
 //              public.estoque_movimentacoes (indiretamente, via IEstoqueService)
 //                - INSERT : Saída por item ao confirmar; Entrada de estorno por item ao
 //                           cancelar um pedido que estava Confirmado
@@ -39,6 +40,8 @@
 //   1.6.0 - 22/09/2026 - Cancelar de Confirmado cancela as parcelas Pendentes (C6).
 //   1.7.0 - 22/09/2026 - ObterResumoVendasAsync (faturamento, ticket médio, por status,
 //                        faturamento diário do mês atual), para o Dashboard.
+//   1.8.0 - 23/09/2026 - Vendedor no pedido (PV1) e confirmar exige vendedor ativo e congela a %
+//                        de comissão (PV2/PV3), etapa 10.
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -89,6 +92,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
     {
         var pedido = await contexto.Pedidos.AsNoTracking()
             .Include(p => p.Cliente)
+            .Include(p => p.Vendedor)
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .FirstOrDefaultAsync(p => p.Id == id, cancelamento);
 
@@ -98,6 +102,8 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
     public async Task<PedidoRespostaDto> CriarAsync(PedidoCriacaoDto dados, CancellationToken cancelamento)
     {
         var cliente = await ObterClienteAtivoAsync(dados.ClienteId!.Value, cancelamento);
+        // PV1: vendedor é opcional no rascunho, mas se vier precisa existir e estar ativo.
+        var vendedor = dados.VendedorId is int vendedorId ? await ObterVendedorAtivoAsync(vendedorId, cancelamento) : null;
         var produtos = await ObterProdutosAsync(dados.Itens.Select(i => i.ProdutoId), cancelamento);
 
         var pedido = new Pedido
@@ -107,6 +113,8 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
             Status = StatusPedido.Rascunho,
             DataPedido = DateTime.UtcNow,
             FormaPagamento = dados.FormaPagamento,
+            Vendedor = vendedor,
+            VendedorId = vendedor?.Id,
             DescontoPercentual = dados.DescontoPercentual
         };
 
@@ -144,6 +152,14 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
 
         pedido.FormaPagamento = dados.FormaPagamento;
         pedido.DescontoPercentual = dados.DescontoPercentual;
+
+        // PV1: mesma regra do cliente — só exige "ativo" se o vendedor foi trocado; pode voltar a ficar vazio.
+        if (dados.VendedorId != pedido.VendedorId)
+        {
+            var vendedor = dados.VendedorId is int vendedorId ? await ObterVendedorAtivoAsync(vendedorId, cancelamento) : null;
+            pedido.Vendedor = vendedor;
+            pedido.VendedorId = vendedor?.Id;
+        }
 
         var produtos = await ObterProdutosAsync(dados.Itens.Select(i => i.ProdutoId), cancelamento);
 
@@ -184,6 +200,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
     {
         var pedido = await contexto.Pedidos
             .Include(p => p.Cliente)
+            .Include(p => p.Vendedor)
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .FirstOrDefaultAsync(p => p.Id == id, cancelamento);
         if (pedido is null)
@@ -200,6 +217,13 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         if (!pedido.Cliente!.Ativo)
             throw new DadoInvalidoException(nameof(PedidoCriacaoDto.ClienteId), "O cliente do pedido está inativo.");
 
+        // PV2: vendedor obrigatório e ativo para confirmar.
+        if (pedido.Vendedor is null)
+            throw new DadoInvalidoException(nameof(PedidoCriacaoDto.VendedorId), "Informe o vendedor para confirmar o pedido.");
+
+        if (!pedido.Vendedor.Ativo)
+            throw new DadoInvalidoException(nameof(PedidoCriacaoDto.VendedorId), "O vendedor do pedido está inativo.");
+
         var inativos = pedido.Itens.Where(i => !i.Produto!.Ativo).Select(i => $"\"{i.Produto!.Nome}\"").ToList();
         if (inativos.Count > 0)
             throw new DadoInvalidoException(CampoItens, $"Produto(s) inativo(s) no pedido: {string.Join(", ", inativos)}.");
@@ -209,6 +233,9 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         await estoqueService.BaixarAsync(pedido.Id, pedido.Itens, cancelamento);
 
         pedido.Status = StatusPedido.Confirmado;
+
+        // PV3: congela a % de comissão do vendedor neste momento (não muda mais, mesmo que a % do vendedor mude).
+        pedido.PercentualComissao = pedido.Vendedor.PercentualComissao;
 
         // C1: gera as parcelas a receber (não chama SaveChanges; entra no mesmo SaveChangesAsync abaixo).
         contasReceberService.GerarParcelas(pedido, numeroParcelas, intervaloDias);
@@ -305,6 +332,15 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
             throw new DadoInvalidoException(nameof(PedidoCriacaoDto.ClienteId), "Cliente inexistente ou inativo.");
 
         return cliente;
+    }
+
+    private async Task<Vendedor> ObterVendedorAtivoAsync(int vendedorId, CancellationToken cancelamento)
+    {
+        var vendedor = await contexto.Vendedores.FirstOrDefaultAsync(v => v.Id == vendedorId, cancelamento);
+        if (vendedor is null || !vendedor.Ativo)
+            throw new DadoInvalidoException(nameof(PedidoCriacaoDto.VendedorId), "Vendedor inexistente ou inativo.");
+
+        return vendedor;
     }
 
     private async Task<Dictionary<int, Produto>> ObterProdutosAsync(IEnumerable<int> ids, CancellationToken cancelamento)

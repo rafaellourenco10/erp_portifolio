@@ -1,7 +1,7 @@
 // =====================================================================================
 // Arquivo....: PedidoRespostaDto.cs
-// Versão.....: 1.0.0
-// Data.......: 21/09/2026
+// Versão.....: 1.1.0
+// Data.......: 23/09/2026
 // Descrição..: DTO de saída com um pedido completo (cabeçalho, cliente e itens) e o
 //              subtotal de cada item. O subtotal do item é derivado (CalculoPedido), não
 //              gravado; valorTotal é o total gravado no pedido.
@@ -14,6 +14,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada (etapa 10).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -52,6 +53,9 @@ public record PedidoRespostaDto(
     DateTime DataPedido,
     StatusPedido Status,
     FormaPagamento? FormaPagamento,
+    int? VendedorId,
+    string? VendedorNome,
+    decimal? PercentualComissao,
     decimal DescontoPercentual,
     decimal SubtotalItens,
     decimal ValorTotal,
@@ -69,6 +73,9 @@ public record PedidoRespostaDto(
             pedido.DataPedido,
             pedido.Status,
             pedido.FormaPagamento,
+            pedido.VendedorId,
+            pedido.Vendedor?.Nome,
+            pedido.PercentualComissao,
             pedido.DescontoPercentual,
             itens.Sum(i => i.Subtotal),
             pedido.ValorTotal,

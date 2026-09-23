@@ -14,9 +14,10 @@
   - Verificar: build; E2E na T3.
   - Resultado: DTOs em `DTOs/VendedorDtos.cs`, `VendedorService` (CPF normalizado e único, mensagem de reativar se o duplicado estiver inativo), `VendedoresController` gerado do de Fornecedores, DI e descrição do Swagger. 7 testes a mais (% de comissão 0-100 com 2 casas; CNPJ recusado no DTO): `dotnet test` 172/172. Build 0 avisos. CRUD verificado por E2E na T3.
 
-- [ ] **T3: Vendedor no pedido de venda** (M)
+- [x] **T3: Vendedor no pedido de venda** (M) — *concluída em 23/09/2026*
   - `PedidoCriacaoDto.VendedorId`; salvar valida vendedor ativo (PV1); confirmar exige vendedor ativo e grava a % (PV2/PV3); `PedidoRespostaDto` com vendedor e %.
   - Verificar: E2E dos critérios 1-5 contra instância temporária.
+  - Resultado: E2E (instância temporária na 5099, dados `ZZT…` apagados ao final; 3 pedidos reais intactos): 19 verificações OK — CRUD do vendedor (CPF com máscara gravado só com dígitos, CPF repetido 409, CNPJ 400, 100,01% 400, filtro, edição, reativação pelo PUT); rascunho com e sem vendedor; vendedor inexistente/inativo → 400 em `VendedorId`; confirmar sem vendedor ou com vendedor inativado → 400 e continua Rascunho; confirmar grava 5,5% e mudar a % do vendedor para 9 não altera o pedido (o próximo pega 9); pedido antigo abre sem vendedor.
 
 ## Fase 2: Frontend
 
