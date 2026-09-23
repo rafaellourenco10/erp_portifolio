@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.13.0
+// Versão.....: 1.14.0
 // Data.......: 23/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
@@ -28,6 +28,7 @@
 //   1.11.0 - 23/09/2026 - Licença Community do QuestPDF (PDF dos relatórios).
 //   1.12.0 - 23/09/2026 - CORS expõe Content-Disposition (nome do arquivo dos relatórios).
 //   1.13.0 - 23/09/2026 - Registro do IVendedorService (etapa 10).
+//   1.14.0 - 23/09/2026 - Registro do IComissaoService (etapa 11).
 // =====================================================================================
 
 using System.Reflection;
@@ -55,6 +56,7 @@ builder.Services.AddScoped<IContasReceberService, ContasReceberService>();
 builder.Services.AddScoped<IContasPagarService, ContasPagarService>();
 builder.Services.AddScoped<IRelatorioService, RelatorioService>();
 builder.Services.AddScoped<IVendedorService, VendedorService>();
+builder.Services.AddScoped<IComissaoService, ComissaoService>();
 builder.Services.AddScoped<IFornecedorService, FornecedorService>();
 builder.Services.AddScoped<IPedidoCompraService, PedidoCompraService>();
 
@@ -68,7 +70,7 @@ builder.Services.AddSwaggerGen(opcoes =>
     {
         Title = "Ambition ERP API",
         Version = "v1",
-        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Fornecedores, Vendedores, Pedidos (venda e compra), Estoque, Contas a Receber, Contas a Pagar e Relatórios."
+        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Fornecedores, Vendedores, Pedidos (venda e compra), Estoque, Contas a Receber, Contas a Pagar, Comissões e Relatórios."
     });
 
     var arquivoXml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");

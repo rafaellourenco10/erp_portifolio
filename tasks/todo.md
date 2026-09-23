@@ -14,9 +14,10 @@
   - Verificar: build; E2E na T3.
   - Resultado: `GerarComissao` no `ContasReceberService`, chamado só quando a parcela muda para Recebido (receber de novo não passa por ele); usa a % do pedido; sem vendedor/% ou valor 0 não gera. Mesmo SaveChanges do recebimento. Corrida de duas chamadas simultâneas marcada com `ponytail:` (o índice único impede duplicar). Build 0 avisos; comportamento no E2E da T3.
 
-- [ ] **T3: API de comissões** (M)
+- [x] **T3: API de comissões** (M) — *concluída em 23/09/2026*
   - DTOs, `IComissaoService`/`ComissaoService` (listar com totais do filtro, pagar em lote), `ComissoesController`, DI.
   - Verificar: E2E dos critérios 1-6 contra instância temporária.
+  - Resultado: E2E (instância temporária na 5099; dados `ZZT…` apagados; dados reais intactos): 18 verificações OK — 350 a 5% congelado gera 17,50 mesmo com o vendedor já em 9%; receber de novo não duplica; 3 parcelas de 1000 a 5,5% geram 3× 18,33; 0% e pedido sem vendedor não geram; a SQL de carga da migration (CM3) gera 16,50 para parcela recebida "antes"; lista, filtro por vendedor/status/período e totais batendo com SQL; período invertido 400; pagar em lote, idempotente, id inexistente 400 sem alterar nada, lista vazia 400; cancelar pedido mantém a comissão. Totais dos cards ignoram o filtro de status de propósito (quadro do vendedor/período).
 
 ## Fase 2: Frontend
 
