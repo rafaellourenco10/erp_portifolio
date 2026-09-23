@@ -126,8 +126,10 @@
   gap: 8px;
 }
 
-.painel-tabela .ant-table-thead > tr > th:first-child,
-.painel-tabela .ant-table-tbody > tr > td:first-child {
+/* A coluna de checkbox (rowSelection) fica de fora: o Ant Design calcula a largura dela para o
+   padding padrão, e os 20px a mais cortavam o checkbox. */
+.painel-tabela .ant-table-thead > tr > th:first-child:not(.ant-table-selection-column),
+.painel-tabela .ant-table-tbody > tr > td:first-child:not(.ant-table-selection-column) {
   padding-left: 20px;
 }
 
