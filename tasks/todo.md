@@ -19,9 +19,9 @@
   - Arquivos: `DTOs/Fornecedor*.cs`, `Services/IFornecedorService.cs`, `Services/FornecedorService.cs`, `Controllers/FornecedoresController.cs`, `Program.cs`.
 
 - [ ] **T3: EstoqueService — Receber/EstornarCompra** (M)
-  - Descrição: `IEstoqueService`/`EstoqueService` ganham `ReceberAsync(pedidoCompraId, itens)` (Entrada por item, motivo `"Compra pedido #N"`, sem checagem de saldo) e `EstornarCompra(pedidoCompraId, itens)` (checa saldo suficiente por item ANTES de enfileirar qualquer Saída — PC7 — e lança `DadoInvalidoException` listando os itens sem saldo se faltar); `MovimentacaoRespostaDto` ganha `PedidoCompraId`.
-  - Aceite: xUnit cobrindo o estorno bloqueado por saldo insuficiente (o caso novo que `Estornar`/`BaixarAsync` não tinham).
-  - Verificar: `dotnet test`.
+  - Descrição: `IEstoqueService`/`EstoqueService` ganham `Receber(pedidoCompraId, itens)` (Entrada por item, motivo `"Compra pedido #N"`, sem checagem de saldo) e `EstornarCompraAsync(pedidoCompraId, itens, cancelamento)` (checa saldo suficiente por item ANTES de enfileirar qualquer Saída — PC7 — e lança `DadoInvalidoException` listando os itens sem saldo se faltar); `MovimentacaoRespostaDto` ganha `PedidoCompraId`.
+  - Aceite: compila; comportamento (entrada gerada, estorno bloqueado por saldo insuficiente) verificado por E2E real na T4, junto do fluxo completo do Pedido de Compra — mesmo padrão do projeto, que não tem xUnit tocando banco (`BaixarAsync`/`Estornar` do Pedido de Venda também só são verificados por E2E).
+  - Verificar: `dotnet build`.
   - Dependências: T1.
   - Arquivos: `Services/IEstoqueService.cs`, `Services/EstoqueService.cs`, `DTOs/MovimentacaoRespostaDto.cs`, `ErpPortfolio.Tests/EstoqueCalculoTests.cs` (ou novo arquivo).
 
@@ -32,10 +32,10 @@
 
 - [ ] **T4: PedidoCompra backend** (L)
   - Descrição: `PedidoCompraCriacaoDto`, `PedidoCompraItemEntradaDto`, `PedidoCompraRespostaDto`, `PedidoCompraResumoDto`, `PedidoCompraFiltroDto` (espelho dos DTOs de Pedido, sem `FormaPagamento`); `IPedidoCompraService`/`PedidoCompraService` reaproveitando `TransicoesPedido` e `CalculoPedido` — criar/editar rascunho, confirmar (PC5/PC6: fornecedor e produtos ativos, chama `ReceberAsync`, atualiza `Produto.Custo` por item), cancelar (PC7/PC8: chama `EstornarCompra`, idempotente); `PedidosCompraController` (espelho de `PedidosController`, sem corpo no `/confirmar`).
-  - Aceite: xUnit para confirmar (entrada gerada + custo atualizado) e cancelar (estorno com saldo ok / bloqueado sem saldo / idempotente); E2E real do fluxo completo.
-  - Verificar: `dotnet build`, `dotnet test`, E2E manual contra a API rodando.
+  - Aceite: E2E real cobrindo confirmar (entrada gerada + custo atualizado), cancelar com saldo ok (estorna), cancelar sem saldo suficiente (bloqueado, 400) e cancelar duas vezes (idempotente) — mesmo padrão de verificação do `PedidoService`.
+  - Verificar: `dotnet build`, E2E manual contra a API rodando.
   - Dependências: T1, T3.
-  - Arquivos: `DTOs/PedidoCompra*.cs`, `Services/IPedidoCompraService.cs`, `Services/PedidoCompraService.cs`, `Controllers/PedidosCompraController.cs`, `Program.cs`, `ErpPortfolio.Tests/PedidoCompraServiceTests.cs`.
+  - Arquivos: `DTOs/PedidoCompra*.cs`, `Services/IPedidoCompraService.cs`, `Services/PedidoCompraService.cs`, `Controllers/PedidosCompraController.cs`, `Program.cs`.
 
 ### Checkpoint 2 (CP1 do plano): API pronta
 - [ ] Critérios 1 a 7 da spec (backend) verificados por E2E na API real

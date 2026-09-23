@@ -1,10 +1,12 @@
 // =====================================================================================
 // Arquivo....: EstoqueService.cs
-// Versão.....: 1.4.0
+// Versão.....: 1.5.0
 // Data.......: 22/09/2026
 // Descrição..: Consulta de estoque (listagem com saldo, extrato por produto), entrada
-//              manual e a baixa/estorno usados pelo PedidoService. O saldo nunca é
-//              gravado: é sempre Σ Entrada − Σ Saída, calculado na consulta (SPEC.md, E1).
+//              manual, a baixa/estorno usados pelo PedidoService (pedido de venda) e o
+//              receber/estornar usados pelo PedidoCompraService (pedido de compra). O
+//              saldo nunca é gravado: é sempre Σ Entrada − Σ Saída, calculado na consulta
+//              (SPEC.md, E1).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.produtos
@@ -12,12 +14,15 @@
 //                           e validação do produto na entrada manual (existe e está ativo)
 //              public.estoque_movimentacoes
 //                - SELECT : saldo agregado por produto (subconsulta correlacionada e,
-//                           em BaixarAsync, uma consulta por item) e extrato paginado de
-//                           um produto (ORDER BY data_movimentacao DESC)
-//                - INSERT : entrada manual (E4), saída por venda (E2), entrada de estorno (E3)
+//                           em BaixarAsync/EstornarCompraAsync, uma consulta por item) e
+//                           extrato paginado de um produto (ORDER BY data_movimentacao DESC)
+//                - INSERT : entrada manual (E4), saída por venda (E2), entrada de estorno
+//                           de venda (E3), entrada por compra (PC6), saída de estorno de
+//                           compra (PC7)
 // Fontes.....: ErpPortfolioDbContext.Produtos / EstoqueMovimentacoes (EF Core / Npgsql).
-//              BaixarAsync e Estornar não chamam SaveChanges: ficam na mesma transação
-//              do PedidoService (Confirmar/Cancelar), que salva tudo de uma vez.
+//              BaixarAsync, Estornar, Receber e EstornarCompraAsync não chamam
+//              SaveChanges: ficam na mesma transação de quem chamar (PedidoService ou
+//              PedidoCompraService), que salva tudo de uma vez.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e extrato).
@@ -26,6 +31,7 @@
 //   1.3.0 - 22/09/2026 - ObterResumoAsync (quantidade de produtos com saldo baixo), para o Dashboard.
 //   1.4.0 - 22/09/2026 - Estoque mínimo passa a ser por produto (produtos.estoque_minimo);
 //                        ObterResumoAsync devolve a lista dos produtos baixos, não só a contagem.
+//   1.5.0 - 22/09/2026 - Receber e EstornarCompraAsync, para o Pedido de Compra (PC6/PC7).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -87,7 +93,7 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
             .ThenByDescending(m => m.Id)
             .Skip((filtro.Pagina - 1) * filtro.TamanhoPagina)
             .Take(filtro.TamanhoPagina)
-            .Select(m => new MovimentacaoRespostaDto(m.Tipo, m.Quantidade, m.Motivo, m.PedidoId, m.DataMovimentacao))
+            .Select(m => new MovimentacaoRespostaDto(m.Tipo, m.Quantidade, m.Motivo, m.PedidoId, m.PedidoCompraId, m.DataMovimentacao))
             .ToListAsync(cancelamento);
 
         return new ResultadoPaginadoDto<MovimentacaoRespostaDto>(itens, filtro.Pagina, filtro.TamanhoPagina, totalItens);
@@ -115,7 +121,7 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
         await contexto.SaveChangesAsync(cancelamento);
 
         return new MovimentacaoRespostaDto(
-            movimentacao.Tipo, movimentacao.Quantidade, movimentacao.Motivo, movimentacao.PedidoId, movimentacao.DataMovimentacao);
+            movimentacao.Tipo, movimentacao.Quantidade, movimentacao.Motivo, movimentacao.PedidoId, movimentacao.PedidoCompraId, movimentacao.DataMovimentacao);
     }
 
     public async Task BaixarAsync(int pedidoId, IEnumerable<PedidoItem> itens, CancellationToken cancelamento)
@@ -148,6 +154,39 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
         {
             contexto.EstoqueMovimentacoes.Add(
                 NovaMovimentacao(item.ProdutoId, TipoMovimentacao.Entrada, item.Quantidade, pedidoId, $"Estorno cancelamento pedido #{pedidoId}"));
+        }
+    }
+
+    public void Receber(int pedidoCompraId, IEnumerable<PedidoCompraItem> itens)
+    {
+        foreach (var item in itens)
+        {
+            contexto.EstoqueMovimentacoes.Add(
+                NovaMovimentacaoCompra(item.ProdutoId, TipoMovimentacao.Entrada, item.Quantidade, pedidoCompraId, $"Compra pedido #{pedidoCompraId}"));
+        }
+    }
+
+    public async Task EstornarCompraAsync(int pedidoCompraId, IEnumerable<PedidoCompraItem> itens, CancellationToken cancelamento)
+    {
+        var lista = itens.ToList();
+        var insuficientes = new List<string>();
+
+        // Confere TODOS os itens antes de enfileirar qualquer movimentação: se um item não tiver saldo (já foi
+        // vendido/consumido), nenhuma Saída é gravada, nem a dos itens que tinham saldo (PC7).
+        foreach (var item in lista)
+        {
+            var saldo = await SaldoAsync(item.ProdutoId, cancelamento);
+            if (saldo < item.Quantidade)
+                insuficientes.Add($"\"{item.Produto!.Nome}\" (saldo {saldo}, a compra tinha entrado com {item.Quantidade})");
+        }
+
+        if (insuficientes.Count > 0)
+            throw new DadoInvalidoException(CampoItens, $"Estoque insuficiente para estornar: {string.Join("; ", insuficientes)}.");
+
+        foreach (var item in lista)
+        {
+            contexto.EstoqueMovimentacoes.Add(
+                NovaMovimentacaoCompra(item.ProdutoId, TipoMovimentacao.Saida, item.Quantidade, pedidoCompraId, $"Estorno cancelamento pedido de compra #{pedidoCompraId}"));
         }
     }
 
@@ -189,6 +228,16 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
         Quantidade = quantidade,
         Motivo = motivo,
         PedidoId = pedidoId,
+        DataMovimentacao = DateTime.UtcNow
+    };
+
+    private static EstoqueMovimentacao NovaMovimentacaoCompra(int produtoId, TipoMovimentacao tipo, decimal quantidade, int pedidoCompraId, string motivo) => new()
+    {
+        ProdutoId = produtoId,
+        Tipo = tipo,
+        Quantidade = quantidade,
+        Motivo = motivo,
+        PedidoCompraId = pedidoCompraId,
         DataMovimentacao = DateTime.UtcNow
     };
 }

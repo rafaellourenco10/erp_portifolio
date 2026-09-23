@@ -31,8 +31,7 @@ T2 Fornecedor backend (DTOs, Service, Controller) ◄─── T1 ────�
 |---|---|
 | **Uma migration só**, cobrindo as 4 mudanças de schema (2 tabelas novas + 1 coluna) | É uma feature coesa; várias migrations pequenas para a mesma entrega não ganham nada. |
 | **Sem `IPedidoCompraService` duplicando `TransicoesPedido`/`CalculoPedido`** | Já são funções puras independentes de `Pedido`; a spec já decidiu reaproveitar (ver "Decisões já tomadas"). |
-| **Sem testes xUnit para Fornecedor** (só verificação manual via API real) | Mesmo padrão do Cliente, que também não tem xUnit dedicado (README: "Testes automatizados de integração para a API de Clientes... ainda pendente") — CRUD simples, sem regra de negócio própria. |
-| **xUnit só para `PedidoCompraService`** (confirmar/cancelar/custo/saldo insuficiente) | É onde mora a regra de negócio nova de verdade (PC5-PC8); mesmo padrão do `PedidoService`. |
+| **Sem xUnit tocando banco** (Fornecedor e PedidoCompra, verificados por E2E real) | Confirmado ao revisar o projeto: nenhum service (Cliente, Pedido, Estoque, ContasReceber) tem xUnit batendo no `DbContext` — xUnit aqui é só para lógica pura (`CalculoPedido`, `TransicoesPedido`, `EstoqueCalculo`, validação de DTO). Regra de negócio ligada a banco (confirmar/cancelar/saldo) sempre foi verificada por E2E contra a API real, e PedidoCompra segue o mesmo padrão. |
 | Ícones do menu: Fornecedores = `ShopOutlined`, Pedidos de Compra = `ShoppingOutlined` | Distintos dos já usados (`TeamOutlined` Clientes, `ShoppingCartOutlined` Pedidos), decidido na T5/T6. |
 
 ## Fases e checkpoints

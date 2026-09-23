@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: MovimentacaoRespostaDto.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 22/09/2026
 // Descrição..: DTO de saída de uma movimentação de estoque, usado no extrato por produto.
 // -------------------------------------------------------------------------------------
@@ -10,6 +10,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
+//   1.1.0 - 22/09/2026 - PedidoCompraId, para distinguir a origem "Compra #N" (etapa 7).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -21,4 +22,5 @@ public record MovimentacaoRespostaDto(
     decimal Quantidade,
     string? Motivo,
     int? PedidoId,
+    int? PedidoCompraId,
     DateTime DataMovimentacao);
