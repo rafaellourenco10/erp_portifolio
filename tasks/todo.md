@@ -36,8 +36,9 @@
   - Verificar: `tsc -b`, `oxlint`; fluxo da venda inalterado.
   - Resultado: modal extraído para `components/ModalParcelas.tsx` e usado pelas duas telas (a venda só trocou o JSX do modal pelo componente: mesmo título, texto, limites e padrão 1/30; os campos agora voltam ao padrão no `afterClose` em vez de ao abrir). `pedidosCompraApi.confirmar` e `useConfirmarPedidoCompra` enviam o corpo. `tsc -b` e `oxlint` limpos.
 
-- [ ] **T7: Card "A pagar" no Dashboard** (S)
+- [x] **T7: Card "A pagar" no Dashboard** (S) — *concluída em 23/09/2026*
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: card "Contas a pagar" ao lado do "Contas a receber"; o corpo dos dois virou a função `ResumoContas` (mesmo visual). Com 5 cards, a grade passou a 2 linhas no desktop: financeiro (Faturamento, A receber, A pagar — `lg=8`) e operação (Pedidos por status, Saldo baixo — `lg=12`). `tsc -b`, `oxlint` e `npm run build` limpos (o aviso de chunk > 500 kB já existia).
 
 ## Fase 3: Fechamento
 

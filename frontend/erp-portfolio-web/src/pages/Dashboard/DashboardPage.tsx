@@ -1,36 +1,61 @@
 /**
  * =====================================================================
  * Arquivo....: DashboardPage.tsx
- * Versão.....: 1.2.0
- * Data.......: 22/09/2026
+ * Versão.....: 1.3.0
+ * Data.......: 23/09/2026
  * Descrição..: Página inicial do Ambition ERP: cards de indicador do mês atual
- *              (faturamento/ticket médio, pedidos por status, contas a receber
- *              pendente/atrasado, produtos com saldo baixo de estoque) e o
+ *              (faturamento/ticket médio, pedidos por status, contas a receber e
+ *              a pagar pendente/atrasado, produtos com saldo baixo de estoque) e o
  *              gráfico de faturamento diário. Cada card busca seu próprio
  *              indicador e mostra loading/erro independente (SPEC.md, D7).
  * ---------------------------------------------------------------------
- * Fontes.....: GET /api/dashboard/vendas, /contas-receber, /estoque
- *              (via useResumoVendas / useResumoContasReceber / useResumoEstoque)
+ * Fontes.....: GET /api/dashboard/vendas, /contas-receber, /contas-pagar, /estoque
+ *              (via useResumoVendas / useResumoContasReceber / useResumoContasPagar /
+ *              useResumoEstoque)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo (cards de número).
  *   1.1.0 - 22/09/2026 - Gráfico de faturamento diário (T6).
  *   1.2.0 - 22/09/2026 - Card "Saldo baixo" lista os produtos (estoque mínimo
  *                        por produto, não mais limite fixo).
+ *   1.3.0 - 23/09/2026 - Card "Contas a pagar" (etapa 8); cards em duas linhas:
+ *                        financeiro (3) e operação (2).
  * =====================================================================
  */
 
 import { Col, Flex, Row, Typography } from 'antd'
-import { useResumoContasReceber, useResumoEstoque, useResumoVendas } from '../../hooks/useDashboard'
+import { useResumoContasPagar, useResumoContasReceber, useResumoEstoque, useResumoVendas } from '../../hooks/useDashboard'
+import type { ContasReceberResumo } from '../../types/dashboard'
 import { formatarReal } from '../../utils/moeda'
 import { CardIndicador } from './CardIndicador'
 import { GraficoFaturamento } from './GraficoFaturamento'
 // A tela reaproveita as classes .painel, .pagina-titulo etc. do módulo de Clientes.
 import '../Clientes/clientes.css'
 
+/** Corpo dos cards de contas a receber e a pagar: total pendente e, se houver, o atrasado em vermelho. */
+function ResumoContas({ resumo }: { resumo: ContasReceberResumo }) {
+  return (
+    <>
+      <Typography.Title level={3} className="numeros-tabulares" style={{ margin: 0 }}>
+        {formatarReal(resumo.totalPendente)}
+      </Typography.Title>
+      <span className="texto-discreto numeros-tabulares">
+        {resumo.quantidadePendente} pendente{resumo.quantidadePendente === 1 ? '' : 's'}
+        {resumo.quantidadeAtrasado > 0 && (
+          <Typography.Text type="danger">
+            {' '}
+            · {formatarReal(resumo.totalAtrasado)} atrasado ({resumo.quantidadeAtrasado})
+          </Typography.Text>
+        )}
+      </span>
+    </>
+  )
+}
+
 export function DashboardPage() {
   const vendas = useResumoVendas()
   const contasReceber = useResumoContasReceber()
+  const contasPagar = useResumoContasPagar()
   const estoque = useResumoEstoque()
 
   return (
@@ -40,8 +65,9 @@ export function DashboardPage() {
         <p className="pagina-subtitulo">Indicadores do mês atual.</p>
       </div>
 
+      {/* Linha 1: financeiro (faturamento, a receber, a pagar); linha 2: operação (pedidos, estoque). */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
           <CardIndicador titulo="Faturamento do mês" loading={vendas.isLoading} erro={vendas.isError}>
             {vendas.data && (
               <>
@@ -56,8 +82,17 @@ export function DashboardPage() {
             )}
           </CardIndicador>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={8}>
+          <CardIndicador titulo="Contas a receber" loading={contasReceber.isLoading} erro={contasReceber.isError}>
+            {contasReceber.data && <ResumoContas resumo={contasReceber.data} />}
+          </CardIndicador>
+        </Col>
+        <Col xs={24} sm={12} lg={8}>
+          <CardIndicador titulo="Contas a pagar" loading={contasPagar.isLoading} erro={contasPagar.isError}>
+            {contasPagar.data && <ResumoContas resumo={contasPagar.data} />}
+          </CardIndicador>
+        </Col>
+        <Col xs={24} sm={12} lg={12}>
           <CardIndicador titulo="Pedidos por status (mês)" loading={vendas.isLoading} erro={vendas.isError}>
             {vendas.data && (
               <Flex justify="space-between">
@@ -83,29 +118,7 @@ export function DashboardPage() {
             )}
           </CardIndicador>
         </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <CardIndicador titulo="Contas a receber" loading={contasReceber.isLoading} erro={contasReceber.isError}>
-            {contasReceber.data && (
-              <>
-                <Typography.Title level={3} className="numeros-tabulares" style={{ margin: 0 }}>
-                  {formatarReal(contasReceber.data.totalPendente)}
-                </Typography.Title>
-                <span className="texto-discreto numeros-tabulares">
-                  {contasReceber.data.quantidadePendente} pendente{contasReceber.data.quantidadePendente === 1 ? '' : 's'}
-                  {contasReceber.data.quantidadeAtrasado > 0 && (
-                    <Typography.Text type="danger">
-                      {' '}
-                      · {formatarReal(contasReceber.data.totalAtrasado)} atrasado ({contasReceber.data.quantidadeAtrasado})
-                    </Typography.Text>
-                  )}
-                </span>
-              </>
-            )}
-          </CardIndicador>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={12}>
           <CardIndicador titulo="Saldo baixo de estoque" loading={estoque.isLoading} erro={estoque.isError}>
             {estoque.data &&
               (estoque.data.quantidadeSaldoBaixo === 0 ? (
