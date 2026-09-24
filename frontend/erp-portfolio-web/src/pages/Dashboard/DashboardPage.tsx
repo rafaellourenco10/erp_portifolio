@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: DashboardPage.tsx
- * Versão.....: 1.4.0
+ * Versão.....: 1.5.0
  * Data.......: 23/09/2026
  * Descrição..: Página inicial do Ambition ERP: cards de indicador do mês atual
  *              (faturamento/ticket médio, pedidos por status, contas a receber e
@@ -21,12 +21,14 @@
  *   1.3.0 - 23/09/2026 - Card "Contas a pagar" (etapa 8); cards em duas linhas:
  *                        financeiro (3) e operação (2).
  *   1.4.0 - 23/09/2026 - Quadros de vencimentos a pagar e a receber (atrasadas e próximos 7 dias).
+ *   1.5.0 - 24/09/2026 - Card "Devoluções do mês" ao lado do faturamento (que continua bruto), etapa 14.
  * =====================================================================
  */
 
 import { Col, Flex, Row, Typography } from 'antd'
 import {
   useResumoContasPagar,
+  useResumoDevolucoes,
   useResumoContasReceber,
   useResumoEstoque,
   useResumoVendas,
@@ -68,6 +70,7 @@ export function DashboardPage() {
   const vencimentosPagar = useVencimentosPagar()
   const vencimentosReceber = useVencimentosReceber()
   const estoque = useResumoEstoque()
+  const devolucoes = useResumoDevolucoes()
 
   return (
     <div className="pagina-dashboard">
@@ -76,9 +79,9 @@ export function DashboardPage() {
         <p className="pagina-subtitulo">Indicadores do mês atual.</p>
       </div>
 
-      {/* Linha 1: financeiro (faturamento, a receber, a pagar); linha 2: operação (pedidos, estoque). */}
+      {/* Linha 1: financeiro (faturamento, devoluções, a receber, a pagar); linha 2: operação (pedidos, estoque). */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
           <CardIndicador titulo="Faturamento do mês" loading={vendas.isLoading} erro={vendas.isError}>
             {vendas.data && (
               <>
@@ -93,12 +96,29 @@ export function DashboardPage() {
             )}
           </CardIndicador>
         </Col>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
+          {/* O faturamento ao lado continua bruto; a devolução aparece aqui (pedido do Rafael, etapa 14). */}
+          <CardIndicador titulo="Devoluções do mês" loading={devolucoes.isLoading} erro={devolucoes.isError}>
+            {devolucoes.data && (
+              <>
+                <Typography.Title level={3} className="numeros-tabulares" style={{ margin: 0 }}>
+                  {formatarReal(devolucoes.data.valorTotal)}
+                </Typography.Title>
+                <span className="texto-discreto numeros-tabulares">
+                  {devolucoes.data.quantidade === 0
+                    ? 'Nenhuma devolução'
+                    : `${devolucoes.data.quantidade} devoluç${devolucoes.data.quantidade === 1 ? 'ão' : 'ões'}`}
+                </span>
+              </>
+            )}
+          </CardIndicador>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
           <CardIndicador titulo="Contas a receber" loading={contasReceber.isLoading} erro={contasReceber.isError}>
             {contasReceber.data && <ResumoContas resumo={contasReceber.data} />}
           </CardIndicador>
         </Col>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={12} lg={6}>
           <CardIndicador titulo="Contas a pagar" loading={contasPagar.isLoading} erro={contasPagar.isError}>
             {contasPagar.data && <ResumoContas resumo={contasPagar.data} />}
           </CardIndicador>

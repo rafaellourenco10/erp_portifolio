@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ContasPagarListaPage.tsx
- * Versão.....: 2.0.0
+ * Versão.....: 2.1.0
  * Data.......: 23/09/2026
  * Descrição..: Tela de contas a pagar de três origens (compra, comissão e avulsa):
  *              busca por nº da compra ou favorecido/descrição, filtros de origem e de
@@ -15,6 +15,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   2.1.0 - 24/09/2026 - Origem Devolução (reembolso) no filtro e na tag; sem Cancelar (etapa 14).
  *   2.0.0 - 23/09/2026 - Origem, favorecido e descrição; filtro de origem; Nova conta
  *                        (avulsa) e Cancelar (etapa 12).
  * =====================================================================
@@ -47,9 +48,10 @@ const opcoesOrigem: { label: string; value: OrigemContaPagar }[] = [
   { label: 'Compras', value: 'Compra' },
   { label: 'Comissões', value: 'Comissao' },
   { label: 'Avulsas', value: 'Avulsa' },
+  { label: 'Reembolsos de devolução', value: 'Devolucao' },
 ]
 
-const ROTULO_ORIGEM: Record<OrigemContaPagar, string> = { Compra: 'Compra', Comissao: 'Comissão', Avulsa: 'Avulsa' }
+const ROTULO_ORIGEM: Record<OrigemContaPagar, string> = { Compra: 'Compra', Comissao: 'Comissão', Avulsa: 'Avulsa', Devolucao: 'Devolução' }
 
 /** O que a conta é: "Compra #N" nas de compra; a descrição nas outras. */
 function descricaoDa(parcela: ParcelaPagar): string {
@@ -133,8 +135,8 @@ export function ContasPagarListaPage() {
           <Tooltip title="Só parcelas pendentes podem ser pagas">{botao}</Tooltip>
         )
 
-      // Cancelar só avulsa/comissão pendente; a de compra é cancelada pelo pedido de compra.
-      const podeCancelar = parcela.status === 'Pendente' && parcela.origem !== 'Compra'
+      // Cancelar só avulsa/comissão pendente; a de compra é cancelada pelo pedido de compra e o reembolso de devolução não cancela.
+      const podeCancelar = parcela.status === 'Pendente' && parcela.origem !== 'Compra' && parcela.origem !== 'Devolucao'
       const botaoCancelar = (
         <Button type="text" danger icon={<StopOutlined />} aria-label={`Cancelar ${descricaoDa(parcela)}`} disabled={!podeCancelar} />
       )
@@ -154,7 +156,15 @@ export function ContasPagarListaPage() {
           {botaoCancelar}
         </Popconfirm>
       ) : (
-        <Tooltip title={parcela.origem === 'Compra' ? 'Cancele pelo pedido de compra' : 'Só parcelas pendentes podem ser canceladas'}>
+        <Tooltip
+          title={
+            parcela.origem === 'Compra'
+              ? 'Cancele pelo pedido de compra'
+              : parcela.origem === 'Devolucao'
+                ? 'Reembolso de devolução não pode ser cancelado'
+                : 'Só parcelas pendentes podem ser canceladas'
+          }
+        >
           {botaoCancelar}
         </Tooltip>
       )
@@ -204,7 +214,7 @@ export function ContasPagarListaPage() {
       responsive: ['sm'],
       render: (_, parcela) => (
         <Flex align="center" gap={8}>
-          <Tag bordered={false}>{ROTULO_ORIGEM[parcela.origem]}</Tag>
+          <Tag variant="filled">{ROTULO_ORIGEM[parcela.origem]}</Tag>
           <span className="numeros-tabulares">{descricaoDa(parcela)}</span>
         </Flex>
       ),

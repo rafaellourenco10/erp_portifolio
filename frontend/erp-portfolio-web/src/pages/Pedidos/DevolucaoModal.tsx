@@ -20,7 +20,6 @@ import { App, Alert, Checkbox, DatePicker, Flex, Input, InputNumber, Modal, Tabl
 import dayjs, { type Dayjs } from 'dayjs'
 import { useMemo, useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
-import { ItemFormulario } from '../../components/ItemFormulario'
 import { useRegistrarDevolucao } from '../../hooks/useDevolucoes'
 import type { Pedido, PedidoItem } from '../../types/pedido'
 import { valorDevolucaoCentavos } from '../../utils/calculoPedido'
@@ -45,7 +44,8 @@ export function DevolucaoModal({ pedido, aberto, aoFechar }: DevolucaoModalProps
   const registrar = useRegistrarDevolucao()
   const [escolhas, setEscolhas] = useState<Record<number, Escolha>>({})
   const [motivo, setMotivo] = useState('')
-  const [vencimento, setVencimento] = useState<Dayjs>(dayjs())
+  // null = hoje. O "hoje" do servidor é UTC (à noite já é amanhã lá): mandar a data local de hoje seria recusado.
+  const [vencimento, setVencimento] = useState<Dayjs | null>(null)
 
   const itens = pedido.itens.filter((item) => disponivel(item) > 0)
   const escolha = (item: PedidoItem): Escolha => escolhas[item.id] ?? { quantidade: 0, voltaEstoque: true }
@@ -75,7 +75,11 @@ export function DevolucaoModal({ pedido, aberto, aoFechar }: DevolucaoModalProps
     try {
       const devolucao = await registrar.mutateAsync({
         pedidoId: pedido.id,
-        dados: { itens: selecionados, motivo: motivo.trim() || null, vencimentoReembolso: vencimento.format('YYYY-MM-DD') },
+        dados: {
+          itens: selecionados,
+          motivo: motivo.trim() || null,
+          vencimentoReembolso: vencimento && !vencimento.isSame(dayjs(), 'day') ? vencimento.format('YYYY-MM-DD') : null,
+        },
       })
       const partes = [`${formatarReal(devolucao.valorAbatido)} abatidos das parcelas`]
       if (devolucao.valorReembolso > 0) partes.push(`${formatarReal(devolucao.valorReembolso)} de reembolso em Contas a Pagar`)
@@ -151,7 +155,7 @@ export function DevolucaoModal({ pedido, aberto, aoFechar }: DevolucaoModalProps
       afterClose={() => {
         setEscolhas({})
         setMotivo('')
-        setVencimento(dayjs())
+        setVencimento(null)
       }}
     >
       <Alert
@@ -169,32 +173,31 @@ export function DevolucaoModal({ pedido, aberto, aoFechar }: DevolucaoModalProps
         scroll={{ x: 560 }}
       />
       <Flex gap={16} wrap style={{ marginTop: 16 }}>
-        <div style={{ flex: '2 1 280px' }}>
-          <ItemFormulario rotulo="Motivo (opcional)">
-            <Input.TextArea
-              aria-label="Motivo da devolução"
-              rows={2}
-              maxLength={200}
-              showCount
-              placeholder="Ex.: produto com defeito, cliente desistiu"
-              value={motivo}
-              onChange={(e) => setMotivo(e.target.value)}
-            />
-          </ItemFormulario>
-        </div>
-        <div style={{ flex: '1 1 180px' }}>
-          <ItemFormulario rotulo="Vencimento do reembolso">
-            <DatePicker
-              className="campo-cheio"
-              aria-label="Vencimento do reembolso"
-              format="DD/MM/YYYY"
-              allowClear={false}
-              disabledDate={(dia) => dia.isBefore(dayjs(), 'day')}
-              value={vencimento}
-              onChange={(valor) => valor && setVencimento(valor)}
-            />
-          </ItemFormulario>
-        </div>
+        <Flex vertical gap={4} style={{ flex: '2 1 280px' }}>
+          <span className="rotulo-filtro">Motivo (opcional)</span>
+          <Input.TextArea
+            aria-label="Motivo da devolução"
+            rows={2}
+            maxLength={200}
+            showCount
+            placeholder="Ex.: produto com defeito, cliente desistiu"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+          />
+        </Flex>
+        <Flex vertical gap={4} style={{ flex: '1 1 180px' }}>
+          <span className="rotulo-filtro">Vencimento do reembolso</span>
+          <DatePicker
+            className="campo-cheio"
+            aria-label="Vencimento do reembolso"
+            format="DD/MM/YYYY"
+            placeholder="Hoje"
+            disabledDate={(dia) => dia.isBefore(dayjs(), 'day')}
+            value={vencimento}
+            onChange={(valor) => setVencimento(valor)}
+          />
+          <span className="texto-discreto">Só vale se houver reembolso.</span>
+        </Flex>
       </Flex>
       <Flex justify="space-between" align="center" className="resumo-linha resumo-total">
         <span>Valor da devolução</span>

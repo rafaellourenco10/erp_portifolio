@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ComissoesListaPage.tsx
- * Versão.....: 2.0.0
+ * Versão.....: 2.1.0
  * Data.......: 23/09/2026
  * Descrição..: Tela de comissões dos vendedores (Financeiro): filtros por
  *              vendedor, status e período (data do recebimento da parcela),
@@ -16,6 +16,8 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   2.1.0 - 24/09/2026 - Estorno de devolução (negativo, "Estorno · devolução #D") e aviso de que os
+ *                        estornos pendentes são descontados ao gerar a conta (etapa 14).
  *   2.0.0 - 23/09/2026 - "Gerar conta a pagar" no lugar de "Marcar como pagas"; status e
  *                        card Em pagamento (etapa 12).
  * =====================================================================
@@ -112,7 +114,7 @@ export function ComissoesListaPage() {
       width: 110,
       render: (_, c) => (
         <span className="numeros-tabulares">
-          #{c.pedidoId} · {c.numeroParcela}/{c.totalParcelas}
+          #{c.pedidoId} · {c.devolucaoId !== null ? `estorno dev. #${c.devolucaoId}` : `${c.numeroParcela}/${c.totalParcelas}`}
         </span>
       ),
     },
@@ -136,7 +138,11 @@ export function ComissoesListaPage() {
       dataIndex: 'valor',
       width: 120,
       align: 'right',
-      render: (valor: number) => <strong className="numeros-tabulares">{formatarReal(valor)}</strong>,
+      render: (valor: number) => (
+        <strong className="numeros-tabulares" style={valor < 0 ? { color: 'var(--cor-erro)' } : undefined}>
+          {formatarReal(valor)}
+        </strong>
+      ),
     },
     {
       title: 'Recebido em',
@@ -324,6 +330,10 @@ export function ComissoesListaPage() {
           {selecionadas.length} comissão(ões) de <strong>{vendedoresSelecionados[0]}</strong>, total{' '}
           <strong className="numeros-tabulares">{formatarReal(totalSelecionado)}</strong>. Elas ficam "Em pagamento" e
           viram pagas quando você pagar a conta em Contas a Pagar.
+        </p>
+        <p className="texto-discreto">
+          Estornos de devolução pendentes deste vendedor entram automaticamente e são descontados do total; o valor
+          final aparece na mensagem ao gerar a conta.
         </p>
         <Flex vertical gap={4}>
           <span className="rotulo-filtro">Vencimento</span>

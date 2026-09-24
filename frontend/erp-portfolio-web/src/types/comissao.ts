@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: comissao.ts
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 23/09/2026
  * Descrição..: Tipos do módulo de Comissões, espelhando os DTOs da API
  *              (ComissaoRespostaDto, ComissaoListaDto, ComissaoFiltroDto).
@@ -9,6 +9,7 @@
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - Status EmPagamento, vínculo com a conta a pagar e gerar conta (etapa 12).
+ *   1.2.0 - 24/09/2026 - Estorno de devolução: numeroParcela nulo, devolucaoId e valor negativo (etapa 14).
  * =====================================================================
  */
 
@@ -22,7 +23,8 @@ export interface Comissao {
   vendedorNome: string
   pedidoId: number
   clienteNome: string
-  numeroParcela: number
+  /** Nulo no estorno de devolução. */
+  numeroParcela: number | null
   totalParcelas: number
   /** Valor da parcela recebida. */
   valorBase: number
@@ -35,6 +37,8 @@ export interface Comissao {
   dataPagamento: string | null
   /** Conta a pagar gerada no fechamento (Em pagamento / Paga). */
   parcelaPagarId: number | null
+  /** Só no estorno: a devolução que o gerou (valor negativo). */
+  devolucaoId: number | null
 }
 
 export interface ComissaoLista {

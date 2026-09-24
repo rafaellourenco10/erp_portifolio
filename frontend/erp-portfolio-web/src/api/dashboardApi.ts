@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: dashboardApi.ts
- * Versão.....: 1.2.0
+ * Versão.....: 1.3.0
  * Data.......: 23/09/2026
  * Descrição..: Chamadas HTTP do Dashboard. Quatro endpoints independentes, um por
  *              módulo de origem (SPEC.md, D7) — sem parâmetros; o mês é sempre
@@ -13,15 +13,18 @@
  *                GET /dashboard/contas-pagar
  *                GET /dashboard/vencimentos-pagar | vencimentos-receber
  *                GET /dashboard/estoque
+ *                GET /dashboard/devolucoes
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 22/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - obterContasPagar (etapa 8).
  *   1.2.0 - 23/09/2026 - obterVencimentosPagar / obterVencimentosReceber.
+ *   1.3.0 - 24/09/2026 - obterDevolucoes (devoluções do mês, etapa 14).
  * =====================================================================
  */
 
 import type { ContasPagarResumo, ContasReceberResumo, EstoqueResumoDashboard, Vencimentos, VendasResumo } from '../types/dashboard'
+import type { DevolucoesResumo } from '../types/devolucao'
 import { axiosClient } from './axiosClient'
 
 export const dashboardApi = {
@@ -47,6 +50,11 @@ export const dashboardApi = {
 
   async obterVencimentosReceber(): Promise<Vencimentos> {
     const resposta = await axiosClient.get<Vencimentos>('/dashboard/vencimentos-receber')
+    return resposta.data
+  },
+
+  async obterDevolucoes(): Promise<DevolucoesResumo> {
+    const resposta = await axiosClient.get<DevolucoesResumo>('/dashboard/devolucoes')
     return resposta.data
   },
 

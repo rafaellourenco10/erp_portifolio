@@ -31,9 +31,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: `types/devolucao.ts`, `devolucoesApi`, `useDevolucoes` (histórico sob a chave `pedidos`; registrar invalida pedidos, contas a receber/pagar, comissões, estoque, dashboard e relatórios). `valorDevolucaoCentavos` em `utils/calculoPedido.ts` (um arredondamento só, igual ao servidor). `DevolucaoModal`: itens ainda disponíveis com quantidade (máx. = disponível, inteira em UN/CX), "volta ao estoque", motivo, vencimento do reembolso e prévia ("o que falta" quando devolve tudo); mensagem final com abatido/reembolso/estorno. `DevolucoesPedido`: histórico. `PedidoPage` 2.6: botão **Registrar devolução**, "Cancelar pedido" some com devolução, aviso com o valor devolvido. `tsc -b` e `oxlint` limpos.
 
-- [ ] **T6: Contas a Pagar, Comissões e Dashboard na tela** (S)
+- [x] **T6: Contas a Pagar, Comissões e Dashboard na tela** (S) — *concluída em 24/09/2026*
   - Origem Devolução (filtro/tag, sem cancelar); estorno na lista de comissões; aviso no modal de gerar conta; card Devoluções do mês.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`; teste de tela (Playwright).
+  - Resultado: Contas a Pagar com origem "Reembolsos de devolução" no filtro, tag "Devolução" e Cancelar desabilitado (dica); Comissões com "estorno dev. #N" e valor negativo em vermelho, e aviso no modal de gerar conta; Dashboard com o card **Devoluções do mês** ao lado do Faturamento (linha de 4 cards). **Achados do teste de tela e corrigidos:** (1) o modal mandava o vencimento "hoje" local, recusado pelo servidor em UTC entre 21h e 24h — agora "hoje" vai vazio e o servidor usa o dele; (2) rótulos do modal em linha espremiam a data — rótulo em cima; (3) aviso do antd já existente em Contas a Pagar (`Tag bordered={false}` obsoleto) → `variant="filled"`. Teste de tela (`ui-devolucoes-run.ps1`, Edge headless): **14/14** — botões/seção antes e depois, prévia 85,50 e 190,00 ("o que falta"), mensagem com abatido/reembolso/estorno, histórico com perda e motivo, reembolso em Contas a Pagar sem cancelar, estorno em Comissões, card do Dashboard, celular sem rolagem, console limpo. `tsc -b`, `oxlint`, `npm run build` limpos.
 
 ## Fase 3: Fechamento
 

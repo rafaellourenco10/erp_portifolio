@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: contaPagar.ts
- * Versão.....: 2.0.0
+ * Versão.....: 2.1.0
  * Data.......: 23/09/2026
  * Descrição..: Tipos do módulo de Contas a Pagar, espelhando os DTOs da API
  *              (ParcelaPagarRespostaDto, ParcelaPagarFiltroDto,
@@ -9,6 +9,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   2.1.0 - 24/09/2026 - Origem Devolucao (reembolso de devolução de venda, etapa 14).
  *   2.0.0 - 23/09/2026 - Origem (Compra/Comissao/Avulsa), favorecido e descrição;
  *                        fornecedorNome vira favorecido; conta avulsa (etapa 12).
  * =====================================================================
@@ -19,7 +20,7 @@ export type StatusParcelaPagar = 'Pendente' | 'Pago' | 'Cancelado'
 /** Status para filtrar a listagem; "Atrasado" não é gravado, é calculado no servidor. */
 export type FiltroStatusParcelaPagar = StatusParcelaPagar | 'Atrasado'
 
-export type OrigemContaPagar = 'Compra' | 'Comissao' | 'Avulsa'
+export type OrigemContaPagar = 'Compra' | 'Comissao' | 'Avulsa' | 'Devolucao'
 
 export interface ParcelaPagar {
   id: number
