@@ -173,7 +173,7 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - **Estoque**: posição atual dos produtos ativos — saldo, estoque mínimo, custo, **valor em estoque** (saldo × custo) e situação (abaixo do mínimo = saldo ≤ mínimo, mesma regra do Dashboard); filtros por categoria e "só abaixo do mínimo"
 - Os arquivos são **gerados pelo servidor** a partir da mesma consulta da tela, então os números são sempre iguais: **Excel** (.xlsx, ClosedXML) com valores de verdade (moeda, data e número somam/ordenam no Excel), cabeçalho destacado e filtro automático; **PDF** (QuestPDF) em A4, paisagem quando a tabela é larga, com filtros, cards de resumo e "Página X de Y"
 - Nome do arquivo: `relatorio-vendas-AAAA-MM-DD_AAAA-MM-DD.xlsx` / `.pdf` (estoque: `relatorio-estoque-AAAA-MM-DD`)
-- Datas exibidas no horário de Brasília; o filtro de período compara em UTC (mesma convenção do Dashboard)
+- Datas exibidas no horário de Brasília; o filtro de período também usa os dias de Brasília (mesma convenção do Dashboard)
 - Fora do escopo por enquanto: seletor de período no Dashboard, relatórios de contas a receber/pagar, relatório agrupado por produto, itens dos pedidos dentro do relatório
 
 ---
@@ -763,7 +763,7 @@ Dashboard:
 | GET | `/dashboard/vencimentos-receber` | Mesmo formato, para as parcelas a receber | 200 |
 | GET | `/dashboard/estoque` | Quantidade de produtos ativos com saldo de estoque ≤ 5 | 200 |
 
-Sem parâmetros — o mês é sempre calculado no servidor (`DateTime.UtcNow`), nunca enviado pelo cliente. Cada rota só delega pro service do módulo de origem (`PedidoService`, `ContasReceberService`, `ContasPagarService`, `EstoqueService`); não existe um "DashboardService" com lógica própria.
+Sem parâmetros — o mês é sempre calculado no servidor (horário de Brasília, `HorarioBrasilia.Hoje()`), nunca enviado pelo cliente. Cada rota só delega pro service do módulo de origem (`PedidoService`, `ContasReceberService`, `ContasPagarService`, `EstoqueService`); não existe um "DashboardService" com lógica própria.
 
 Fornecedores (mesmo desenho de respostas de Clientes):
 

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasPagarService.cs
-// Versão.....: 2.2.0
+// Versão.....: 2.3.0
 // Data.......: 23/09/2026
 // Descrição..: Contas a pagar de três origens (Compra, Comissao, Avulsa): listagem com
 //              favorecido/descrição e "atrasado" calculados no servidor, marcar como paga,
@@ -30,6 +30,7 @@
 //                        comissões (etapa 12).
 //   2.1.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
 //   2.2.0 - 24/09/2026 - Origem Devolucao (reembolso): não pode ser cancelada (etapa 14, CP5).
+//   2.3.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using System.Linq.Expressions;
@@ -44,8 +45,8 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
 {
     public async Task<ResultadoPaginadoDto<ParcelaPagarRespostaDto>> ListarAsync(ParcelaPagarFiltroDto filtro, CancellationToken cancelamento)
     {
-        // "Hoje" do servidor (UTC), igual ao Contas a Receber: nunca o relógio do navegador.
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        // "Hoje" do servidor (Brasília), igual ao Contas a Receber: nunca o relógio do navegador.
+        var hoje = HorarioBrasilia.Hoje();
         var consulta = contexto.ParcelasPagar.AsNoTracking();
 
         // CP2: nº da compra ("4" ou "#4") ou trecho do favorecido (fornecedor, vendedor ou texto) ou da descrição.
@@ -180,7 +181,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
         await contexto.SaveChangesAsync(cancelamento);
 
         var ids = parcelas.Select(p => p.Id).ToList();
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
         return await contexto.ParcelasPagar.AsNoTracking()
             .Where(p => ids.Contains(p.Id))
             .OrderBy(p => p.NumeroParcela)
@@ -192,7 +193,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
     {
         // Mesma divisão do Contas a Receber (P1): centavos para baixo, resto na última.
         var valores = ContasReceberCalculo.Dividir(pedido.ValorTotal, numeroParcelas);
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
 
         for (var i = 0; i < numeroParcelas; i++)
         {
@@ -221,7 +222,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
 
     public async Task<ContasPagarResumoDto> ObterResumoAsync(CancellationToken cancelamento)
     {
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
         var pendentes = await contexto.ParcelasPagar.AsNoTracking()
             .Where(p => p.Status == StatusParcelaPagar.Pendente)
             .Select(p => new { p.Valor, p.Vencimento })
@@ -236,7 +237,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
     private async Task<ParcelaPagarRespostaDto?> ObterAsync(int id, CancellationToken cancelamento) =>
         await contexto.ParcelasPagar.AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(Projecao(DateOnly.FromDateTime(DateTime.UtcNow)))
+            .Select(Projecao(HorarioBrasilia.Hoje()))
             .FirstOrDefaultAsync(cancelamento);
 
     // CP2: o favorecido vem do fornecedor (compra), do vendedor (comissão) ou do texto (avulsa).
@@ -259,7 +260,7 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
 
     public async Task<VencimentosDto> ObterVencimentosAsync(CancellationToken cancelamento)
     {
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
         var fim = VencimentosCalculo.FimDaJanela(hoje);
 
         // Pendentes atrasadas (vencimento < hoje) ou que vencem até hoje + 7 dias.

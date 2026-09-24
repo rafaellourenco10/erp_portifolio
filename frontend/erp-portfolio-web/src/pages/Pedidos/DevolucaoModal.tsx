@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: DevolucaoModal.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 24/09/2026
  * Descrição..: Modal "Registrar devolução" do pedido confirmado (etapa 14): para cada
  *              item ainda não devolvido, a quantidade a devolver (até o disponível, inteira
@@ -13,6 +13,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 24/09/2026 - Criação do arquivo.
+ *   1.1.0 - 24/09/2026 - Envia a data escolhida direto: o "hoje" do servidor agora é de Brasília.
  * =====================================================================
  */
 
@@ -44,7 +45,7 @@ export function DevolucaoModal({ pedido, aberto, aoFechar }: DevolucaoModalProps
   const registrar = useRegistrarDevolucao()
   const [escolhas, setEscolhas] = useState<Record<number, Escolha>>({})
   const [motivo, setMotivo] = useState('')
-  // null = hoje. O "hoje" do servidor é UTC (à noite já é amanhã lá): mandar a data local de hoje seria recusado.
+  // null = hoje (o servidor usa o mesmo dia de Brasília).
   const [vencimento, setVencimento] = useState<Dayjs | null>(null)
 
   const itens = pedido.itens.filter((item) => disponivel(item) > 0)
@@ -78,7 +79,7 @@ export function DevolucaoModal({ pedido, aberto, aoFechar }: DevolucaoModalProps
         dados: {
           itens: selecionados,
           motivo: motivo.trim() || null,
-          vencimentoReembolso: vencimento && !vencimento.isSame(dayjs(), 'day') ? vencimento.format('YYYY-MM-DD') : null,
+          vencimentoReembolso: vencimento?.format('YYYY-MM-DD') ?? null,
         },
       })
       const partes = [`${formatarReal(devolucao.valorAbatido)} abatidos das parcelas`]

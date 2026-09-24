@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: RelatorioModelo.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Modelo genérico de um relatório para exportação: título, filtros já
 //              descritos, campos do resumo, colunas e linhas (valores tipados). Os três
@@ -13,6 +13,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using System.Globalization;
@@ -47,12 +48,6 @@ public record RelatorioModelo(
 public static class FormatoRelatorioTexto
 {
     public static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
-
-    // Horário de Brasília para exibir datas gravadas em UTC (os arquivos são lidos por gente, não por máquina).
-    private static readonly TimeZoneInfo FusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
-
-    public static DateTime ParaBrasilia(DateTime utc) =>
-        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), FusoBrasilia);
 
     /// <summary>Texto de um valor para o PDF (e para os filtros/resumo descritos), em pt-BR.</summary>
     public static string Formatar(object? valor, TipoValor tipo) => valor switch

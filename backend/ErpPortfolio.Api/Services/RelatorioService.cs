@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: RelatorioService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Consultas dos relatórios (somente leitura): vendas e compras por período
 //              (um pedido por linha + resumo) e posição atual de estoque (saldo, valor em
@@ -8,7 +8,7 @@
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (connection string "ErpPortfolio")
 // Tabelas....: public.pedidos, public.clientes, public.pedido_itens
-//                - SELECT : pedidos do período [início 00:00 UTC, fim + 1 dia 00:00 UTC),
+//                - SELECT : pedidos do período [início 00:00, fim + 1 dia 00:00) de Brasília,
 //                           filtro de status e cliente, com nome do cliente e nº de itens
 //              public.pedidos_compra, public.fornecedores, public.pedido_compra_itens
 //                - SELECT : idem, para compras e fornecedor
@@ -20,6 +20,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - Modelo*Async: mesma consulta no modelo de exportação (T2).
+//   1.2.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -128,7 +129,7 @@ public class RelatorioService(ErpPortfolioDbContext contexto) : IRelatorioServic
         var categoria = filtro.CategoriaId is null
             ? "Todas"
             : await contexto.Categorias.Where(c => c.Id == filtro.CategoriaId).Select(c => c.Nome).FirstOrDefaultAsync(cancelamento) ?? $"#{filtro.CategoriaId}";
-        var agora = FormatoRelatorioTexto.ParaBrasilia(DateTime.UtcNow);
+        var agora = HorarioBrasilia.ParaBrasilia(DateTime.UtcNow);
 
         return new RelatorioModelo(
             "Relatório de Estoque",
@@ -165,7 +166,7 @@ public class RelatorioService(ErpPortfolioDbContext contexto) : IRelatorioServic
         return new RelatorioModelo(
             titulo,
             $"relatorio-{chave}-{inicio:yyyy-MM-dd}_{fim:yyyy-MM-dd}",
-            FormatoRelatorioTexto.ParaBrasilia(DateTime.UtcNow),
+            HorarioBrasilia.ParaBrasilia(DateTime.UtcNow),
             [
                 $"Período: {inicio:dd/MM/yyyy} a {fim:dd/MM/yyyy}",
                 $"Status: {filtro.Status?.ToString() ?? "Todos"}",
@@ -185,14 +186,14 @@ public class RelatorioService(ErpPortfolioDbContext contexto) : IRelatorioServic
                 new ColunaRelatorio("Status", TipoValor.Texto),
             ],
             dados.Linhas
-                .Select(l => new object?[] { l.Id, FormatoRelatorioTexto.ParaBrasilia(l.DataPedido), l.Nome, l.QuantidadeItens, l.ValorTotal, l.Status.ToString() })
+                .Select(l => new object?[] { l.Id, HorarioBrasilia.ParaBrasilia(l.DataPedido), l.Nome, l.QuantidadeItens, l.ValorTotal, l.Status.ToString() })
                 .ToList());
     }
 
-    // Datas inclusivas em UTC (R1/R2): o fim vale o dia inteiro, então compara com o dia seguinte exclusivo.
+    // Datas inclusivas em horário de Brasília (R1/R2): o fim vale o dia inteiro, então compara com o dia seguinte exclusivo.
     private static (DateTime Inicio, DateTime FimExclusivo) Intervalo(RelatorioPedidosFiltroDto filtro) =>
-        (filtro.DataInicio!.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
-         filtro.DataFim!.Value.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc));
+        (HorarioBrasilia.InicioDoDiaUtc(filtro.DataInicio!.Value),
+         HorarioBrasilia.InicioDoDiaUtc(filtro.DataFim!.Value.AddDays(1)));
 
     private static RelatorioPedidosDto ComResumo(List<RelatorioPedidoLinhaDto> linhas)
     {

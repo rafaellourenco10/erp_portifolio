@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: DevolucaoService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 24/09/2026
 // Descrição..: Devolução de venda (SPEC.md etapa 14). Valida os itens (DV1/DV2), calcula
 //              valor, abatimento, reembolso e estorno pelo DevolucaoCalculo (DV3-DV6) e
@@ -22,6 +22,7 @@
 // Histórico de alterações:
 //   1.0.0 - 24/09/2026 - Criação do arquivo.
 //   1.1.0 - 24/09/2026 - ObterResumoMesAsync (card do Dashboard, DB1).
+//   1.2.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -48,7 +49,7 @@ public class DevolucaoService(ErpPortfolioDbContext contexto, IEstoqueService es
         if (pedido.Status != StatusPedido.Confirmado)
             throw new ConflitoException($"O pedido {pedidoId} está {pedido.Status}; só pedido confirmado aceita devolução.");
 
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
         if (dados.VencimentoReembolso is { } vencimento && vencimento < hoje)
             throw new DadoInvalidoException(nameof(DevolucaoCriacaoDto.VencimentoReembolso), "O vencimento do reembolso não pode ser anterior a hoje.");
 
@@ -193,9 +194,10 @@ public class DevolucaoService(ErpPortfolioDbContext contexto, IEstoqueService es
 
     public async Task<DevolucoesResumoDto> ObterResumoMesAsync(CancellationToken cancelamento)
     {
-        var agora = DateTime.UtcNow;
-        var inicioMes = new DateTime(agora.Year, agora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var doMes = contexto.Devolucoes.Where(d => d.DataDevolucao >= inicioMes && d.DataDevolucao < inicioMes.AddMonths(1));
+        var hoje = HorarioBrasilia.Hoje();
+        var primeiroDia = new DateOnly(hoje.Year, hoje.Month, 1);
+        var (inicioMes, inicioProximoMes) = (HorarioBrasilia.InicioDoDiaUtc(primeiroDia), HorarioBrasilia.InicioDoDiaUtc(primeiroDia.AddMonths(1)));
+        var doMes = contexto.Devolucoes.Where(d => d.DataDevolucao >= inicioMes && d.DataDevolucao < inicioProximoMes);
 
         return new DevolucoesResumoDto(await doMes.SumAsync(d => d.ValorTotal, cancelamento), await doMes.CountAsync(cancelamento));
     }

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IDevolucaoService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 24/09/2026
 // Descrição..: Contrato do serviço de devolução de venda (SPEC.md etapa 14).
 // -------------------------------------------------------------------------------------
@@ -12,6 +12,7 @@
 // Histórico de alterações:
 //   1.0.0 - 24/09/2026 - Criação do arquivo.
 //   1.1.0 - 24/09/2026 - ObterResumoMesAsync, para o card do Dashboard (DB1).
+//   1.2.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -32,6 +33,6 @@ public interface IDevolucaoService
     /// <returns>As devoluções do pedido (mais antigas primeiro), ou null se o pedido não existir.</returns>
     Task<IReadOnlyList<DevolucaoRespostaDto>?> ListarAsync(int pedidoId, CancellationToken cancelamento);
 
-    /// <summary>DB1: valor e quantidade das devoluções do mês atual (UTC, como os outros cards).</summary>
+    /// <summary>DB1: valor e quantidade das devoluções do mês atual (horário de Brasília, como os outros cards).</summary>
     Task<DevolucoesResumoDto> ObterResumoMesAsync(CancellationToken cancelamento);
 }

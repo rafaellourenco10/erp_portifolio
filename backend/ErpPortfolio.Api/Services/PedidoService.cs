@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.10.0
+// Versão.....: 1.11.0
 // Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
@@ -46,6 +46,7 @@
 //                        pelo OrcamentoService (etapa 13).
 //   1.10.0 - 24/09/2026 - Detalhe traz quantidade/valor devolvidos; cancelar pedido com devolução
 //                         → 409 (etapa 14, DV9).
+//   1.11.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -293,9 +294,12 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
 
     public async Task<VendasResumoDto> ObterResumoVendasAsync(CancellationToken cancelamento)
     {
-        var hoje = DateTime.UtcNow;
-        var inicioMes = new DateTime(hoje.Year, hoje.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var inicioProximoMes = inicioMes.AddMonths(1);
+        // Mês e dias em horário de Brasília: venda das 22h do dia 30 é do dia 30, não do 1º.
+        var hoje = HorarioBrasilia.Hoje();
+        var primeiroDia = new DateOnly(hoje.Year, hoje.Month, 1);
+        var ultimoDia = primeiroDia.AddMonths(1).AddDays(-1);
+        var inicioMes = HorarioBrasilia.InicioDoDiaUtc(primeiroDia);
+        var inicioProximoMes = HorarioBrasilia.InicioDoDiaUtc(primeiroDia.AddMonths(1));
 
         var pedidosDoMes = await contexto.Pedidos.AsNoTracking()
             .Where(p => p.DataPedido >= inicioMes && p.DataPedido < inicioProximoMes)
@@ -311,11 +315,9 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
             pedidosDoMes.Count(p => p.Status == StatusPedido.Cancelado));
 
         var valoresPorDia = confirmados
-            .GroupBy(p => DateOnly.FromDateTime(p.DataPedido))
+            .GroupBy(p => DateOnly.FromDateTime(HorarioBrasilia.ParaBrasilia(p.DataPedido)))
             .Select(g => (Dia: g.Key, Valor: g.Sum(p => p.ValorTotal)));
 
-        var primeiroDia = DateOnly.FromDateTime(inicioMes);
-        var ultimoDia = DateOnly.FromDateTime(inicioProximoMes.AddDays(-1));
         var faturamentoPorDia = DashboardCalculo.PreencherDias(valoresPorDia, primeiroDia, ultimoDia)
             .Select(d => new FaturamentoDiaDto(d.Dia, d.Valor))
             .ToList();

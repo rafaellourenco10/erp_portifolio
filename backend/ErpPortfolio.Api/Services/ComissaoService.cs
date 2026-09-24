@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ComissaoService.cs
-// Versão.....: 1.3.0
+// Versão.....: 1.4.0
 // Data.......: 23/09/2026
 // Descrição..: Consulta de comissões (filtro por vendedor, status e período da data do
 //              recebimento, com totais do filtro calculados no servidor) e pagamento ao
@@ -23,6 +23,7 @@
 //   1.2.0 - 24/09/2026 - Estorno de devolução na lista; gerar conta inclui os estornos pendentes do
 //                        vendedor e recusa soma <= 0 (etapa 14, CC6/CC7).
 //   1.3.0 - 24/09/2026 - ModeloAsync: exportação da tela em Excel/PDF (ExportadorRelatorio).
+//   1.4.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -41,15 +42,15 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
         if (filtro.VendedorId is int vendedorId)
             consulta = consulta.Where(c => c.VendedorId == vendedorId);
 
-        // Datas inclusivas em UTC, mesma convenção dos relatórios e do Dashboard.
+        // Datas inclusivas em horário de Brasília, mesma convenção dos relatórios e do Dashboard.
         if (filtro.DataInicio is DateOnly inicio)
         {
-            var desde = inicio.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var desde = HorarioBrasilia.InicioDoDiaUtc(inicio);
             consulta = consulta.Where(c => c.DataGeracao >= desde);
         }
         if (filtro.DataFim is DateOnly fim)
         {
-            var ate = fim.AddDays(1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var ate = HorarioBrasilia.InicioDoDiaUtc(fim.AddDays(1));
             consulta = consulta.Where(c => c.DataGeracao < ate);
         }
 
@@ -107,7 +108,7 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
         var periodo = filtro.DataInicio is null && filtro.DataFim is null
             ? "Todo o período"
             : $"{filtro.DataInicio:dd/MM/yyyy} a {filtro.DataFim:dd/MM/yyyy}";
-        var agora = FormatoRelatorioTexto.ParaBrasilia(DateTime.UtcNow);
+        var agora = HorarioBrasilia.ParaBrasilia(DateTime.UtcNow);
 
         return new RelatorioModelo(
             "Comissões",
@@ -142,9 +143,9 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
                     c.ValorBase,
                     c.Percentual,
                     c.Valor,
-                    FormatoRelatorioTexto.ParaBrasilia(c.DataGeracao),
+                    HorarioBrasilia.ParaBrasilia(c.DataGeracao),
                     RotuloStatus(c.Status),
-                    c.DataPagamento is DateTime pago ? FormatoRelatorioTexto.ParaBrasilia(pago) : null,
+                    c.DataPagamento is DateTime pago ? HorarioBrasilia.ParaBrasilia(pago) : null,
                 })
                 .ToList());
     }

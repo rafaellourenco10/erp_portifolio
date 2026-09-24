@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.5.0
+// Versão.....: 1.6.0
 // Data.......: 23/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
 //              no servidor), marcar parcela como recebida, gerar as parcelas ao
@@ -30,6 +30,7 @@
 //   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 //   1.4.0 - 23/09/2026 - Marcar como recebida gera a comissão do vendedor (etapa 11).
 //   1.5.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
+//   1.6.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -43,7 +44,7 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
 {
     public async Task<ResultadoPaginadoDto<ParcelaRespostaDto>> ListarAsync(ParcelaFiltroDto filtro, CancellationToken cancelamento)
     {
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
         var consulta = contexto.ParcelasReceber.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(filtro.Busca))
@@ -146,7 +147,7 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
     public void GerarParcelas(Pedido pedido, int numeroParcelas, int intervaloDias)
     {
         var valores = ContasReceberCalculo.Dividir(pedido.ValorTotal, numeroParcelas);
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
 
         for (var i = 0; i < numeroParcelas; i++)
         {
@@ -174,7 +175,7 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
 
     public async Task<ContasReceberResumoDto> ObterResumoAsync(CancellationToken cancelamento)
     {
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
 
         var pendentes = await contexto.ParcelasReceber.AsNoTracking()
             .Where(p => p.Status == StatusParcela.Pendente)
@@ -190,7 +191,7 @@ public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceb
 
     public async Task<VencimentosDto> ObterVencimentosAsync(CancellationToken cancelamento)
     {
-        var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
+        var hoje = HorarioBrasilia.Hoje();
         var fim = VencimentosCalculo.FimDaJanela(hoje);
 
         // Pendentes atrasadas (vencimento < hoje) ou que vencem até hoje + 7 dias.

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: OrcamentoService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de orçamentos (SPEC.md etapa 13). Mesma
 //              forma do pedido de venda: o servidor copia o preço do produto (OR2) e
@@ -24,6 +24,7 @@
 //   1.0.0 - 23/09/2026 - Criação do arquivo (listar, obter, criar, editar).
 //   1.1.0 - 23/09/2026 - Gerar pedido (GP1-GP4) e marcar como perdido (PE1).
 //   1.2.0 - 23/09/2026 - PDF do orçamento (PD1, ExportadorOrcamento).
+//   1.3.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -36,11 +37,9 @@ namespace ErpPortfolio.Api.Services;
 public class OrcamentoService(ErpPortfolioDbContext contexto) : IOrcamentoService
 {
     // Mesma referência de "hoje" de Contas a Receber (OR3).
-    private static DateOnly Hoje() => DateOnly.FromDateTime(DateTime.UtcNow);
-
     public async Task<ResultadoPaginadoDto<OrcamentoResumoDto>> ListarAsync(OrcamentoFiltroDto filtro, CancellationToken cancelamento)
     {
-        var hoje = Hoje();
+        var hoje = HorarioBrasilia.Hoje();
         var consulta = contexto.Orcamentos.AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(filtro.Busca))
@@ -86,7 +85,7 @@ public class OrcamentoService(ErpPortfolioDbContext contexto) : IOrcamentoServic
             .Include(o => o.Itens).ThenInclude(i => i.Produto)
             .FirstOrDefaultAsync(o => o.Id == id, cancelamento);
 
-        return orcamento is null ? null : OrcamentoRespostaDto.DeEntidade(orcamento, Hoje());
+        return orcamento is null ? null : OrcamentoRespostaDto.DeEntidade(orcamento, HorarioBrasilia.Hoje());
     }
 
     public async Task<OrcamentoRespostaDto> CriarAsync(OrcamentoCriacaoDto dados, CancellationToken cancelamento)
@@ -193,7 +192,7 @@ public class OrcamentoService(ErpPortfolioDbContext contexto) : IOrcamentoServic
         if (orcamento.Status != StatusOrcamento.Aberto)
             throw new ConflitoException($"O orçamento {id} está {orcamento.Status}; só o aberto gera pedido.");
 
-        if (orcamento.EstaVencido(Hoje()))
+        if (orcamento.EstaVencido(HorarioBrasilia.Hoje()))
             throw new DadoInvalidoException(nameof(OrcamentoCriacaoDto.Validade), "O orçamento está vencido; prorrogue a validade para gerar o pedido.");
 
         // GP2: cliente e produtos precisam estar ativos; vendedor inativo só não vai para o pedido (é opcional no rascunho).
@@ -265,13 +264,13 @@ public class OrcamentoService(ErpPortfolioDbContext contexto) : IOrcamentoServic
             .Include(o => o.Itens).ThenInclude(i => i.Produto)
             .FirstOrDefaultAsync(o => o.Id == id, cancelamento);
 
-        return orcamento is null ? null : ExportadorOrcamento.GerarPdf(orcamento, Hoje());
+        return orcamento is null ? null : ExportadorOrcamento.GerarPdf(orcamento, HorarioBrasilia.Hoje());
     }
 
     // OR1: validade não pode ser antes de hoje, ao criar e ao editar (editar com data nova "prorroga" o vencido).
     private static void ValidarValidade(DateOnly validade)
     {
-        if (validade < Hoje())
+        if (validade < HorarioBrasilia.Hoje())
             throw new DadoInvalidoException(nameof(OrcamentoCriacaoDto.Validade), "A validade não pode ser anterior a hoje.");
     }
 

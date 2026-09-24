@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ExportadorOrcamento.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: PDF do orçamento para mandar ao cliente (SPEC.md etapa 13, PD1): A4 retrato
 //              com número, data e validade; dados do cliente e vendedor; tabela de itens;
@@ -15,6 +15,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -55,7 +56,7 @@ public static class ExportadorOrcamento
                 });
                 linha.ConstantItem(190).AlignRight().Column(direita =>
                 {
-                    direita.Item().AlignRight().Text($"Data: {FormatoRelatorioTexto.ParaBrasilia(orcamento.DataOrcamento):dd/MM/yyyy}");
+                    direita.Item().AlignRight().Text($"Data: {HorarioBrasilia.ParaBrasilia(orcamento.DataOrcamento):dd/MM/yyyy}");
                     direita.Item().AlignRight().Text($"Válido até: {validade}").Bold();
                     if (Situacao(orcamento, hoje) is { } situacao)
                         direita.Item().AlignRight().Text(situacao).FontColor(cinza);
