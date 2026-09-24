@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IOrcamentoService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Contrato do serviço de orçamentos (SPEC.md etapa 13).
 // -------------------------------------------------------------------------------------
@@ -10,6 +10,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo (listar, obter, criar, editar).
+//   1.1.0 - 23/09/2026 - Gerar pedido (GP1-GP4) e marcar como perdido (PE1).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -33,4 +34,18 @@ public interface IOrcamentoService
     /// <exception cref="ConflitoException">O orçamento está Aprovado ou Perdido.</exception>
     /// <exception cref="DadoInvalidoException">Mesmas regras da criação.</exception>
     Task<OrcamentoRespostaDto?> AtualizarAsync(int id, OrcamentoCriacaoDto dados, CancellationToken cancelamento);
+
+    /// <summary>
+    /// GP1-GP4: cria um pedido de venda em Rascunho com os preços e descontos do orçamento e deixa o
+    /// orçamento Aprovado, ligado ao pedido, na mesma transação.
+    /// </summary>
+    /// <returns>O id do pedido gerado, ou null se o orçamento não existir.</returns>
+    /// <exception cref="ConflitoException">O orçamento já está Aprovado ou Perdido.</exception>
+    /// <exception cref="DadoInvalidoException">Orçamento vencido, cliente inativo ou produto inativo.</exception>
+    Task<int?> GerarPedidoAsync(int id, CancellationToken cancelamento);
+
+    /// <summary>PE1: Aberto (vencido ou não) → Perdido, com motivo opcional. Repetir num Perdido é sucesso sem mudar nada.</summary>
+    /// <returns>false se o orçamento não existir.</returns>
+    /// <exception cref="ConflitoException">O orçamento está Aprovado.</exception>
+    Task<bool> PerderAsync(int id, string? motivo, CancellationToken cancelamento);
 }

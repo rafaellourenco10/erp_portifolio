@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: OrcamentoService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de orçamentos (SPEC.md etapa 13). Mesma
 //              forma do pedido de venda: o servidor copia o preço do produto (OR2) e
@@ -11,14 +11,18 @@
 // Tabelas....: public.orcamentos
 //                - SELECT : listagem (busca, status/vencido, paginação) e detalhe
 //                - INSERT : criar
-//                - UPDATE : editar o Aberto
+//                - UPDATE : editar o Aberto; status Aprovado + pedido_id (gerar pedido);
+//                           status Perdido + motivo_perda
 //              public.orcamento_itens
 //                - INSERT/UPDATE/DELETE : itens atualizados no lugar ao editar
+//              public.pedidos, public.pedido_itens
+//                - INSERT : pedido Rascunho gerado a partir do orçamento (GP3)
 //              public.clientes, public.vendedores, public.produtos (SELECT: validações)
-// Fontes.....: ErpPortfolioDbContext.Orcamentos / OrcamentoItens.
+// Fontes.....: ErpPortfolioDbContext.Orcamentos / OrcamentoItens / Pedidos.
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo (listar, obter, criar, editar).
+//   1.1.0 - 23/09/2026 - Gerar pedido (GP1-GP4) e marcar como perdido (PE1).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -172,6 +176,84 @@ public class OrcamentoService(ErpPortfolioDbContext contexto) : IOrcamentoServic
         await contexto.SaveChangesAsync(cancelamento);
 
         return await ObterPorIdAsync(id, cancelamento);
+    }
+
+    public async Task<int?> GerarPedidoAsync(int id, CancellationToken cancelamento)
+    {
+        var orcamento = await contexto.Orcamentos
+            .Include(o => o.Cliente)
+            .Include(o => o.Vendedor)
+            .Include(o => o.Itens).ThenInclude(i => i.Produto)
+            .FirstOrDefaultAsync(o => o.Id == id, cancelamento);
+        if (orcamento is null)
+            return null;
+
+        // GP1
+        if (orcamento.Status != StatusOrcamento.Aberto)
+            throw new ConflitoException($"O orçamento {id} está {orcamento.Status}; só o aberto gera pedido.");
+
+        if (orcamento.EstaVencido(Hoje()))
+            throw new DadoInvalidoException(nameof(OrcamentoCriacaoDto.Validade), "O orçamento está vencido; prorrogue a validade para gerar o pedido.");
+
+        // GP2: cliente e produtos precisam estar ativos; vendedor inativo só não vai para o pedido (é opcional no rascunho).
+        if (!orcamento.Cliente!.Ativo)
+            throw new DadoInvalidoException(nameof(OrcamentoCriacaoDto.ClienteId), "O cliente do orçamento está inativo.");
+
+        var inativos = orcamento.Itens.Where(i => !i.Produto!.Ativo).Select(i => $"\"{i.Produto!.Nome}\"").ToList();
+        if (inativos.Count > 0)
+            throw new DadoInvalidoException(PedidoService.CampoItens, $"Produto(s) inativo(s) no orçamento: {string.Join(", ", inativos)}.");
+
+        var vendedor = orcamento.Vendedor is { Ativo: true } ? orcamento.Vendedor : null;
+
+        // GP3: rascunho com os preços e descontos do orçamento (não os atuais do produto). Montado aqui e não
+        // pelo PedidoService.CriarAsync, que copia o preço atual (R3).
+        var pedido = new Pedido
+        {
+            ClienteId = orcamento.ClienteId,
+            VendedorId = vendedor?.Id,
+            DataPedido = DateTime.UtcNow,
+            Status = StatusPedido.Rascunho,
+            FormaPagamento = orcamento.FormaPagamento,
+            DescontoPercentual = orcamento.DescontoPercentual,
+            ValorTotal = orcamento.ValorTotal,
+            Itens = [.. orcamento.Itens.OrderBy(i => i.Id).Select(i => new PedidoItem
+            {
+                ProdutoId = i.ProdutoId,
+                Quantidade = i.Quantidade,
+                PrecoUnitario = i.PrecoUnitario,
+                DescontoPercentual = i.DescontoPercentual
+            })]
+        };
+
+        // GP4: um SaveChanges só (INSERT do pedido e UPDATE do orçamento na mesma transação).
+        // ponytail: sem trava de concorrência (como o resto do ERP, monousuário); dois cliques simultâneos gerariam
+        // dois pedidos. Se virar multiusuário: SELECT ... FOR UPDATE no orçamento ou token de concorrência (xmin).
+        orcamento.Status = StatusOrcamento.Aprovado;
+        orcamento.Pedido = pedido;
+        contexto.Pedidos.Add(pedido);
+        await contexto.SaveChangesAsync(cancelamento);
+
+        return pedido.Id;
+    }
+
+    public async Task<bool> PerderAsync(int id, string? motivo, CancellationToken cancelamento)
+    {
+        var orcamento = await contexto.Orcamentos.FirstOrDefaultAsync(o => o.Id == id, cancelamento);
+        if (orcamento is null)
+            return false;
+
+        // PE1: repetir é sucesso sem mudar nada (nem o motivo).
+        if (orcamento.Status == StatusOrcamento.Perdido)
+            return true;
+
+        if (orcamento.Status == StatusOrcamento.Aprovado)
+            throw new ConflitoException($"O orçamento {id} já virou o pedido {orcamento.PedidoId} e não pode ser marcado como perdido.");
+
+        orcamento.Status = StatusOrcamento.Perdido;
+        orcamento.MotivoPerda = string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim();
+        await contexto.SaveChangesAsync(cancelamento);
+
+        return true;
     }
 
     // OR1: validade não pode ser antes de hoje, ao criar e ao editar (editar com data nova "prorroga" o vencido).

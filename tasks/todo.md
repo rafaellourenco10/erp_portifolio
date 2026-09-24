@@ -14,9 +14,10 @@
   - Verificar: build; `dotnet test` (os testes do pedido continuam passando).
   - Resultado: `DTOs/OrcamentoDtos.cs` (itens de entrada/resposta reaproveitam `PedidoItemEntradaDto`/`PedidoItemRespostaDto`); `OrcamentoService` com filtro Aberto/Vencido/Aprovado/Perdido e `vencido` calculado na projeção; validade ≥ hoje no serviço (400 no campo `Validade`); edição só do Aberto (409), itens no lugar como no pedido. `PedidoService` 1.9: helpers de cliente/vendedor/produto/quantidade viraram `internal static` (sem mudar comportamento). Transições por status ficam para o E2E da T3 (dependem do banco). `OrcamentoTests` (+18): `dotnet test` 203/203, build 0 avisos.
 
-- [ ] **T3: Gerar pedido + perder** (M)
+- [x] **T3: Gerar pedido + perder** (M) — *concluída em 23/09/2026*
   - `POST /{id}/gerar-pedido` (GP1-GP4), `PATCH /{id}/perder` (PE1).
   - Verificar: E2E dos critérios 1-5 contra instância temporária (dados `ZZT…` apagados), incluindo a regressão do pedido.
+  - Resultado: `GerarPedidoAsync` monta o `Pedido` Rascunho com os preços/descontos do orçamento e aprova o orçamento num `SaveChanges` só (201 + `Location: /api/pedidos/N`); `PerderAsync` idempotente sem trocar o motivo. Sem trava de concorrência (anotado com `ponytail:`, como o resto do ERP). E2E (API temporária 5099, `.claude/ferramentas-locais/e2e-orcamentos.ps1`): **51/51** — criar/validar (validade passada/hoje, itens, UN fracionada, observações, cliente inativo), editar com preço congelado e item novo com preço atual, vencido/prorrogar, filtros Aberto/Vencido/Aprovado/Perdido e busca `#N`, gerar pedido (produto inativo → 400 sem gravar; pedido com preço 100 com o produto a 130; total igual; Aprovado + `pedidoId`; de novo 409; vendedor inativo em branco; cliente inativado 400), pedido gerado confirma (2 saídas de estoque, 2 parcelas somando o total), perder (motivo aparado, idempotente, sem corpo, 201 caracteres 400, vencido ok, Aprovado 409). Dados de teste apagados; dados reais e contagens idênticos.
 
 - [ ] **T4: PDF** (S)
   - `ExportadorOrcamento.GerarPdf` + `GET /{id}/pdf` (PD1).

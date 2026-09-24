@@ -1,9 +1,9 @@
 // =====================================================================================
 // Arquivo....: OrcamentosController.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints de orçamentos (/api/orcamentos, SPEC.md etapa 13): listar,
-//              obter, criar e editar o aberto.
+//              obter, criar, editar o aberto, gerar pedido e marcar como perdido.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (via IOrcamentoService).
 // Tabelas....: public.orcamentos, public.orcamento_itens
@@ -11,6 +11,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
+//   1.1.0 - 23/09/2026 - POST gerar-pedido e PATCH perder (T3).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -83,6 +84,50 @@ public class OrcamentosController(IOrcamentoService orcamentoService) : Controll
         catch (DadoInvalidoException ex)
         {
             return ProblemaDeCampo(ex);
+        }
+    }
+
+    /// <summary>Gera um pedido de venda em rascunho com os preços do orçamento; o orçamento passa a Aprovado. Só orçamento aberto e dentro da validade.</summary>
+    [HttpPost("{id:int}/gerar-pedido")]
+    [ProducesResponseType<OrcamentoPedidoGeradoDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<OrcamentoPedidoGeradoDto>> GerarPedido(int id, CancellationToken cancelamento)
+    {
+        try
+        {
+            var pedidoId = await orcamentoService.GerarPedidoAsync(id, cancelamento);
+            return pedidoId is int numero
+                ? CreatedAtAction(nameof(PedidosController.ObterPorId), "Pedidos", new { id = numero }, new OrcamentoPedidoGeradoDto(numero))
+                : NotFound();
+        }
+        catch (ConflitoException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Conflito", detail: ex.Message);
+        }
+        catch (DadoInvalidoException ex)
+        {
+            return ProblemaDeCampo(ex);
+        }
+    }
+
+    /// <summary>Marca um orçamento aberto como perdido (motivo opcional). Chamadas repetidas também retornam 204.</summary>
+    [HttpPatch("{id:int}/perder")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Perder(int id, OrcamentoPerderDto? dados, CancellationToken cancelamento)
+    {
+        try
+        {
+            var encontrado = await orcamentoService.PerderAsync(id, dados?.Motivo, cancelamento);
+            return encontrado ? NoContent() : NotFound();
+        }
+        catch (ConflitoException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Conflito", detail: ex.Message);
         }
     }
 

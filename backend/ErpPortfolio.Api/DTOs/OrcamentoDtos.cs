@@ -3,7 +3,8 @@
 // Versão.....: 1.0.0
 // Data.......: 23/09/2026
 // Descrição..: DTOs de orçamentos (SPEC.md etapa 13): criação/edição (OR1), filtro da
-//              listagem (com "Vencido" calculado, OR4), linha da lista e resposta com itens.
+//              listagem (com "Vencido" calculado, OR4), linha da lista, resposta com itens,
+//              motivo da perda (PE1) e pedido gerado (GP4).
 //              Os itens de entrada e de resposta reaproveitam os do pedido (mesmas regras).
 // -------------------------------------------------------------------------------------
 // Banco......: Não acessa banco diretamente.
@@ -98,6 +99,17 @@ public class OrcamentoFiltroDto
     [Range(1, 100, ErrorMessage = "O tamanho da página deve estar entre 1 e 100.")]
     public int TamanhoPagina { get; set; } = 10;
 }
+
+/// <summary>Corpo (opcional) de PATCH /api/orcamentos/{id}/perder (PE1).</summary>
+public class OrcamentoPerderDto
+{
+    /// <example>Cliente achou mais barato no concorrente</example>
+    [StringLength(200, ErrorMessage = "O motivo deve ter no máximo 200 caracteres.")]
+    public string? Motivo { get; set; }
+}
+
+/// <summary>Resposta de POST /api/orcamentos/{id}/gerar-pedido (GP4).</summary>
+public record OrcamentoPedidoGeradoDto(int PedidoId);
 
 /// <summary>Linha da listagem (sem itens).</summary>
 public record OrcamentoResumoDto(
