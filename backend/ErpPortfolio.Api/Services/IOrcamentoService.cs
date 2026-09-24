@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IOrcamentoService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Contrato do serviço de orçamentos (SPEC.md etapa 13).
 // -------------------------------------------------------------------------------------
@@ -11,6 +11,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo (listar, obter, criar, editar).
 //   1.1.0 - 23/09/2026 - Gerar pedido (GP1-GP4) e marcar como perdido (PE1).
+//   1.2.0 - 23/09/2026 - PDF do orçamento (PD1).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -48,4 +49,8 @@ public interface IOrcamentoService
     /// <returns>false se o orçamento não existir.</returns>
     /// <exception cref="ConflitoException">O orçamento está Aprovado.</exception>
     Task<bool> PerderAsync(int id, string? motivo, CancellationToken cancelamento);
+
+    /// <summary>PD1: PDF do orçamento (qualquer status).</summary>
+    /// <returns>Os bytes do PDF, ou null se o orçamento não existir.</returns>
+    Task<byte[]?> GerarPdfAsync(int id, CancellationToken cancelamento);
 }

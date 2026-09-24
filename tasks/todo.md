@@ -19,9 +19,10 @@
   - Verificar: E2E dos critérios 1-5 contra instância temporária (dados `ZZT…` apagados), incluindo a regressão do pedido.
   - Resultado: `GerarPedidoAsync` monta o `Pedido` Rascunho com os preços/descontos do orçamento e aprova o orçamento num `SaveChanges` só (201 + `Location: /api/pedidos/N`); `PerderAsync` idempotente sem trocar o motivo. Sem trava de concorrência (anotado com `ponytail:`, como o resto do ERP). E2E (API temporária 5099, `.claude/ferramentas-locais/e2e-orcamentos.ps1`): **51/51** — criar/validar (validade passada/hoje, itens, UN fracionada, observações, cliente inativo), editar com preço congelado e item novo com preço atual, vencido/prorrogar, filtros Aberto/Vencido/Aprovado/Perdido e busca `#N`, gerar pedido (produto inativo → 400 sem gravar; pedido com preço 100 com o produto a 130; total igual; Aprovado + `pedidoId`; de novo 409; vendedor inativo em branco; cliente inativado 400), pedido gerado confirma (2 saídas de estoque, 2 parcelas somando o total), perder (motivo aparado, idempotente, sem corpo, 201 caracteres 400, vencido ok, Aprovado 409). Dados de teste apagados; dados reais e contagens idênticos.
 
-- [ ] **T4: PDF** (S)
+- [x] **T4: PDF** (S) — *concluída em 23/09/2026*
   - `ExportadorOrcamento.GerarPdf` + `GET /{id}/pdf` (PD1).
   - Verificar: 200 `application/pdf`; abrir o arquivo e conferir o layout.
+  - Resultado: `ExportadorOrcamento` (QuestPDF, A4 retrato): cabeçalho com nº, data (Brasília), "Válido até" e a situação quando não é um aberto válido (Aprovado com nº do pedido / Perdido / Vencido); quadro do cliente (CPF/CNPJ formatado, e-mail · telefone, cidade/UF, vendedor); tabela com SKU sob o nome; subtotal, desconto (só se houver) e total; forma de pagamento; observações; rodapé "Orçamento válido até … · Página X de Y". `GET /api/orcamentos/{id}/pdf` → `orcamento-N.pdf`. E2E com `-pdf`: **54/54** (200, `%PDF`, nome do arquivo, 404); PDF aberto e conferido (totais batem com a tela). +4 xUnit de máscara CPF/CNPJ (inclusive alfanumérico): 207/207, build 0 avisos.
 
 ## Fase 2: Frontend
 

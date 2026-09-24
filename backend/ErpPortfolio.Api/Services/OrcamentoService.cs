@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: OrcamentoService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de orçamentos (SPEC.md etapa 13). Mesma
 //              forma do pedido de venda: o servidor copia o preço do produto (OR2) e
@@ -23,6 +23,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo (listar, obter, criar, editar).
 //   1.1.0 - 23/09/2026 - Gerar pedido (GP1-GP4) e marcar como perdido (PE1).
+//   1.2.0 - 23/09/2026 - PDF do orçamento (PD1, ExportadorOrcamento).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -254,6 +255,17 @@ public class OrcamentoService(ErpPortfolioDbContext contexto) : IOrcamentoServic
         await contexto.SaveChangesAsync(cancelamento);
 
         return true;
+    }
+
+    public async Task<byte[]?> GerarPdfAsync(int id, CancellationToken cancelamento)
+    {
+        var orcamento = await contexto.Orcamentos.AsNoTracking()
+            .Include(o => o.Cliente)
+            .Include(o => o.Vendedor)
+            .Include(o => o.Itens).ThenInclude(i => i.Produto)
+            .FirstOrDefaultAsync(o => o.Id == id, cancelamento);
+
+        return orcamento is null ? null : ExportadorOrcamento.GerarPdf(orcamento, Hoje());
     }
 
     // OR1: validade não pode ser antes de hoje, ao criar e ao editar (editar com data nova "prorroga" o vencido).

@@ -1,9 +1,9 @@
 // =====================================================================================
 // Arquivo....: OrcamentosController.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints de orçamentos (/api/orcamentos, SPEC.md etapa 13): listar,
-//              obter, criar, editar o aberto, gerar pedido e marcar como perdido.
+//              obter, criar, editar o aberto, gerar pedido, marcar como perdido e PDF.
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (via IOrcamentoService).
 // Tabelas....: public.orcamentos, public.orcamento_itens
@@ -12,6 +12,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - POST gerar-pedido e PATCH perder (T3).
+//   1.2.0 - 23/09/2026 - GET pdf (T4).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -129,6 +130,16 @@ public class OrcamentosController(IOrcamentoService orcamentoService) : Controll
         {
             return Problem(statusCode: StatusCodes.Status409Conflict, title: "Conflito", detail: ex.Message);
         }
+    }
+
+    /// <summary>Baixa o PDF do orçamento (orcamento-N.pdf), em qualquer status.</summary>
+    [HttpGet("{id:int}/pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, ExportadorRelatorio.TipoConteudoPdf)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Pdf(int id, CancellationToken cancelamento)
+    {
+        var pdf = await orcamentoService.GerarPdfAsync(id, cancelamento);
+        return pdf is null ? NotFound() : File(pdf, ExportadorRelatorio.TipoConteudoPdf, $"orcamento-{id}.pdf");
     }
 
     // Mesmo formato dos erros de validação do [ApiController] (400), com o erro associado ao campo.

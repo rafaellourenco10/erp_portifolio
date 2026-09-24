@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using ErpPortfolio.Api.DTOs;
 using ErpPortfolio.Api.Models;
+using ErpPortfolio.Api.Services;
 
 namespace ErpPortfolio.Tests;
 
@@ -90,4 +91,14 @@ public class OrcamentoTests
         dto.DescontoPercentual = decimal.Parse(texto, System.Globalization.CultureInfo.InvariantCulture);
         Assert.True(TemErroEm(Validar(dto), nameof(OrcamentoCriacaoDto.DescontoPercentual)));
     }
+
+    // ---------------------------------------------------------------- PDF (PD1)
+
+    [Theory]
+    [InlineData("52998224725", "529.982.247-25")]
+    [InlineData("11222333000181", "11.222.333/0001-81")]
+    [InlineData("12ABC34501DE35", "12.ABC.345/01DE-35")]   // CNPJ alfanumérico
+    [InlineData("123", "123")]                             // fora do padrão: sai como está
+    public void Pdf_formata_cpf_e_cnpj(string documento, string esperado) =>
+        Assert.Equal(esperado, ExportadorOrcamento.FormatarDocumento(documento));
 }
