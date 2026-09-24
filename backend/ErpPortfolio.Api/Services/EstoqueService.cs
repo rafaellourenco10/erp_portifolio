@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: EstoqueService.cs
-// Versão.....: 1.5.0
+// Versão.....: 1.6.0
 // Data.......: 22/09/2026
 // Descrição..: Consulta de estoque (listagem com saldo, extrato por produto), entrada
 //              manual, a baixa/estorno usados pelo PedidoService (pedido de venda) e o
@@ -32,6 +32,7 @@
 //   1.4.0 - 22/09/2026 - Estoque mínimo passa a ser por produto (produtos.estoque_minimo);
 //                        ObterResumoAsync devolve a lista dos produtos baixos, não só a contagem.
 //   1.5.0 - 22/09/2026 - Receber e EstornarCompraAsync, para o Pedido de Compra (PC6/PC7).
+//   1.6.0 - 24/09/2026 - DevolverAoEstoque (Entrada por devolução de venda, etapa 14).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -154,6 +155,15 @@ public class EstoqueService(ErpPortfolioDbContext contexto) : IEstoqueService
         {
             contexto.EstoqueMovimentacoes.Add(
                 NovaMovimentacao(item.ProdutoId, TipoMovimentacao.Entrada, item.Quantidade, pedidoId, $"Estorno cancelamento pedido #{pedidoId}"));
+        }
+    }
+
+    public void DevolverAoEstoque(int pedidoId, int devolucaoId, IEnumerable<(int ProdutoId, decimal Quantidade)> itens)
+    {
+        foreach (var (produtoId, quantidade) in itens)
+        {
+            contexto.EstoqueMovimentacoes.Add(
+                NovaMovimentacao(produtoId, TipoMovimentacao.Entrada, quantidade, pedidoId, $"Devolução #{devolucaoId} pedido #{pedidoId}"));
         }
     }
 

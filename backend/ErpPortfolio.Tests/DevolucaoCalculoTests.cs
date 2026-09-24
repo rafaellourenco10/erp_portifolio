@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+using ErpPortfolio.Api.DTOs;
 using ErpPortfolio.Api.Services;
 using static ErpPortfolio.Api.Services.DevolucaoCalculo;
 
@@ -95,4 +97,48 @@ public class DevolucaoCalculoTests
     public void Pedido_sem_vendedor_nao_tem_estorno() => Assert.Equal(0m, Estorno(60m, null));
 
     private static decimal D(string texto) => decimal.Parse(texto, System.Globalization.CultureInfo.InvariantCulture);
+
+    // ---------------------------------------------------------------- DTO (DV2)
+
+    private static List<ValidationResult> Validar(object objeto)
+    {
+        var resultados = new List<ValidationResult>();
+        Validator.TryValidateObject(objeto, new ValidationContext(objeto), resultados, validateAllProperties: true);
+        return resultados;
+    }
+
+    private static DevolucaoCriacaoDto Dto(params (int Item, decimal Qtd)[] itens) =>
+        new() { Itens = [.. itens.Select(i => new DevolucaoItemEntradaDto { PedidoItemId = i.Item, Quantidade = i.Qtd })] };
+
+    [Fact]
+    public void Dto_valido_e_volta_ao_estoque_por_padrao()
+    {
+        var dto = Dto((1, 1m), (2, 0.5m));
+        Assert.Empty(Validar(dto));
+        Assert.All(dto.Itens, i => Assert.True(i.VoltaEstoque));
+    }
+
+    [Fact]
+    public void Dto_exige_itens_sem_repetir()
+    {
+        Assert.Contains(Validar(Dto()), r => r.MemberNames.Contains(nameof(DevolucaoCriacaoDto.Itens)));
+        Assert.Contains(Validar(Dto((1, 1m), (1, 2m))), r => r.MemberNames.Contains(nameof(DevolucaoCriacaoDto.Itens)));
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1.2345")]
+    public void Item_recusa_quantidade_fora_da_regra(string qtd)
+    {
+        var item = new DevolucaoItemEntradaDto { PedidoItemId = 1, Quantidade = D(qtd) };
+        Assert.Contains(Validar(item), r => r.MemberNames.Contains(nameof(DevolucaoItemEntradaDto.Quantidade)));
+    }
+
+    [Fact]
+    public void Dto_recusa_motivo_acima_de_200()
+    {
+        var dto = Dto((1, 1m));
+        dto.Motivo = new string('x', 201);
+        Assert.Contains(Validar(dto), r => r.MemberNames.Contains(nameof(DevolucaoCriacaoDto.Motivo)));
+    }
 }

@@ -14,9 +14,10 @@
   - Verificar: `dotnet test`.
   - Resultado: `Services/DevolucaoCalculo.cs` (`ValorItem`, `ValorTotal` com "o que falta" e teto no restante, `Abater` → ajustes/abatido/reembolso, `Estorno` via `ComissaoCalculo`). `DevolucaoCalculoTests` (+17): 3 devoluções de um pedido de 97,00 fecham exatamente; abatimento da última, parcela zerada = cancelar, excedente = reembolso; estorno −reembolso × % e zero sem vendedor/%. `dotnet test` 224/224.
 
-- [ ] **T3: API de devolução** (M)
+- [x] **T3: API de devolução** (M) — *concluída em 24/09/2026*
   - DTOs, `DevolucaoService` (DV1-DV8), `POST/GET /api/pedidos/{id}/devolucoes`, `valorDevolvido`/`quantidadeDevolvida` no pedido, cancelar pedido com devolução → 409 (DV9).
   - Verificar: build; `dotnet test`.
+  - Resultado: `DevolucaoService` valida (pedido confirmado, item do pedido, unidade, disponível, vencimento ≥ hoje), calcula pelo `DevolucaoCalculo` e aplica numa **transação explícita com dois SaveChanges** (o nº da devolução entra na descrição do reembolso e no motivo do estoque): devolução + itens, parcelas reduzidas/canceladas, conta `Devolucao`, comissão negativa, entrada via `IEstoqueService.DevolverAoEstoque`. `DevolucoesController` em `/api/pedidos/{pedidoId}/devolucoes` (POST 201, GET). Pedido: `quantidadeDevolvida` por item e `valorDevolvido` (parâmetros com padrão, o orçamento não muda); cancelar com devolução → 409. +6 xUnit do DTO: `dotnet test` 230/230, build 0 avisos. E2E na T4.
 
 - [ ] **T4: Contas a Pagar e Comissões** (S)
   - Origem `Devolucao` (lista/filtro, não cancela); lista de comissões com estorno; gerar conta inclui estornos (CC6); `GET /api/dashboard/devolucoes` (DB1).

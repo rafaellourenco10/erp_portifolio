@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IEstoqueService.cs
-// Versão.....: 1.5.0
+// Versão.....: 1.6.0
 // Data.......: 22/09/2026
 // Descrição..: Contrato do serviço de estoque: consulta (saldo por produto e extrato),
 //              entrada manual, a baixa/estorno usados pelo PedidoService (pedido de
@@ -18,6 +18,7 @@
 //   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 //   1.4.0 - 22/09/2026 - ObterResumoAsync devolve a lista de produtos baixos (estoque mínimo por produto).
 //   1.5.0 - 22/09/2026 - ReceberAsync e EstornarCompra, para o Pedido de Compra (SPEC.md, PC6/PC7).
+//   1.6.0 - 24/09/2026 - DevolverAoEstoque, para a devolução de venda (etapa 14, DV7).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -45,6 +46,9 @@ public interface IEstoqueService
 
     /// <summary>Enfileira uma Entrada de estorno por item (E3); não chama SaveChanges.</summary>
     void Estornar(int pedidoId, IEnumerable<PedidoItem> itens);
+
+    /// <summary>Enfileira uma Entrada por item devolvido que volta ao estoque (DV7); não chama SaveChanges.</summary>
+    void DevolverAoEstoque(int pedidoId, int devolucaoId, IEnumerable<(int ProdutoId, decimal Quantidade)> itens);
 
     /// <summary>
     /// Enfileira uma Entrada por item ligada ao pedido de compra (PC6), sem checar saldo (uma compra sempre

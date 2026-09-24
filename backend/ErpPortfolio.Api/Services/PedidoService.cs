@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.9.0
+// Versão.....: 1.10.0
 // Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
@@ -44,6 +44,8 @@
 //                        de comissão (PV2/PV3), etapa 10.
 //   1.9.0 - 23/09/2026 - Validações de cliente/vendedor/produto/item internal static, reaproveitadas
 //                        pelo OrcamentoService (etapa 13).
+//   1.10.0 - 24/09/2026 - Detalhe traz quantidade/valor devolvidos; cancelar pedido com devolução
+//                         → 409 (etapa 14, DV9).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -98,7 +100,18 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
             .Include(p => p.Itens).ThenInclude(i => i.Produto)
             .FirstOrDefaultAsync(p => p.Id == id, cancelamento);
 
-        return pedido is null ? null : PedidoRespostaDto.DeEntidade(pedido);
+        if (pedido is null)
+            return null;
+
+        // Etapa 14: quanto de cada item já voltou e quanto em reais (a tela limita a próxima devolução por isso).
+        var devolvidoPorItem = await contexto.DevolucaoItens
+            .Where(i => i.Devolucao!.PedidoId == id)
+            .GroupBy(i => i.PedidoItemId)
+            .Select(g => new { g.Key, Total = g.Sum(i => i.Quantidade) })
+            .ToDictionaryAsync(x => x.Key, x => x.Total, cancelamento);
+        var valorDevolvido = await contexto.Devolucoes.Where(d => d.PedidoId == id).SumAsync(d => d.ValorTotal, cancelamento);
+
+        return PedidoRespostaDto.DeEntidade(pedido, devolvidoPorItem, valorDevolvido);
     }
 
     public async Task<PedidoRespostaDto> CriarAsync(PedidoCriacaoDto dados, CancellationToken cancelamento)
@@ -259,6 +272,10 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
 
         if (!TransicoesPedido.PodeCancelar(pedido.Status))
             throw new ConflitoException($"O pedido {id} está {pedido.Status} e não pode ser cancelado.");
+
+        // DV9: cancelar estornaria ao estoque também os itens que já voltaram na devolução (entrada em dobro).
+        if (await contexto.Devolucoes.AnyAsync(d => d.PedidoId == id, cancelamento))
+            throw new ConflitoException($"O pedido {id} tem devolução registrada e não pode ser cancelado; registre a devolução do restante.");
 
         // E3/C6: só devolve estoque e cancela parcelas se o pedido JÁ TINHA baixado/gerado (estava Confirmado);
         // um rascunho cancelado nunca baixou estoque nem gerou parcela.

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoRespostaDto.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: DTO de saída com um pedido completo (cabeçalho, cliente e itens) e o
 //              subtotal de cada item. O subtotal do item é derivado (CalculoPedido), não
@@ -15,6 +15,7 @@
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada (etapa 10).
+//   1.2.0 - 24/09/2026 - QuantidadeDevolvida por item e ValorDevolvido (etapa 14).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -31,9 +32,10 @@ public record PedidoItemRespostaDto(
     decimal Quantidade,
     decimal PrecoUnitario,
     decimal DescontoPercentual,
-    decimal Subtotal)
+    decimal Subtotal,
+    decimal QuantidadeDevolvida = 0)
 {
-    public static PedidoItemRespostaDto DeEntidade(PedidoItem item) => new(
+    public static PedidoItemRespostaDto DeEntidade(PedidoItem item, decimal quantidadeDevolvida = 0) => new(
         item.Id,
         item.ProdutoId,
         item.Produto!.Nome,
@@ -42,7 +44,8 @@ public record PedidoItemRespostaDto(
         item.Quantidade,
         item.PrecoUnitario,
         item.DescontoPercentual,
-        CalculoPedido.Subtotal(item.Quantidade, item.PrecoUnitario, item.DescontoPercentual));
+        CalculoPedido.Subtotal(item.Quantidade, item.PrecoUnitario, item.DescontoPercentual),
+        quantidadeDevolvida);
 }
 
 public record PedidoRespostaDto(
@@ -59,11 +62,17 @@ public record PedidoRespostaDto(
     decimal DescontoPercentual,
     decimal SubtotalItens,
     decimal ValorTotal,
-    IReadOnlyList<PedidoItemRespostaDto> Itens)
+    IReadOnlyList<PedidoItemRespostaDto> Itens,
+    decimal ValorDevolvido = 0)
 {
-    public static PedidoRespostaDto DeEntidade(Pedido pedido)
+    /// <param name="pedido">Com cliente, vendedor e itens (com produto) carregados.</param>
+    /// <param name="devolvidoPorItem">Quantidade já devolvida por id do item (etapa 14); ausente = nada devolvido.</param>
+    /// <param name="valorDevolvido">Soma das devoluções do pedido.</param>
+    public static PedidoRespostaDto DeEntidade(Pedido pedido, IReadOnlyDictionary<int, decimal>? devolvidoPorItem = null, decimal valorDevolvido = 0)
     {
-        var itens = pedido.Itens.OrderBy(i => i.Id).Select(PedidoItemRespostaDto.DeEntidade).ToList();
+        var itens = pedido.Itens.OrderBy(i => i.Id)
+            .Select(i => PedidoItemRespostaDto.DeEntidade(i, devolvidoPorItem?.GetValueOrDefault(i.Id) ?? 0))
+            .ToList();
 
         return new PedidoRespostaDto(
             pedido.Id,
@@ -79,6 +88,7 @@ public record PedidoRespostaDto(
             pedido.DescontoPercentual,
             itens.Sum(i => i.Subtotal),
             pedido.ValorTotal,
-            itens);
+            itens,
+            valorDevolvido);
     }
 }
