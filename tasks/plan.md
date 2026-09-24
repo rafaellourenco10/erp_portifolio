@@ -1,7 +1,7 @@
 # Plano de implementação: Orçamentos (etapa 13)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **aguardando aprovação**.
+> Status: **aprovado e implementado** (23/09/2026).
 
 ## Visão geral
 

@@ -38,5 +38,6 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T7: Documentação e verificação final** (S)
+- [x] **T7: Documentação e verificação final** (S) — *concluída em 23/09/2026*
   - README (etapa 13; Login passa a 14), SPEC marcada como implementada, `python -m graphify update .`, memória.
+  - Resultado: README com a etapa 13 na tabela (Login → 14), menu, seção de funcionalidades, estrutura de pastas, endpoints, tabelas `orcamentos`/`orcamento_itens`, testes realizados e próximas etapas. SPEC 7/7 ✅ (formulário corrigido para página; PE1 204). Grafo atualizado preservando os conceitos (+9 conceitos da etapa, nenhum ausente; reexecução idempotente), comunidades novas nomeadas e HTML exportado. Memória atualizada. Verificação final: build Release 0 avisos, `dotnet test` 207/207, `tsc -b`/`oxlint`/`npm run build` limpos.

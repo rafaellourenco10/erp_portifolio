@@ -1,6 +1,6 @@
 # Spec: Orçamentos (etapa 13)
 
-> Status: **aguardando aprovação** (23/09/2026).
+> Status: **implementada e testada em 23/09/2026** (T1 a T7, ver `tasks/todo.md`). Critérios 1-7 conferidos: E2E da API com 54 verificações e teste de tela com Playwright com 25 (dados `ZZT…` apagados, dados reais intactos).
 
 ## Objetivo
 
@@ -51,7 +51,7 @@ Reabrir orçamento perdido ou aprovado; duplicar orçamento; orçamento para que
 
 | # | Regra |
 |---|---|
-| PE1 | Marcar como perdido: de Aberto (vencido ou não), com motivo opcional (até 200). Repetir em um Perdido → 200 sem mudar nada (idempotente). Aprovado → 409. |
+| PE1 | Marcar como perdido: de Aberto (vencido ou não), com motivo opcional (até 200). Repetir em um Perdido → 204 sem mudar nada (idempotente). Aprovado → 409. |
 
 ### PDF (PD)
 
@@ -81,7 +81,7 @@ Reabrir orçamento perdido ou aprovado; duplicar orçamento; orçamento para que
 
 - **Menu**: "Orçamentos" em **Ordem Vendas/Compras**, antes de Pedidos de Venda (rota `/orcamentos`).
 - **Lista**: nº, cliente, data, validade, total, status (tag; **Vencido** em laranja); busca e filtro de status no mesmo padrão de Pedidos.
-- **Formulário** (gaveta, como Pedidos): cliente, vendedor, forma de pagamento, validade (padrão +15 dias), itens, desconto, observações, total ao vivo.
+- **Formulário** (página própria `/orcamentos/novo` e `/orcamentos/:id`, como Pedidos): cliente, vendedor, forma de pagamento, validade (padrão +15 dias), itens, desconto, observações, total ao vivo.
 - **Ações**: Editar (Aberto); **Gerar pedido** (confirmação → mensagem com link para o pedido gerado); **Marcar como perdido** (modal com motivo); **Baixar PDF** (qualquer status); no Aprovado, link "Pedido #N".
 
 ## Testing strategy
@@ -98,10 +98,12 @@ Reabrir orçamento perdido ou aprovado; duplicar orçamento; orçamento para que
 
 ## Success criteria (testáveis)
 
-1. Criar/editar orçamento com as validações de OR1 → 400 por campo; preço congelado no item.
-2. Vencido calculado corretamente e filtros de status devolvem os conjuntos certos.
-3. Gerar pedido cria um rascunho com os preços/descontos do orçamento e deixa o orçamento Aprovado com `pedidoId`; as regras de GP1/GP2 barram sem alterar nada.
-4. O pedido gerado confirma pelo fluxo normal (estoque baixa, parcelas geradas).
-5. Marcar como perdido funciona, é idempotente e bloqueia a edição.
-6. PDF gerado com cliente, itens e totais corretos.
-7. Tela completa; `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` todos passando.
+Conferidos em 23/09/2026; detalhes na seção "Orçamentos (23/09/2026)" do README.
+
+1. ✅ Criar/editar orçamento com as validações de OR1 → 400 por campo; preço congelado no item.
+2. ✅ Vencido calculado corretamente e filtros de status devolvem os conjuntos certos.
+3. ✅ Gerar pedido cria um rascunho com os preços/descontos do orçamento e deixa o orçamento Aprovado com `pedidoId`; as regras de GP1/GP2 barram sem alterar nada.
+4. ✅ O pedido gerado confirma pelo fluxo normal (estoque baixa, parcelas geradas).
+5. ✅ Marcar como perdido funciona, é idempotente e bloqueia a edição.
+6. ✅ PDF gerado com cliente, itens e totais corretos.
+7. ✅ Tela completa (teste de tela com Playwright, 25/25); `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` 207/207.

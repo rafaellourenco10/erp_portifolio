@@ -1,9 +1,9 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, e a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, e **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique. O **Dashboard** (etapa 6) resume os outros módulos.
 
-O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
+O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Orçamentos, Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -22,7 +22,8 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 10 | Vendedores (cadastro + vendedor no pedido de venda, % de comissão congelada) | Back-end testado de ponta a ponta; telas confirmadas pelo Rafael (23/09/2026) |
 | 11 | Comissões (geradas no recebimento da parcela, pagamento ao vendedor) | Back-end testado de ponta a ponta; tela confirmada pelo Rafael (23/09/2026) |
 | 12 | Comissão vira conta a pagar + contas avulsas (origem Compra/Comissão/Avulsa, cancelar) | Back-end testado de ponta a ponta; telas não verificadas visualmente (23/09/2026) |
-| 13+ | Login | Planejada |
+| 13 | Orçamentos (validade, situação Vencido calculada, gerar pedido com os preços do orçamento, marcar como perdido, PDF) | Back-end testado de ponta a ponta; tela testada com Playwright (23/09/2026) |
+| 14+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -209,6 +210,16 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - O "Marcar como paga" direto em Comissões saiu: todo pagamento de comissão passa pelo Contas a Pagar. Comissões já pagas antes continuam pagas (sem conta ligada)
 - Fora do escopo por enquanto: contas recorrentes automáticas, categorias/plano de contas, editar conta lançada (cancele e lance de novo), anexos, juros e pagamento parcial
 
+## Funcionalidades (etapa 13 — Orçamentos)
+
+- Tela **Orçamentos** no menu (Ordem Vendas/Compras, antes de Pedidos de Venda): a proposta que vai para o cliente **antes** da venda, com a mesma montagem do pedido (cliente cadastrado, vendedor e forma de pagamento opcionais, itens com desconto, desconto geral) mais **validade** (sugerida hoje + 15 dias) e **observações** (até 500 caracteres, saem no PDF)
+- O preço de cada item é copiado do produto ao adicionar e fica **congelado** no orçamento
+- Situações: **Aberto**, **Aprovado** (automático ao gerar o pedido), **Perdido** (marcado à mão, com motivo opcional) e **Vencido** — calculado, não gravado: é o aberto com a validade já passada. Filtro por situação (inclui Vencido) e busca por número ou cliente
+- Só o aberto é editável; salvar um **vencido** com uma validade nova o **prorroga**
+- **Gerar pedido**: cria o **pedido de venda em rascunho** com os **preços e descontos do orçamento** (mesmo que o produto tenha mudado de preço), cliente, vendedor e forma de pagamento; o orçamento vira Aprovado e mostra o link do pedido. A confirmação do pedido segue o fluxo normal (estoque, parcelas, vendedor). Vencido não gera (prorrogue antes); cliente ou produto inativo → erro; vendedor inativo fica em branco no pedido
+- **Baixar PDF** (qualquer situação): A4 com número, data, validade, dados do cliente (CPF/CNPJ formatado, contato, cidade/UF), vendedor, itens com SKU, subtotal, desconto, total, forma de pagamento, observações e "válido até" no rodapé
+- Fora do escopo por enquanto: reabrir ou duplicar orçamento, orçamento para quem não é cliente, envio por e-mail, orçamentos no Dashboard/Relatórios (taxa de conversão), desfazer a aprovação se o pedido for cancelado
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -296,6 +307,7 @@ erp_portifolio/
 │       │   ├── ProdutosController.cs        # endpoints REST de produtos
 │       │   ├── CategoriasController.cs      # endpoints REST de categorias
 │       │   ├── PedidosController.cs         # endpoints REST de pedidos
+│       │   ├── OrcamentosController.cs      # orçamentos: CRUD do aberto, gerar pedido, perder, PDF
 │       │   ├── EstoqueController.cs         # endpoints REST de estoque
 │       │   ├── ContasReceberController.cs   # endpoints REST de contas a receber
 │       │   ├── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
@@ -393,6 +405,9 @@ erp_portifolio/
 │       │   ├── IComissaoService.cs
 │       │   ├── ComissaoService.cs           # lista com totais do filtro, pagar em lote (a geração fica no ContasReceberService)
 │       │   ├── ComissaoCalculo.cs           # parcela × % com 2 casas, função pura (com xUnit)
+│       │   ├── IOrcamentoService.cs
+│       │   ├── OrcamentoService.cs          # orçamento (validações de item do PedidoService), gerar pedido, perder
+│       │   ├── ExportadorOrcamento.cs       # PDF do orçamento (QuestPDF, layout de documento)
 │       │   ├── IPedidoCompraService.cs
 │       │   ├── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       │   ├── IContasPagarService.cs
@@ -443,6 +458,7 @@ erp_portifolio/
             │   ├── fornecedoresApi.ts       # chamadas da API de fornecedores
             │   ├── vendedoresApi.ts         # chamadas da API de vendedores
             │   ├── comissoesApi.ts          # chamadas da API de comissões
+            │   ├── orcamentosApi.ts         # chamadas da API de orçamentos (+ URL do PDF)
             │   └── pedidosCompraApi.ts      # chamadas da API de pedidos de compra
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
@@ -456,6 +472,7 @@ erp_portifolio/
             │   ├── useFornecedores.ts       # useQuery / useMutation
             │   ├── useVendedores.ts         # useQuery / useMutation
             │   ├── useComissoes.ts          # lista com totais e marcar como pagas
+            │   ├── useOrcamentos.ts         # lista, detalhe, salvar, gerar pedido e perder
             │   └── usePedidosCompra.ts      # useQuery / useMutation de pedidos de compra
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
@@ -467,6 +484,9 @@ erp_portifolio/
             ├── pages/Categorias/
             │   ├── CategoriasListaPage.tsx  # busca, status, tabela, paginação, ações
             │   └── CategoriaFormDrawer.tsx  # painel lateral de inclusão/edição
+            ├── pages/Orcamentos/
+            │   ├── OrcamentosListaPage.tsx  # filtro (número/cliente + situação com Vencido), tabela, link do pedido
+            │   └── OrcamentoPage.tsx        # formulário (tabela de itens do pedido) + gerar pedido, perder, PDF
             ├── pages/Pedidos/
             │   ├── PedidosListaPage.tsx     # filtro (número/cliente + status), tabela, paginação
             │   ├── PedidoPage.tsx           # formulário: cliente, itens, desconto, resumo, ações
@@ -757,6 +777,18 @@ Comissões:
 | GET | `/comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=1&tamanhoPagina=10` | `{ resultado: <lista paginada, mais recente primeiro>, totais: { totalGerado, totalPendente, totalPago } }`; `status` = `Pendente`/`Paga`; datas = data do recebimento, inclusivas; os totais são do vendedor/período (não dependem do status) | 200, 400 |
 | POST | `/comissoes/gerar-conta` | Corpo `{ "ids": [1, 2], "vencimento": "2026-10-10" }`: comissões **Pendentes de um vendedor** viram **uma** conta a pagar com a soma e ficam `EmPagamento`; id inexistente, comissão não pendente ou vendedores misturados → 400 em `Ids` e nada muda (etapa 12; substitui o antigo `POST /comissoes/pagar`) | 201, 400 |
 
+Orçamentos (etapa 13; itens com o mesmo formato dos de pedido):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/orcamentos?busca=&status=&pagina=1&tamanhoPagina=10` | Lista paginada (mais recentes primeiro) com `validade`, `vencido` e `pedidoId`; `busca` = número (`12` ou `#12`) ou nome do cliente; `status` = `Aberto` (só os dentro da validade), `Vencido`, `Aprovado` ou `Perdido` | 200, 400 |
+| GET | `/orcamentos/{id}` | Detalhe com itens, `vencido`, `observacoes`, `motivoPerda`, `pedidoId` | 200, 404 |
+| POST | `/orcamentos` | Corpo do pedido + `validade` (AAAA-MM-DD, não antes de hoje) e `observacoes`; preço copiado do produto | 201, 400 |
+| PUT | `/orcamentos/{id}` | Edita o **Aberto** (inclusive vencido, para prorrogar); itens já existentes mantêm o preço | 200, 400, 404, 409 |
+| POST | `/orcamentos/{id}/gerar-pedido` | Cria o pedido de venda **Rascunho** com os preços do orçamento e aprova o orçamento (mesma transação); `201` com `{ "pedidoId": N }` e `Location: /api/pedidos/N`; vencido, cliente inativo ou produto inativo → 400; já aprovado/perdido → 409 | 201, 400, 404, 409 |
+| PATCH | `/orcamentos/{id}/perder` | Corpo opcional `{ "motivo": "..." }` (até 200); repetir num perdido → 204 sem mudar o motivo; aprovado → 409 | 204, 400, 404, 409 |
+| GET | `/orcamentos/{id}/pdf` | Arquivo `orcamento-N.pdf` (qualquer situação) | 200, 404 |
+
 `PATCH /contas-receber/{id}/receber` passou a gerar a comissão por dentro (mesma transação). Status da comissão: `Pendente` → `EmPagamento` (conta gerada) → `Paga` (conta paga); os totais incluem `totalEmPagamento`.
 
 Pedidos de Compra (mesmo desenho de Pedidos, sem forma de pagamento):
@@ -1030,6 +1062,22 @@ Tabela `public.comissoes`:
 | `data_pagamento` | timestamptz | nula até pagar |
 
 Migration: `20260923181059_CriacaoTabelaComissoes` (cria a tabela e insere, em SQL, as comissões das parcelas já recebidas de pedidos com vendedor).
+
+Tabela `public.orcamentos` (etapa 13):
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `id` | integer | PK `pk_orcamentos`, identity (generated always); é o número do orçamento |
+| `cliente_id` / `vendedor_id` | integer | FKs restrict (`fk_orcamentos_clientes`, `fk_orcamentos_vendedores`; vendedor opcional); índices `ix_orcamentos_cliente_id`, `ix_orcamentos_vendedor_id` |
+| `data_orcamento` | timestamptz | UTC, padrão `now()`; índice `ix_orcamentos_data_orcamento` |
+| `validade` | date | último dia em que vale; "vencido" = `Aberto` com validade antes de hoje (calculado) |
+| `status` | varchar(20) | `Aberto`, `Aprovado` ou `Perdido` |
+| `forma_pagamento` | varchar(20) | opcional |
+| `desconto_percentual` / `valor_total` | numeric(5,2) / numeric(12,2) | `CHECK` 0-100 / ≥ 0 (total calculado pelo servidor) |
+| `observacoes` / `motivo_perda` | varchar(500) / varchar(200) | opcionais |
+| `pedido_id` | integer | FK `fk_orcamentos_pedidos` (restrict), **único** (`ux_orcamentos_pedido_id`); `CHECK ck_orcamentos_status`: preenchido **só** no `Aprovado` |
+
+`public.orcamento_itens` é o espelho de `pedido_itens` (`orcamento_id` com FK cascade, `produto_id` restrict, `quantidade`, `preco_unitario` congelado, `desconto_percentual`, índice único `ux_orcamento_itens_orcamento_produto`). Migration: `20260923235828_CriacaoTabelasOrcamentos`.
 
 Tabela `public.fornecedores` (espelho exato de `public.clientes`):
 
@@ -1465,6 +1513,23 @@ Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (18
 
 **Limitação desta rodada:** sem navegador nesta sessão, as telas de Contas a Pagar (Nova conta, colunas, filtro, cancelar) e de Comissões (Gerar conta a pagar) **não foram verificadas visualmente**. Recomenda-se: lançar uma conta avulsa em 2 parcelas; em Comissões, gerar a conta de um vendedor; pagar essa conta em Contas a Pagar e ver as comissões virarem Pagas; gerar outra e cancelar para vê-las voltar a "A pagar".
 
+### Orçamentos (23/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script PowerShell com 54 verificações, e a **tela** com Playwright (Edge headless) contra essa API e um Vite temporário (porta 5174), com 25 verificações. Dados de teste (`ZZT Orc…`, SKUs `690000xx`, vendedores de teste) apagados via SQL ao final; dados reais e contagens de pedidos/orçamentos/estoque/parcelas idênticos antes e depois.
+
+| Verificação | Resultado |
+|---|---|
+| Criar: preço copiado do produto, total 185,25 (itens com desconto + 5% geral), observações aparadas; validade passada / ausente, sem itens, produto repetido, UN fracionada, observações com 501, cliente inativo → 400 no campo; validade = hoje aceita | ✅ |
+| Editar: item existente mantém o preço (100) com o produto já a 130; item novo pega o preço atual; item removido sai | ✅ |
+| Vencido calculado no detalhe e na lista; filtros Aberto/Vencido/Aprovado/Perdido e busca `#N`; prorrogar pela edição | ✅ |
+| Gerar pedido: vencido → 400; produto inativo → 400 sem gravar nada; gera o rascunho com cliente, vendedor, forma, descontos e **preço do orçamento**, total igual; orçamento Aprovado com `pedidoId`; gerar de novo / editar / perder o aprovado → 409; vendedor inativo fica em branco; cliente inativado → 400 | ✅ |
+| O pedido gerado confirma pelo fluxo normal: 2 saídas de estoque e 2 parcelas somando o total | ✅ |
+| Perder: motivo aparado, idempotente (sem trocar o motivo), sem corpo, motivo com 201 → 400, vencido pode, inexistente → 404 | ✅ |
+| PDF: 200 `application/pdf` (`%PDF`), `orcamento-N.pdf`, 404 para inexistente; arquivo aberto e conferido | ✅ |
+| Tela: lista com as 4 situações e link do pedido; filtro Vencido; preço congelado; vencido desabilita "Gerar pedido" e prorrogar reabilita; perdido/aprovado somente leitura; novo com validade hoje + 15, erros de campo e breadcrumb; marcar como perdido; gerar pedido abre o rascunho com o preço do orçamento; celular sem rolagem horizontal; console sem erros | ✅ |
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (207 aprovados, 22 novos em `OrcamentoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
 ---
 
 ## Padrões do projeto
@@ -1563,5 +1628,6 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
-- **Autenticação/login**
+- **Autenticação/login** (etapa 14)
+- Orçamentos: duplicar, reabrir, orçamento para não cliente, envio por e-mail, taxa de conversão no Dashboard/Relatórios; trava de concorrência ao gerar pedido se o ERP virar multiusuário
 - Testes automatizados de integração para a API de Clientes/Produtos/Categorias/Fornecedores (Pedidos, Estoque, Contas a Receber, Dashboard e Pedidos de Compra já têm testes unitários e/ou scripts de ponta a ponta)
