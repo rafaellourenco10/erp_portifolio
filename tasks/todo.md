@@ -26,9 +26,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T5: Tela do pedido** (M)
+- [x] **T5: Tela do pedido** (M) — *concluída em 24/09/2026*
   - Tipos/api/hooks; modal "Registrar devolução" com prévia; seção Devoluções; "Cancelar pedido" some com devolução.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: `types/devolucao.ts`, `devolucoesApi`, `useDevolucoes` (histórico sob a chave `pedidos`; registrar invalida pedidos, contas a receber/pagar, comissões, estoque, dashboard e relatórios). `valorDevolucaoCentavos` em `utils/calculoPedido.ts` (um arredondamento só, igual ao servidor). `DevolucaoModal`: itens ainda disponíveis com quantidade (máx. = disponível, inteira em UN/CX), "volta ao estoque", motivo, vencimento do reembolso e prévia ("o que falta" quando devolve tudo); mensagem final com abatido/reembolso/estorno. `DevolucoesPedido`: histórico. `PedidoPage` 2.6: botão **Registrar devolução**, "Cancelar pedido" some com devolução, aviso com o valor devolvido. `tsc -b` e `oxlint` limpos.
 
 - [ ] **T6: Contas a Pagar, Comissões e Dashboard na tela** (S)
   - Origem Devolução (filtro/tag, sem cancelar); estorno na lista de comissões; aviso no modal de gerar conta; card Devoluções do mês.

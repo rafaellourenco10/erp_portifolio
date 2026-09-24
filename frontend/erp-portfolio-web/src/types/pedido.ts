@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: pedido.ts
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 23/09/2026
  * Descrição..: Tipos do módulo de Pedidos, espelhando os DTOs da API
  *              (PedidoRespostaDto, PedidoResumoDto, PedidoCriacaoDto,
@@ -11,6 +11,7 @@
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada (etapa 10).
+ *   1.2.0 - 24/09/2026 - quantidadeDevolvida por item e valorDevolvido (etapa 14).
  * =====================================================================
  */
 
@@ -42,6 +43,8 @@ export interface PedidoItem {
   precoUnitario: number
   descontoPercentual: number
   subtotal: number
+  /** Quanto deste item já voltou em devoluções (0 no orçamento e em pedido sem devolução). */
+  quantidadeDevolvida: number
 }
 
 export interface Pedido {
@@ -62,6 +65,8 @@ export interface Pedido {
   subtotalItens: number
   valorTotal: number
   itens: PedidoItem[]
+  /** Soma das devoluções do pedido (etapa 14). */
+  valorDevolvido: number
 }
 
 /** Uma linha da listagem (sem os itens). */

@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: PedidoPage.tsx
- * Versão.....: 2.5.0
+ * Versão.....: 2.6.0
  * Data.......: 23/09/2026
  * Descrição..: Página do pedido (rotas /pedidos/novo e /pedidos/:id). Formulário com
  *              cliente (busca no servidor), forma de pagamento, itens (tabela editável;
@@ -31,10 +31,12 @@
  *   2.4.0 - 23/09/2026 - Modal de parcelas extraído para components/ModalParcelas (etapa 8).
  *   2.5.0 - 23/09/2026 - Campo Vendedor (obrigatório só para confirmar) e % de comissão congelada
  *                        no pedido confirmado (etapa 10).
+ *   2.6.0 - 24/09/2026 - Registrar devolução (modal) e histórico de devoluções no pedido confirmado;
+ *                        "Cancelar pedido" some quando já houve devolução (etapa 14).
  * =====================================================================
  */
 
-import { ArrowLeftOutlined, CheckCircleOutlined, CheckOutlined, StopOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, CheckOutlined, RollbackOutlined, StopOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Alert, App, Button, Col, Flex, Form, InputNumber, Row, Select, Spin } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
@@ -64,6 +66,8 @@ import { OPCOES_FORMA_PAGAMENTO, type Pedido, type PedidoConfirmarEntrada } from
 import { calcularPedido } from '../../utils/calculoPedido'
 import { formatarReal } from '../../utils/moeda'
 import '../Clientes/clientes.css'
+import { DevolucaoModal } from './DevolucaoModal'
+import { DevolucoesPedido } from './DevolucoesPedido'
 import { ItensPedidoTabela } from './ItensPedidoTabela'
 import './pedido.css'
 
@@ -129,6 +133,10 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
 
   // Valores validados do formulário, guardados enquanto o modal de confirmar (parcelas) está aberto.
   const [confirmando, setConfirmando] = useState<PedidoFormValores | null>(null)
+  const [devolvendo, setDevolvendo] = useState(false)
+  // Etapa 14: devolução só em pedido confirmado com algo ainda não devolvido; com devolução, não cancela mais.
+  const temDevolucao = (pedido?.valorDevolvido ?? 0) > 0
+  const podeDevolver = pedido?.status === 'Confirmado' && pedido.itens.some((item) => item.quantidade > item.quantidadeDevolvida)
 
   const {
     control,
@@ -285,7 +293,9 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
           style={{ marginBottom: 24 }}
           title={
             pedido.status === 'Confirmado'
-              ? 'Pedido confirmado: não pode ser editado, só cancelado.'
+              ? temDevolucao
+                ? `Pedido confirmado com devolução de ${formatarReal(pedido.valorDevolvido)}: não pode ser editado nem cancelado; devoluções abaixo.`
+                : 'Pedido confirmado: não pode ser editado; pode ser cancelado ou ter itens devolvidos.'
               : 'Pedido cancelado: somente leitura.'
           }
         />
@@ -458,9 +468,11 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
         </Row>
       </section>
 
+      {pedido && <DevolucoesPedido pedidoId={pedido.id} />}
+
       {pedido?.status !== 'Cancelado' && (
         <div className="pedido-rodape">
-          {pedido && (
+          {pedido && !temDevolucao && (
             <Button
               danger
               size="large"
@@ -470,6 +482,11 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
               loading={cancelarPedido.isPending}
             >
               Cancelar pedido
+            </Button>
+          )}
+          {podeDevolver && (
+            <Button size="large" icon={<RollbackOutlined />} onClick={() => setDevolvendo(true)}>
+              Registrar devolução
             </Button>
           )}
           {!somenteLeitura && (
@@ -508,6 +525,8 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
       aoConfirmar={confirmar}
       aoFechar={() => setConfirmando(null)}
     />
+
+    {pedido && <DevolucaoModal pedido={pedido} aberto={devolvendo} aoFechar={() => setDevolvendo(false)} />}
     </>
   )
 }

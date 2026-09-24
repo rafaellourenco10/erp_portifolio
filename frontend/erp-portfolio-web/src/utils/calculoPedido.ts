@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: calculoPedido.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 21/09/2026
  * Descrição..: Cálculo de subtotal e total do pedido para a PRÉ-VISUALIZAÇÃO da tela,
  *              com a mesma fórmula do servidor (Services/CalculoPedido.cs):
@@ -17,6 +17,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
+ *   1.1.0 - 24/09/2026 - valorDevolucaoCentavos: prévia do valor de um item devolvido (etapa 14).
  * =====================================================================
  */
 
@@ -99,4 +100,18 @@ export function centavosParaTexto(centavos: bigint): string {
   const inteiro = centavos / 100n
   const resto = (centavos % 100n).toString().padStart(2, '0')
   return `${inteiro}.${resto}`
+}
+
+/**
+ * Valor de um item devolvido em CENTAVOS, com a regra do servidor (DevolucaoCalculo.ValorItem):
+ * arredonda2(quantidade × preço × (1 − desc. item/100) × (1 − desc. pedido/100)), com UM arredondamento só.
+ */
+export function valorDevolucaoCentavos(item: ItemCalculo, descontoPedidoPercentual: number): bigint {
+  const milesimos = paraInteiro(item.quantidade, 1000)
+  const centavos = paraInteiro(item.precoUnitario, 100)
+  const fatorItem = CEM_POR_CENTO - descontoEmCentesimos(item.descontoPercentual)
+  const fatorPedido = CEM_POR_CENTO - descontoEmCentesimos(descontoPedidoPercentual)
+  const divisor = 1000n * CEM_POR_CENTO * CEM_POR_CENTO
+
+  return (milesimos * centavos * fatorItem * fatorPedido + divisor / 2n) / divisor
 }
