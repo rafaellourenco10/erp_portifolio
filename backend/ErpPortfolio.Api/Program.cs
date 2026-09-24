@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Program.cs
-// Versão.....: 1.16.0
+// Versão.....: 1.17.0
 // Data.......: 23/09/2026
 // Descrição..: Ponto de entrada da API. Configura injeção de dependência, EF Core,
 //              Swagger, CORS, tratamento de erros (ProblemDetails) e controllers.
@@ -31,6 +31,7 @@
 //   1.14.0 - 23/09/2026 - Registro do IComissaoService (etapa 11).
 //   1.15.0 - 23/09/2026 - Registro do IOrcamentoService e Orçamentos no Swagger (etapa 13).
 //   1.16.0 - 24/09/2026 - Registro do IDevolucaoService e Devoluções no Swagger (etapa 14).
+//   1.17.0 - 24/09/2026 - Registro do IFluxoCaixaService e Fluxo de Caixa no Swagger (etapa 15).
 // =====================================================================================
 
 using System.Reflection;
@@ -63,6 +64,7 @@ builder.Services.AddScoped<IFornecedorService, FornecedorService>();
 builder.Services.AddScoped<IPedidoCompraService, PedidoCompraService>();
 builder.Services.AddScoped<IOrcamentoService, OrcamentoService>();
 builder.Services.AddScoped<IDevolucaoService, DevolucaoService>();
+builder.Services.AddScoped<IFluxoCaixaService, FluxoCaixaService>();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -74,7 +76,7 @@ builder.Services.AddSwaggerGen(opcoes =>
     {
         Title = "Ambition ERP API",
         Version = "v1",
-        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Fornecedores, Vendedores, Orçamentos, Pedidos (venda e compra), Devoluções, Estoque, Contas a Receber, Contas a Pagar, Comissões e Relatórios."
+        Description = "API do Ambition ERP (projeto de portfólio) - módulos de Clientes, Produtos, Categorias, Fornecedores, Vendedores, Orçamentos, Pedidos (venda e compra), Devoluções, Estoque, Contas a Receber, Contas a Pagar, Comissões, Fluxo de Caixa e Relatórios."
     });
 
     var arquivoXml = Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml");
