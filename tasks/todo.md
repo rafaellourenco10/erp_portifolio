@@ -9,9 +9,10 @@
   - Verificar: build 0 avisos; migration aplicada; dados existentes intactos (comissões e contas continuam válidas nos CHECKs novos).
   - Resultado: backup `backup_pre_devolucao_20260924.dump` (ferramentas locais) antes; migration `20260924004530_AdicionaDevolucoes` aplicada: tabelas `devolucoes` (CHECK total = abatido + reembolso) e `devolucao_itens`; `parcelas_pagar.devolucao_id` + CHECK de origem com `Devolucao`; `comissoes.parcela_receber_id` nulo + `devolucao_id` e CHECK `ck_comissoes_valor` (normal > 0 com parcela ou estorno < 0 com devolução). As 2 comissões e as 4 contas reais passaram nos CHECKs novos. Build 0 avisos, `dotnet test` 207/207.
 
-- [ ] **T2: DevolucaoCalculo** (S)
+- [x] **T2: DevolucaoCalculo** (S) — *concluída em 24/09/2026*
   - Valor por item com descontos; "o que falta" na devolução final; abatimento das pendentes (da última, zera → cancela); reembolso; estorno de comissão. xUnit.
   - Verificar: `dotnet test`.
+  - Resultado: `Services/DevolucaoCalculo.cs` (`ValorItem`, `ValorTotal` com "o que falta" e teto no restante, `Abater` → ajustes/abatido/reembolso, `Estorno` via `ComissaoCalculo`). `DevolucaoCalculoTests` (+17): 3 devoluções de um pedido de 97,00 fecham exatamente; abatimento da última, parcela zerada = cancelar, excedente = reembolso; estorno −reembolso × % e zero sem vendedor/%. `dotnet test` 224/224.
 
 - [ ] **T3: API de devolução** (M)
   - DTOs, `DevolucaoService` (DV1-DV8), `POST/GET /api/pedidos/{id}/devolucoes`, `valorDevolvido`/`quantidadeDevolvida` no pedido, cancelar pedido com devolução → 409 (DV9).
