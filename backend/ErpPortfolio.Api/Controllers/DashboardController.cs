@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: DashboardController.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints REST do Dashboard. Cada rota só delega pro service do módulo
 //              de origem (D7) — sem service ou lógica própria do Dashboard.
@@ -19,6 +19,7 @@
 //   1.0.0 - 22/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - GET /api/dashboard/contas-pagar (etapa 8).
 //   1.2.0 - 23/09/2026 - GET vencimentos-pagar e vencimentos-receber.
+//   1.3.0 - 24/09/2026 - GET devolucoes (devoluções do mês, etapa 14).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -31,7 +32,7 @@ namespace ErpPortfolio.Api.Controllers;
 [Route("api/dashboard")]
 [Produces("application/json")]
 public class DashboardController(IPedidoService pedidoService, IContasReceberService contasReceberService,
-    IContasPagarService contasPagarService, IEstoqueService estoqueService)
+    IContasPagarService contasPagarService, IEstoqueService estoqueService, IDevolucaoService devolucaoService)
     : ControllerBase
 {
     /// <summary>Faturamento e ticket médio do mês atual (só pedidos Confirmados), pedidos por status e faturamento diário.</summary>
@@ -63,6 +64,12 @@ public class DashboardController(IPedidoService pedidoService, IContasReceberSer
     [ProducesResponseType<VencimentosDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<VencimentosDto>> ObterVencimentosReceber(CancellationToken cancelamento) =>
         Ok(await contasReceberService.ObterVencimentosAsync(cancelamento));
+
+    /// <summary>Valor e quantidade das devoluções de venda do mês atual (o faturamento continua bruto).</summary>
+    [HttpGet("devolucoes")]
+    [ProducesResponseType<DevolucoesResumoDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<DevolucoesResumoDto>> ObterDevolucoes(CancellationToken cancelamento) =>
+        Ok(await devolucaoService.ObterResumoMesAsync(cancelamento));
 
     /// <summary>Quantidade de produtos ativos com saldo de estoque baixo.</summary>
     [HttpGet("estoque")]

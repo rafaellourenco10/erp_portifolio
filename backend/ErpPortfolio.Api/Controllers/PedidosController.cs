@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidosController.cs
-// Versão.....: 1.4.0
+// Versão.....: 1.5.0
 // Data.......: 22/09/2026
 // Descrição..: Endpoints REST do módulo de Pedidos.
 //                GET    /api/pedidos        -> listagem paginada (filtros: busca, status)
@@ -22,6 +22,7 @@
 //   1.2.0 - 21/09/2026 - Edição do rascunho (PUT); transição inválida vira 409.
 //   1.3.0 - 21/09/2026 - Confirmar e cancelar (PATCH).
 //   1.4.0 - 22/09/2026 - Confirmar recebe numeroParcelas/intervaloDias (gera parcelas).
+//   1.5.0 - 24/09/2026 - Cancelar devolve 409 quando o pedido tem devolução (etapa 14, DV9).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -122,14 +123,22 @@ public class PedidosController(IPedidoService pedidoService) : ControllerBase
         }
     }
 
-    /// <summary>Cancela um pedido (rascunho ou confirmado). Chamadas repetidas também retornam 204.</summary>
+    /// <summary>Cancela um pedido (rascunho ou confirmado). Chamadas repetidas também retornam 204. Pedido com devolução → 409.</summary>
     [HttpPatch("{id:int}/cancelar")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Cancelar(int id, CancellationToken cancelamento)
     {
-        var encontrado = await pedidoService.CancelarAsync(id, cancelamento);
-        return encontrado ? NoContent() : NotFound();
+        try
+        {
+            var encontrado = await pedidoService.CancelarAsync(id, cancelamento);
+            return encontrado ? NoContent() : NotFound();
+        }
+        catch (ConflitoException ex)
+        {
+            return Problem(statusCode: StatusCodes.Status409Conflict, title: "Conflito", detail: ex.Message);
+        }
     }
 
     // Mesmo formato dos erros de validação do [ApiController] (400), com o erro associado ao campo.

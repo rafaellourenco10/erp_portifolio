@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ComissaoService.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Consulta de comissões (filtro por vendedor, status e período da data do
 //              recebimento, com totais do filtro calculados no servidor) e pagamento ao
@@ -20,6 +20,8 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - GerarContaAsync substitui PagarAsync; total Em pagamento (etapa 12).
+//   1.2.0 - 24/09/2026 - Estorno de devolução na lista; gerar conta inclui os estornos pendentes do
+//                        vendedor e recusa soma <= 0 (etapa 14, CC6/CC7).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -74,7 +76,7 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
                 c.Vendedor!.Nome,
                 c.PedidoId,
                 c.Pedido!.Cliente!.Nome,
-                c.ParcelaReceber!.NumeroParcela,
+                c.ParcelaReceberId == null ? null : (int?)c.ParcelaReceber!.NumeroParcela,
                 contexto.ParcelasReceber.Count(p => p.PedidoId == c.PedidoId),
                 c.ValorBase,
                 c.Percentual,
@@ -82,7 +84,8 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
                 c.DataGeracao,
                 c.Status,
                 c.DataPagamento,
-                c.ParcelaPagarId))
+                c.ParcelaPagarId,
+                c.DevolucaoId))
             .ToListAsync(cancelamento);
 
         return new ComissaoListaDto(
@@ -110,6 +113,18 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
         if (comissoes.Select(c => c.VendedorId).Distinct().Count() > 1)
             throw new DadoInvalidoException(nameof(ComissaoGerarContaDto.Ids), "Selecione comissões de um único vendedor.");
 
+        // CC6: os estornos de devolução pendentes do vendedor entram sempre, mesmo sem selecionar.
+        var vendedorId = comissoes[0].VendedorId;
+        var idsSelecionados = comissoes.Select(c => c.Id).ToList();
+        comissoes.AddRange(await contexto.Comissoes
+            .Where(c => c.VendedorId == vendedorId && c.Status == StatusComissao.Pendente && c.Valor < 0 && !idsSelecionados.Contains(c.Id))
+            .ToListAsync(cancelamento));
+
+        var total = comissoes.Sum(c => c.Valor);
+        if (total <= 0)
+            throw new DadoInvalidoException(nameof(ComissaoGerarContaDto.Ids),
+                $"Os estornos de devolução do vendedor ({comissoes.Where(c => c.Valor < 0).Sum(c => c.Valor):N2}) superam as comissões selecionadas; selecione mais comissões.");
+
         // CC2: uma parcela (1/1) com a soma; o vínculo e o status mudam no mesmo SaveChanges.
         var vendedor = comissoes[0].Vendedor!;
         var parcela = new ParcelaPagar
@@ -119,7 +134,7 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
             Descricao = $"Comissões — {vendedor.Nome} ({comissoes.Count})",
             NumeroParcela = 1,
             TotalParcelas = 1,
-            Valor = comissoes.Sum(c => c.Valor),
+            Valor = total,
             Vencimento = vencimento,
             Status = StatusParcelaPagar.Pendente
         };

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ComissaoDtos.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: DTOs da tela de comissões: filtro da listagem (vendedor, status e período
 //              pela data do recebimento), linha da lista, totais do filtro e o corpo de
@@ -15,6 +15,7 @@
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - Gerar conta a pagar (substitui o "pagar" direto), total Em pagamento e
 //                        vínculo com a conta (etapa 12).
+//   1.2.0 - 24/09/2026 - Estorno de devolução: NumeroParcela nulo e DevolucaoId (etapa 14, CC7).
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;
@@ -57,7 +58,7 @@ public record ComissaoRespostaDto(
     string VendedorNome,
     int PedidoId,
     string ClienteNome,
-    int NumeroParcela,
+    int? NumeroParcela,
     int TotalParcelas,
     decimal ValorBase,
     decimal Percentual,
@@ -65,7 +66,8 @@ public record ComissaoRespostaDto(
     DateTime DataGeracao,
     StatusComissao Status,
     DateTime? DataPagamento,
-    int? ParcelaPagarId);
+    int? ParcelaPagarId,
+    int? DevolucaoId);
 
 /// <summary>Somas das comissões que atendem o filtro (todas as páginas).</summary>
 public record ComissaoTotaisDto(decimal TotalGerado, decimal TotalPendente, decimal TotalEmPagamento, decimal TotalPago);

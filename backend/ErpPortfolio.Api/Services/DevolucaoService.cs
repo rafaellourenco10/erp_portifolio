@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: DevolucaoService.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 24/09/2026
 // Descrição..: Devolução de venda (SPEC.md etapa 14). Valida os itens (DV1/DV2), calcula
 //              valor, abatimento, reembolso e estorno pelo DevolucaoCalculo (DV3-DV6) e
@@ -21,6 +21,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 24/09/2026 - Criação do arquivo.
+//   1.1.0 - 24/09/2026 - ObterResumoMesAsync (card do Dashboard, DB1).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -188,6 +189,15 @@ public class DevolucaoService(ErpPortfolioDbContext contexto, IEstoqueService es
         return devolucoes
             .Select(d => ParaResposta(d, reembolsos.TryGetValue(d.Id, out var conta) ? conta : null, estornos.GetValueOrDefault(d.Id)))
             .ToList();
+    }
+
+    public async Task<DevolucoesResumoDto> ObterResumoMesAsync(CancellationToken cancelamento)
+    {
+        var agora = DateTime.UtcNow;
+        var inicioMes = new DateTime(agora.Year, agora.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var doMes = contexto.Devolucoes.Where(d => d.DataDevolucao >= inicioMes && d.DataDevolucao < inicioMes.AddMonths(1));
+
+        return new DevolucoesResumoDto(await doMes.SumAsync(d => d.ValorTotal, cancelamento), await doMes.CountAsync(cancelamento));
     }
 
     /// <summary>Quantidade já devolvida por item do pedido (id do item → quantidade).</summary>

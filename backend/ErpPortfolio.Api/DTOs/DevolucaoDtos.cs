@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: DevolucaoDtos.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 24/09/2026
 // Descrição..: DTOs da devolução de venda (SPEC.md etapa 14): entrada (itens do pedido com
 //              quantidade e "volta ao estoque", motivo e vencimento do reembolso, DV2) e
@@ -13,6 +13,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 24/09/2026 - Criação do arquivo.
+//   1.1.0 - 24/09/2026 - DevolucoesResumoDto (card do Dashboard, DB1).
 // =====================================================================================
 
 using System.ComponentModel.DataAnnotations;
@@ -87,3 +88,6 @@ public record DevolucaoRespostaDto(
     int? ParcelaPagarId,
     decimal EstornoComissao,
     IReadOnlyList<DevolucaoItemRespostaDto> Itens);
+
+/// <summary>Card "Devoluções do mês" do Dashboard (DB1).</summary>
+public record DevolucoesResumoDto(decimal ValorTotal, int Quantidade);

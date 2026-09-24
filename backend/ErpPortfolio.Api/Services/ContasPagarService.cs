@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasPagarService.cs
-// Versão.....: 2.1.0
+// Versão.....: 2.2.0
 // Data.......: 23/09/2026
 // Descrição..: Contas a pagar de três origens (Compra, Comissao, Avulsa): listagem com
 //              favorecido/descrição e "atrasado" calculados no servidor, marcar como paga,
@@ -29,6 +29,7 @@
 //                        filtro de origem, conta avulsa, cancelar e propagação para as
 //                        comissões (etapa 12).
 //   2.1.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
+//   2.2.0 - 24/09/2026 - Origem Devolucao (reembolso): não pode ser cancelada (etapa 14, CP5).
 // =====================================================================================
 
 using System.Linq.Expressions;
@@ -129,6 +130,10 @@ public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarSe
         // CP4: parcela de compra só é cancelada junto com o pedido de compra.
         if (parcela.Origem == OrigemContaPagar.Compra)
             throw new ConflitoException("Esta parcela é de um pedido de compra: cancele o pedido de compra.");
+
+        // CP5: o reembolso faz parte da devolução, que é definitiva.
+        if (parcela.Origem == OrigemContaPagar.Devolucao)
+            throw new ConflitoException("Este é o reembolso de uma devolução de venda e não pode ser cancelado; a devolução é definitiva.");
 
         if (parcela.Status == StatusParcelaPagar.Pago)
             throw new ConflitoException("Esta parcela já foi paga e não pode ser cancelada.");
