@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ContasPagarListaPage.tsx
- * Versão.....: 2.1.0
+ * Versão.....: 2.2.0
  * Data.......: 23/09/2026
  * Descrição..: Tela de contas a pagar de três origens (compra, comissão e avulsa):
  *              busca por nº da compra ou favorecido/descrição, filtros de origem e de
@@ -10,6 +10,7 @@
  *              (avulsa). Mesmo layout da tela de Contas a Receber, inclusive no celular.
  * ---------------------------------------------------------------------
  * Fontes.....: GET   /api/contas-pagar?busca=&status=&pagina=&tamanhoPagina=
+ *              GET   /api/contas-pagar/exportar?busca=&status=&origem=&formato=xlsx|pdf
  *              PATCH /api/contas-pagar/{id}/pagar e /cancelar, POST /api/contas-pagar
  *              (via useListaContasPagar / usePagarParcela / useCancelarParcela / NovaContaModal)
  * ---------------------------------------------------------------------
@@ -18,6 +19,7 @@
  *   2.1.0 - 24/09/2026 - Origem Devolução (reembolso) no filtro e na tag; sem Cancelar (etapa 14).
  *   2.0.0 - 23/09/2026 - Origem, favorecido e descrição; filtro de origem; Nova conta
  *                        (avulsa) e Cancelar (etapa 12).
+ *   2.2.0 - 24/09/2026 - Exportar Excel/PDF com todas as parcelas do filtro.
  * =====================================================================
  */
 
@@ -26,6 +28,8 @@ import { App, Alert, Button, Flex, Grid, Input, Popconfirm, Segmented, Select, T
 import type { TableProps } from 'antd'
 import { useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
+import { contasPagarApi } from '../../api/contasPagarApi'
+import { BotoesExportar } from '../../components/BotoesExportar'
 import { TagStatusParcela } from '../../components/TagStatusParcela'
 import { useCancelarParcela, useListaContasPagar, usePagarParcela } from '../../hooks/useContasPagar'
 import type { FiltroStatusParcelaPagar, OrigemContaPagar, ParcelaPagar, ParcelaPagarFiltro } from '../../types/contaPagar'
@@ -297,6 +301,7 @@ export function ContasPagarListaPage() {
               }))
             }
           />
+          <BotoesExportar baixar={(formato) => contasPagarApi.exportar(filtro, formato)} desativado={!data || data.totalItens === 0} />
         </Flex>
       </Flex>
 

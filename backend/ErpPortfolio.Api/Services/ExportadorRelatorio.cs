@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ExportadorRelatorio.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Gera o arquivo de um RelatorioModelo: Excel (.xlsx, ClosedXML) ou PDF
 //              (QuestPDF). O mesmo modelo serve aos três relatórios e aos dois formatos.
@@ -17,9 +17,12 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo (Excel).
 //   1.1.0 - 23/09/2026 - GerarPdf (T3).
+//   1.2.0 - 24/09/2026 - Arquivo() (FileContentResult pronto) e célula de data (DateOnly).
 // =====================================================================================
 
 using ClosedXML.Excel;
+using ErpPortfolio.Api.DTOs;
+using Microsoft.AspNetCore.Mvc;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -33,6 +36,13 @@ public static class ExportadorRelatorio
 
     private const string FormatoMoeda = "\"R$\" #,##0.00";
     private const string FormatoDataHora = "dd/mm/yyyy hh:mm";
+    private const string FormatoData = "dd/mm/yyyy";
+
+    /// <summary>O arquivo pronto para a action devolver: .pdf se pedido, senão .xlsx, com o nome do modelo.</summary>
+    public static FileContentResult Arquivo(RelatorioModelo modelo, FormatoRelatorio formato) =>
+        formato == FormatoRelatorio.Pdf
+            ? new FileContentResult(GerarPdf(modelo), TipoConteudoPdf) { FileDownloadName = $"{modelo.NomeArquivo}.pdf" }
+            : new FileContentResult(GerarXlsx(modelo), TipoConteudoXlsx) { FileDownloadName = $"{modelo.NomeArquivo}.xlsx" };
 
     public static byte[] GerarXlsx(RelatorioModelo modelo)
     {
@@ -123,11 +133,11 @@ public static class ExportadorRelatorio
 
                 conteudo.Table(tabela =>
                 {
-                    // Texto ganha o dobro da largura das numéricas; data-hora o suficiente para não quebrar a hora.
+                    // Texto ganha o dobro da largura das numéricas; datas o suficiente para não quebrar o ano/a hora.
                     tabela.ColumnsDefinition(colunas =>
                     {
                         foreach (var coluna in modelo.Colunas)
-                            colunas.RelativeColumn(coluna.Tipo switch { TipoValor.Texto => 2f, TipoValor.DataHora => 1.6f, _ => 1f });
+                            colunas.RelativeColumn(coluna.Tipo switch { TipoValor.Texto => 2f, TipoValor.DataHora => 1.6f, TipoValor.Data => 1.2f, _ => 1f });
                     });
 
                     tabela.Header(cabecalho =>
@@ -180,6 +190,10 @@ public static class ExportadorRelatorio
             case DateTime dt:
                 celula.Value = dt;
                 celula.Style.NumberFormat.Format = FormatoDataHora;
+                break;
+            case DateOnly d:
+                celula.Value = d.ToDateTime(TimeOnly.MinValue);
+                celula.Style.NumberFormat.Format = FormatoData;
                 break;
             default:
                 celula.Value = FormatoRelatorioTexto.Formatar(valor, tipo);

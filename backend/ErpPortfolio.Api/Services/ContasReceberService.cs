@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasReceberService.cs
-// Versão.....: 1.6.0
+// Versão.....: 1.7.0
 // Data.......: 23/09/2026
 // Descrição..: Consulta de contas a receber (listagem paginada com "atrasado" calculado
 //              no servidor), marcar parcela como recebida, gerar as parcelas ao
@@ -31,6 +31,7 @@
 //   1.4.0 - 23/09/2026 - Marcar como recebida gera a comissão do vendedor (etapa 11).
 //   1.5.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
 //   1.6.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
+//   1.7.0 - 24/09/2026 - ModeloAsync: exportação da tela em Excel/PDF (ExportadorRelatorio).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -42,6 +43,57 @@ namespace ErpPortfolio.Api.Services;
 
 public class ContasReceberService(ErpPortfolioDbContext contexto) : IContasReceberService
 {
+    public async Task<RelatorioModelo> ModeloAsync(ParcelaFiltroDto filtro, CancellationToken cancelamento)
+    {
+        // O arquivo leva todas as linhas do filtro, não só a página da tela.
+        filtro.Pagina = 1;
+        filtro.TamanhoPagina = int.MaxValue;
+        var parcelas = (await ListarAsync(filtro, cancelamento)).Itens;
+        var agora = HorarioBrasilia.ParaBrasilia(DateTime.UtcNow);
+
+        return new RelatorioModelo(
+            "Contas a Receber",
+            $"contas-receber-{agora:yyyy-MM-dd}",
+            agora,
+            [
+                $"Busca: {(string.IsNullOrWhiteSpace(filtro.Busca) ? "—" : filtro.Busca.Trim())}",
+                $"Status: {filtro.Status switch
+                {
+                    null => "Todas",
+                    FiltroStatusParcela.Pendente => "Pendentes",
+                    FiltroStatusParcela.Atrasado => "Atrasadas",
+                    FiltroStatusParcela.Recebido => "Recebidas",
+                    _ => "Canceladas"
+                }}",
+            ],
+            [
+                new CampoRelatorio("Parcelas", parcelas.Count, TipoValor.Inteiro),
+                new CampoRelatorio("Valor total", parcelas.Sum(p => p.Valor), TipoValor.Moeda),
+                new CampoRelatorio("Em atraso", parcelas.Where(p => p.Atrasado).Sum(p => p.Valor), TipoValor.Moeda),
+            ],
+            [
+                new ColunaRelatorio("Pedido", TipoValor.Inteiro),
+                new ColunaRelatorio("Cliente", TipoValor.Texto),
+                new ColunaRelatorio("Parcela", TipoValor.Texto),
+                new ColunaRelatorio("Valor", TipoValor.Moeda),
+                new ColunaRelatorio("Vencimento", TipoValor.Data),
+                new ColunaRelatorio("Status", TipoValor.Texto),
+                new ColunaRelatorio("Recebido em", TipoValor.DataHora),
+            ],
+            parcelas
+                .Select(p => new object?[]
+                {
+                    p.PedidoId,
+                    p.ClienteNome,
+                    $"{p.NumeroParcela}/{p.TotalParcelas}",
+                    p.Valor,
+                    p.Vencimento,
+                    p.Atrasado ? "Atrasada" : p.Status switch { StatusParcela.Pendente => "Pendente", StatusParcela.Recebido => "Recebida", _ => "Cancelada" },
+                    p.DataRecebimento is DateTime data ? HorarioBrasilia.ParaBrasilia(data) : null,
+                })
+                .ToList());
+    }
+
     public async Task<ResultadoPaginadoDto<ParcelaRespostaDto>> ListarAsync(ParcelaFiltroDto filtro, CancellationToken cancelamento)
     {
         var hoje = HorarioBrasilia.Hoje();

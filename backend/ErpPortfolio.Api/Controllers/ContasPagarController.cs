@@ -1,9 +1,10 @@
 // =====================================================================================
 // Arquivo....: ContasPagarController.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints REST do módulo de Contas a Pagar.
 //                GET   /api/contas-pagar            -> listagem paginada
+//                GET   /api/contas-pagar/exportar?formato=xlsx|pdf -> arquivo com todo o filtro
 //                PATCH /api/contas-pagar/{id}/pagar  -> marca a parcela como paga
 //                POST  /api/contas-pagar             -> lança conta avulsa em parcelas
 //                PATCH /api/contas-pagar/{id}/cancelar -> cancela parcela avulsa/de comissão
@@ -16,6 +17,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - POST (conta avulsa) e PATCH cancelar (etapa 12).
+//   1.2.0 - 24/09/2026 - GET exportar (Excel/PDF pelo ExportadorRelatorio).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -38,6 +40,13 @@ public class ContasPagarController(IContasPagarService contasPagarService) : Con
     {
         return Ok(await contasPagarService.ListarAsync(filtro, cancelamento));
     }
+
+    /// <summary>Parcelas do filtro (todas as páginas) em Excel ou PDF, no mesmo layout dos relatórios.</summary>
+    [HttpGet("exportar")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, ExportadorRelatorio.TipoConteudoXlsx, ExportadorRelatorio.TipoConteudoPdf)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Exportar([FromQuery] ParcelaPagarFiltroDto filtro, [FromQuery] FormatoRelatorio formato = FormatoRelatorio.Xlsx, CancellationToken cancelamento = default) =>
+        ExportadorRelatorio.Arquivo(await contasPagarService.ModeloAsync(filtro, cancelamento), formato);
 
     /// <summary>Marca a parcela como paga. Chamadas repetidas também retornam 200; parcela cancelada retorna 409.</summary>
     [HttpPatch("{id:int}/pagar")]

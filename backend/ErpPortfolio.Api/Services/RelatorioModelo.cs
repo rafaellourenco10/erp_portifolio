@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: RelatorioModelo.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Modelo genérico de um relatório para exportação: título, filtros já
 //              descritos, campos do resumo, colunas e linhas (valores tipados). Os três
@@ -14,6 +14,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
+//   1.2.0 - 24/09/2026 - TipoValor.Data (DateOnly, ex.: vencimento).
 // =====================================================================================
 
 using System.Globalization;
@@ -28,6 +29,7 @@ public enum TipoValor
     Quantidade,
     Moeda,
     DataHora,
+    Data,
     SimNao
 }
 
@@ -57,6 +59,7 @@ public static class FormatoRelatorioTexto
         decimal d => d.ToString("#,##0.###", PtBr),
         int i => i.ToString("N0", PtBr),
         DateTime dt => dt.ToString("dd/MM/yyyy HH:mm", PtBr),
+        DateOnly d => d.ToString("dd/MM/yyyy", PtBr),
         bool b => b ? "Sim" : "Não",
         _ => Convert.ToString(valor, PtBr) ?? ""
     };

@@ -747,6 +747,7 @@ Contas a Receber:
 |---|---|---|---|
 | GET | `/contas-receber?busca=&status=&pagina=1&tamanhoPagina=10` | Lista paginada, vencimento mais próximo primeiro; `busca` = nº do pedido ou nome do cliente; `status` = `Pendente`/`Recebido`/`Cancelado`/**`Atrasado`** (calculado) | 200, 400 |
 | PATCH | `/contas-receber/{id}/receber` | Marca a parcela como recebida; repetir é idempotente | 200, 404, 409 |
+| GET | `/contas-receber/exportar?busca=&status=&formato=xlsx` | Todas as parcelas do filtro (sem paginação) em Excel ou PDF (`formato=pdf`), no layout dos relatórios; o nome vem no `Content-Disposition` | 200, 400 |
 
 `PATCH /pedidos/{id}/confirmar` passou a aceitar corpo **opcional** `{ numeroParcelas, intervaloDias }` (padrão `{1, 30}`): ao confirmar com sucesso, gera essa quantidade de parcelas cuja soma bate exatamente com `valorTotal` (resto na última) e vencimento em `N × intervaloDias` dias. `PATCH /pedidos/{id}/cancelar` continua sem corpo, mas cancela por dentro as parcelas **Pendentes** do pedido quando ele estava Confirmado; parcelas já Recebidas não mudam.
 
@@ -795,6 +796,7 @@ Comissões:
 |---|---|---|---|
 | GET | `/comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=1&tamanhoPagina=10` | `{ resultado: <lista paginada, mais recente primeiro>, totais: { totalGerado, totalPendente, totalPago } }`; `status` = `Pendente`/`Paga`; datas = data do recebimento, inclusivas; os totais são do vendedor/período (não dependem do status) | 200, 400 |
 | POST | `/comissoes/gerar-conta` | Corpo `{ "ids": [1, 2], "vencimento": "2026-10-10" }`: comissões **Pendentes de um vendedor** viram **uma** conta a pagar com a soma e ficam `EmPagamento`; id inexistente, comissão não pendente ou vendedores misturados → 400 em `Ids` e nada muda (etapa 12; substitui o antigo `POST /comissoes/pagar`) | 201, 400 |
+| GET | `/comissoes/exportar?vendedorId=&status=&dataInicio=&dataFim=&formato=xlsx` | Todas as comissões do filtro (sem paginação) em Excel ou PDF (`formato=pdf`), com os totais | 200, 400 |
 
 Orçamentos (etapa 13; itens com o mesmo formato dos de pedido):
 
@@ -841,6 +843,7 @@ Contas a Pagar (espelho de Contas a Receber):
 | PATCH | `/contas-pagar/{id}/pagar` | Marca a parcela como paga; repetir é idempotente; parcela cancelada retorna 409; se for de comissão, as comissões ligadas ficam Pagas | 200, 404, 409 |
 | POST | `/contas-pagar` | Conta **avulsa**: `{ descricao, favorecido?, valorTotal, primeiroVencimento, numeroParcelas (1-12), intervaloDias (1-180) }`; devolve as parcelas criadas | 201, 400 |
 | PATCH | `/contas-pagar/{id}/cancelar` | Cancela parcela pendente avulsa ou de comissão (de comissão devolve as comissões para Pendente); repetir retorna 200; de compra ou paga → 409 | 200, 404, 409 |
+| GET | `/contas-pagar/exportar?busca=&status=&origem=&formato=xlsx` | Todas as parcelas do filtro (sem paginação) em Excel ou PDF (`formato=pdf`), no layout dos relatórios | 200, 400 |
 
 Confirmar um pedido de compra gera as parcelas (mesmas regras de `numeroParcelas`/`intervaloDias` do Pedido de Venda); cancelar um que estava Confirmado cancela as parcelas **Pendentes** depois da checagem de saldo — se o cancelamento for recusado por saldo, nenhuma parcela muda.
 

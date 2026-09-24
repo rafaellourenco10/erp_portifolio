@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: RelatoriosController.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints REST dos relatórios. Cada rota devolve os dados (JSON) para a
 //              tela; com ?formato=xlsx|pdf devolve o arquivo, gerado da mesma consulta
@@ -18,6 +18,7 @@
 //   1.0.0 - 23/09/2026 - Criação do arquivo (JSON).
 //   1.1.0 - 23/09/2026 - formato=xlsx devolve o arquivo Excel (T2).
 //   1.2.0 - 23/09/2026 - formato=pdf devolve o arquivo PDF (T3).
+//   1.3.0 - 24/09/2026 - Arquivo gerado por ExportadorRelatorio.Arquivo (o mesmo das telas de lista).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -63,9 +64,6 @@ public class RelatoriosController(IRelatorioService relatorioService) : Controll
         if (formato == FormatoRelatorio.Json)
             return Ok(await dados());
 
-        var relatorio = await modelo();
-        return formato == FormatoRelatorio.Xlsx
-            ? File(ExportadorRelatorio.GerarXlsx(relatorio), ExportadorRelatorio.TipoConteudoXlsx, $"{relatorio.NomeArquivo}.xlsx")
-            : File(ExportadorRelatorio.GerarPdf(relatorio), ExportadorRelatorio.TipoConteudoPdf, $"{relatorio.NomeArquivo}.pdf");
+        return ExportadorRelatorio.Arquivo(await modelo(), formato);
     }
 }

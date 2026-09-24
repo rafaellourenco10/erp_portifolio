@@ -1,9 +1,10 @@
 // =====================================================================================
 // Arquivo....: ContasReceberController.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 22/09/2026
 // Descrição..: Endpoints REST do módulo de Contas a Receber.
 //                GET   /api/contas-receber              -> listagem paginada
+//                GET   /api/contas-receber/exportar?formato=xlsx|pdf -> arquivo com todo o filtro
 //                PATCH /api/contas-receber/{id}/receber  -> marca a parcela como recebida
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db (via IContasReceberService)
@@ -13,6 +14,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 22/09/2026 - Criação do arquivo (listar e marcar recebido).
+//   1.1.0 - 24/09/2026 - GET exportar (Excel/PDF pelo ExportadorRelatorio).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -35,6 +37,13 @@ public class ContasReceberController(IContasReceberService contasReceberService)
     {
         return Ok(await contasReceberService.ListarAsync(filtro, cancelamento));
     }
+
+    /// <summary>Parcelas do filtro (todas as páginas) em Excel ou PDF, no mesmo layout dos relatórios.</summary>
+    [HttpGet("exportar")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, ExportadorRelatorio.TipoConteudoXlsx, ExportadorRelatorio.TipoConteudoPdf)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Exportar([FromQuery] ParcelaFiltroDto filtro, [FromQuery] FormatoRelatorio formato = FormatoRelatorio.Xlsx, CancellationToken cancelamento = default) =>
+        ExportadorRelatorio.Arquivo(await contasReceberService.ModeloAsync(filtro, cancelamento), formato);
 
     /// <summary>Marca a parcela como recebida. Chamadas repetidas também retornam 200 (idempotente).</summary>
     [HttpPatch("{id:int}/receber")]

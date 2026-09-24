@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IContasPagarService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 23/09/2026
 // Descrição..: Contrato do serviço de contas a pagar: consulta, marcar pago, geração e
 //              cancelamento de parcelas usados pelo PedidoCompraService, e o resumo do
@@ -14,6 +14,7 @@
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - CriarAvulsaAsync e CancelarAsync; pagar propaga para comissões (etapa 12).
 //   1.2.0 - 23/09/2026 - ObterVencimentosAsync, para o Dashboard.
+//   1.3.0 - 24/09/2026 - ModeloAsync (exportar Excel/PDF).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -24,6 +25,9 @@ namespace ErpPortfolio.Api.Services;
 public interface IContasPagarService
 {
     Task<ResultadoPaginadoDto<ParcelaPagarRespostaDto>> ListarAsync(ParcelaPagarFiltroDto filtro, CancellationToken cancelamento);
+
+    /// <summary>Todas as parcelas do filtro (ignora a paginação) no modelo do ExportadorRelatorio.</summary>
+    Task<RelatorioModelo> ModeloAsync(ParcelaPagarFiltroDto filtro, CancellationToken cancelamento);
 
     /// <summary>
     /// Marca a parcela como paga (P4); se for de comissão, paga as comissões ligadas (CC3).

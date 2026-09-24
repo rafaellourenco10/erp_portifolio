@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ComissoesListaPage.tsx
- * Versão.....: 2.2.0
+ * Versão.....: 2.3.0
  * Data.......: 23/09/2026
  * Descrição..: Tela de comissões dos vendedores (Financeiro): filtros por
  *              vendedor, status e período (data do recebimento da parcela),
@@ -13,7 +13,7 @@
  * Fontes.....: GET  /api/comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=&tamanhoPagina=
  *              GET  /api/comissoes/exportar?...&formato=xlsx|pdf
  *              POST /api/comissoes/gerar-conta
- *              (via useListaComissoes / useExportarComissoes / useGerarContaComissoes)
+ *              (via useListaComissoes / BotoesExportar / useGerarContaComissoes)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
@@ -22,19 +22,21 @@
  *                        estornos pendentes são descontados ao gerar a conta (etapa 14).
  *   2.0.0 - 23/09/2026 - "Gerar conta a pagar" no lugar de "Marcar como pagas"; status e
  *                        card Em pagamento (etapa 12).
+ *   2.3.0 - 24/09/2026 - Botões de exportar pelo componente BotoesExportar.
  * =====================================================================
  */
 
-import { FileAddOutlined, FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons'
+import { FileAddOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Col, DatePicker, Flex, Modal, Row, Segmented, Table, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
 import { SelecaoVendedor } from '../../components/SelecaoVendedor'
-import { useExportarComissoes, useGerarContaComissoes, useListaComissoes } from '../../hooks/useComissoes'
+import { comissoesApi } from '../../api/comissoesApi'
+import { BotoesExportar } from '../../components/BotoesExportar'
+import { useGerarContaComissoes, useListaComissoes } from '../../hooks/useComissoes'
 import type { Comissao, ComissaoFiltro, StatusComissao } from '../../types/comissao'
-import type { FormatoArquivo } from '../../types/relatorio'
 import { formatarReal } from '../../utils/moeda'
 import { CardIndicador } from '../Dashboard/CardIndicador'
 // A tela reaproveita as classes .painel, .pagina-titulo etc. do módulo de Clientes e as .tag-status do TagStatus.css.
@@ -76,7 +78,6 @@ export function ComissoesListaPage() {
 
   const { data, isFetching, isError, error } = useListaComissoes(filtro)
   const gerarConta = useGerarContaComissoes()
-  const exportar = useExportarComissoes()
   // Aberto = modal de gerar conta visível; guarda o vencimento escolhido.
   const [vencimento, setVencimento] = useState<Dayjs | null>(null)
 
@@ -105,17 +106,6 @@ export function ComissoesListaPage() {
       message.error(lerErroApi(erro).mensagem)
     }
   }
-
-  async function baixar(formato: FormatoArquivo) {
-    try {
-      await exportar.mutateAsync({ filtro, formato })
-    } catch (erro) {
-      message.error(lerErroApi(erro).mensagem)
-    }
-  }
-
-  const exportando = (formato: FormatoArquivo) => exportar.isPending && exportar.variables?.formato === formato
-  const semLinhas = !data || data.resultado.totalItens === 0
 
   const colunas: TableProps<Comissao>['columns'] = [
     {
@@ -195,12 +185,10 @@ export function ComissoesListaPage() {
           </p>
         </div>
         <Flex gap={8} wrap>
-          <Button size="large" icon={<FileExcelOutlined />} disabled={semLinhas} loading={exportando('xlsx')} onClick={() => baixar('xlsx')}>
-            Excel
-          </Button>
-          <Button size="large" icon={<FilePdfOutlined />} disabled={semLinhas} loading={exportando('pdf')} onClick={() => baixar('pdf')}>
-            PDF
-          </Button>
+          <BotoesExportar
+            baixar={(formato) => comissoesApi.exportar(filtro, formato)}
+            desativado={!data || data.resultado.totalItens === 0}
+          />
           <Tooltip title={selecionadas.length > 0 && !umVendedorSo ? 'Selecione comissões de um único vendedor' : undefined}>
             <Button
               type="primary"

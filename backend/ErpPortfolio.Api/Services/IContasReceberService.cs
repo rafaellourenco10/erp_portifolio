@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: IContasReceberService.cs
-// Versão.....: 1.5.0
+// Versão.....: 1.6.0
 // Data.......: 23/09/2026
 // Descrição..: Contrato do serviço de contas a receber: consulta, marcar recebido e a
 //              geração de parcelas usada pelo PedidoService ao confirmar um pedido.
@@ -16,6 +16,7 @@
 //   1.3.0 - 22/09/2026 - ObterResumoAsync, para o Dashboard.
 //   1.4.0 - 23/09/2026 - MarcarRecebidaAsync também gera a comissão do vendedor (etapa 11).
 //   1.5.0 - 23/09/2026 - ObterVencimentosAsync, para o Dashboard.
+//   1.6.0 - 24/09/2026 - ModeloAsync (exportar Excel/PDF).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -26,6 +27,9 @@ namespace ErpPortfolio.Api.Services;
 public interface IContasReceberService
 {
     Task<ResultadoPaginadoDto<ParcelaRespostaDto>> ListarAsync(ParcelaFiltroDto filtro, CancellationToken cancelamento);
+
+    /// <summary>Todas as parcelas do filtro (ignora a paginação) no modelo do ExportadorRelatorio.</summary>
+    Task<RelatorioModelo> ModeloAsync(ParcelaFiltroDto filtro, CancellationToken cancelamento);
 
     /// <summary>
     /// Marca a parcela como recebida (C7) e, se o pedido tiver vendedor e %, gera a comissão (etapa 11, CM1).

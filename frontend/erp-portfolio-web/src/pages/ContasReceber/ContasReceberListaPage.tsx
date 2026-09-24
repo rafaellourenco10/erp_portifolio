@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ContasReceberListaPage.tsx
- * Versão.....: 1.2.0
+ * Versão.....: 1.3.0
  * Data.......: 22/09/2026
  * Descrição..: Tela de contas a receber: busca por cliente ou número do pedido,
  *              filtro de status (incluindo "Atrasado", calculado), tabela com
@@ -10,6 +10,7 @@
  *              numa única coluna (como em Produtos e Estoque).
  * ---------------------------------------------------------------------
  * Fontes.....: GET   /api/contas-receber?busca=&status=&pagina=&tamanhoPagina=
+ *              GET   /api/contas-receber/exportar?busca=&status=&formato=xlsx|pdf
  *              PATCH /api/contas-receber/{id}/receber
  *              (via useListaContasReceber / useReceberParcela)
  * ---------------------------------------------------------------------
@@ -18,6 +19,7 @@
  *   1.1.0 - 22/09/2026 - Colunas compactas no celular (T9).
  *   1.2.0 - 22/09/2026 - Corrige Tooltip sobrepondo o botão do Popconfirm ao
  *                        marcar como recebido (Tooltip só aparece desabilitado).
+ *   1.3.0 - 24/09/2026 - Exportar Excel/PDF com todas as parcelas do filtro.
  * =====================================================================
  */
 
@@ -26,6 +28,8 @@ import { App, Alert, Button, Flex, Grid, Input, Popconfirm, Segmented, Table, To
 import type { TableProps } from 'antd'
 import { useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
+import { contasReceberApi } from '../../api/contasReceberApi'
+import { BotoesExportar } from '../../components/BotoesExportar'
 import { TagStatusParcela } from '../../components/TagStatusParcela'
 import { useListaContasReceber, useReceberParcela } from '../../hooks/useContasReceber'
 import type { FiltroStatusParcela, Parcela, ParcelaFiltro } from '../../types/contaReceber'
@@ -204,6 +208,7 @@ export function ContasReceberListaPage() {
               }))
             }
           />
+          <BotoesExportar baixar={(formato) => contasReceberApi.exportar(filtro, formato)} desativado={!data || data.totalItens === 0} />
         </Flex>
       </Flex>
 

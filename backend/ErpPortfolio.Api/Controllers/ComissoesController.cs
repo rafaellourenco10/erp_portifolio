@@ -41,13 +41,8 @@ public class ComissoesController(IComissaoService comissaoService) : ControllerB
     [HttpGet("exportar")]
     [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, ExportadorRelatorio.TipoConteudoXlsx, ExportadorRelatorio.TipoConteudoPdf)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Exportar([FromQuery] ComissaoFiltroDto filtro, [FromQuery] FormatoRelatorio formato = FormatoRelatorio.Xlsx, CancellationToken cancelamento = default)
-    {
-        var modelo = await comissaoService.ModeloAsync(filtro, cancelamento);
-        return formato == FormatoRelatorio.Pdf
-            ? File(ExportadorRelatorio.GerarPdf(modelo), ExportadorRelatorio.TipoConteudoPdf, $"{modelo.NomeArquivo}.pdf")
-            : File(ExportadorRelatorio.GerarXlsx(modelo), ExportadorRelatorio.TipoConteudoXlsx, $"{modelo.NomeArquivo}.xlsx");
-    }
+    public async Task<IActionResult> Exportar([FromQuery] ComissaoFiltroDto filtro, [FromQuery] FormatoRelatorio formato = FormatoRelatorio.Xlsx, CancellationToken cancelamento = default) =>
+        ExportadorRelatorio.Arquivo(await comissaoService.ModeloAsync(filtro, cancelamento), formato);
 
     /// <summary>Fecha comissões pendentes de UM vendedor numa conta a pagar (com a soma). Pague essa conta em Contas a Pagar para as comissões ficarem pagas.</summary>
     [HttpPost("gerar-conta")]

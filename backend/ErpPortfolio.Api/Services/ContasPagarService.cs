@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ContasPagarService.cs
-// Versão.....: 2.3.0
+// Versão.....: 2.4.0
 // Data.......: 23/09/2026
 // Descrição..: Contas a pagar de três origens (Compra, Comissao, Avulsa): listagem com
 //              favorecido/descrição e "atrasado" calculados no servidor, marcar como paga,
@@ -31,6 +31,7 @@
 //   2.1.0 - 23/09/2026 - ObterVencimentosAsync para o Dashboard.
 //   2.2.0 - 24/09/2026 - Origem Devolucao (reembolso): não pode ser cancelada (etapa 14, CP5).
 //   2.3.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
+//   2.4.0 - 24/09/2026 - ModeloAsync: exportação da tela em Excel/PDF (ExportadorRelatorio).
 // =====================================================================================
 
 using System.Linq.Expressions;
@@ -43,6 +44,70 @@ namespace ErpPortfolio.Api.Services;
 
 public class ContasPagarService(ErpPortfolioDbContext contexto) : IContasPagarService
 {
+    public async Task<RelatorioModelo> ModeloAsync(ParcelaPagarFiltroDto filtro, CancellationToken cancelamento)
+    {
+        // O arquivo leva todas as linhas do filtro, não só a página da tela.
+        filtro.Pagina = 1;
+        filtro.TamanhoPagina = int.MaxValue;
+        var parcelas = (await ListarAsync(filtro, cancelamento)).Itens;
+        var agora = HorarioBrasilia.ParaBrasilia(DateTime.UtcNow);
+
+        return new RelatorioModelo(
+            "Contas a Pagar",
+            $"contas-pagar-{agora:yyyy-MM-dd}",
+            agora,
+            [
+                $"Busca: {(string.IsNullOrWhiteSpace(filtro.Busca) ? "—" : filtro.Busca.Trim())}",
+                $"Status: {filtro.Status switch
+                {
+                    null => "Todas",
+                    FiltroStatusParcelaPagar.Pendente => "Pendentes",
+                    FiltroStatusParcelaPagar.Atrasado => "Atrasadas",
+                    FiltroStatusParcelaPagar.Pago => "Pagas",
+                    _ => "Canceladas"
+                }}",
+                $"Origem: {(filtro.Origem is OrigemContaPagar origem ? RotuloOrigem(origem) : "Todas")}",
+            ],
+            [
+                new CampoRelatorio("Parcelas", parcelas.Count, TipoValor.Inteiro),
+                new CampoRelatorio("Valor total", parcelas.Sum(p => p.Valor), TipoValor.Moeda),
+                new CampoRelatorio("Em atraso", parcelas.Where(p => p.Atrasado).Sum(p => p.Valor), TipoValor.Moeda),
+            ],
+            [
+                new ColunaRelatorio("Origem", TipoValor.Texto),
+                new ColunaRelatorio("Descrição", TipoValor.Texto),
+                new ColunaRelatorio("Favorecido", TipoValor.Texto),
+                new ColunaRelatorio("Parcela", TipoValor.Texto),
+                new ColunaRelatorio("Valor", TipoValor.Moeda),
+                new ColunaRelatorio("Vencimento", TipoValor.Data),
+                new ColunaRelatorio("Status", TipoValor.Texto),
+                new ColunaRelatorio("Pago em", TipoValor.DataHora),
+            ],
+            parcelas
+                .Select(p => new object?[]
+                {
+                    RotuloOrigem(p.Origem),
+                    // Mesma regra da tela: "Compra #N" nas de compra, a descrição nas outras.
+                    p.Origem == OrigemContaPagar.Compra ? $"Compra #{p.PedidoCompraId}" : p.Descricao,
+                    p.Favorecido,
+                    $"{p.NumeroParcela}/{p.TotalParcelas}",
+                    p.Valor,
+                    p.Vencimento,
+                    p.Atrasado ? "Atrasada" : p.Status switch { StatusParcelaPagar.Pendente => "Pendente", StatusParcelaPagar.Pago => "Paga", _ => "Cancelada" },
+                    p.DataPagamento is DateTime data ? HorarioBrasilia.ParaBrasilia(data) : null,
+                })
+                .ToList());
+    }
+
+    // Mesmos rótulos da tela.
+    private static string RotuloOrigem(OrigemContaPagar origem) => origem switch
+    {
+        OrigemContaPagar.Compra => "Compra",
+        OrigemContaPagar.Comissao => "Comissão",
+        OrigemContaPagar.Avulsa => "Avulsa",
+        _ => "Devolução"
+    };
+
     public async Task<ResultadoPaginadoDto<ParcelaPagarRespostaDto>> ListarAsync(ParcelaPagarFiltroDto filtro, CancellationToken cancelamento)
     {
         // "Hoje" do servidor (Brasília), igual ao Contas a Receber: nunca o relógio do navegador.
