@@ -26,9 +26,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T5: Tela de Orçamentos** (M)
+- [x] **T5: Tela de Orçamentos** (M) — *concluída em 23/09/2026*
   - Tipos, `orcamentosApi`, `useOrcamentos`, schema Zod; página com lista, busca, filtro de status (tag Vencido) e formulário em gaveta (reaproveitando `SelecaoCliente`, `SelecaoVendedor`, `ItemFormulario`); item no menu e rota `/orcamentos`.
   - Verificar: `tsc -b`, `oxlint`.
+  - Resultado: o formulário virou **página** (`/orcamentos/novo`, `/orcamentos/:id`) em vez de gaveta, igual ao pedido, que é o padrão da casa para cabeçalho + itens. `orcamentoSchema` = `pedidoSchema.safeExtend({ validade, observacoes })` (mantém o limite do total); conversões reaproveitam as do pedido (`paraFormulario` do pedido passou a aceitar um `Pick`). A tabela de itens é a `ItensPedidoTabela` (cast comentado do `control`). Lista com colunas Validade e Status (tag + link "Pedido #N" no aprovado), filtro com Vencido; `TagStatusOrcamento` (Aberto azul, Vencido laranja `--cor-alerta`, Aprovado verde, Perdido cinza). Menu "Orçamentos" (ícone `FileTextOutlined`) antes de Pedidos de Venda, rotas e breadcrumb. `tsc -b` e `oxlint` limpos.
 
 - [ ] **T6: Ações da tela** (S)
   - Gerar pedido (confirmação → link para o pedido), Marcar como perdido (modal com motivo), Baixar PDF, link "Pedido #N" no Aprovado.

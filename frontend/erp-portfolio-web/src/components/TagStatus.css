@@ -54,3 +54,10 @@
 .tag-status-riscado {
   text-decoration: line-through;
 }
+
+/* Orçamento vencido (TagStatusOrcamento): laranja de alerta do tema. */
+.tag-status-vencido {
+  color: var(--cor-alerta);
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.3);
+}

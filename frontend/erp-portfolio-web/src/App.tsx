@@ -1,13 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.16.0
+ * Versão.....: 1.17.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
- *              /vendedores, /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /comissoes, /relatorios/*) com o
+ *              /vendedores, /orcamentos, /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /comissoes, /relatorios/*) com o
  *              React Router. O menu é dividido por departamento (Cadastro,
  *              Ordem Vendas/Compras, Depósito, Financeiro); o Dashboard (/)
  *              fica fora das seções: resume vários módulos.
@@ -38,6 +38,8 @@
  *                         fica salvo no navegador (localStorage).
  *   1.15.0 - 23/09/2026 - Rota e item de menu de Vendedores (Cadastro), etapa 10.
  *   1.16.0 - 23/09/2026 - Rota e item de menu de Comissões (Financeiro), etapa 11.
+ *   1.17.0 - 23/09/2026 - Item de menu e rotas de Orçamentos (/orcamentos, /orcamentos/novo,
+ *                         /orcamentos/:id) em Ordem Vendas/Compras, etapa 13.
  * =====================================================================
  */
 
@@ -48,6 +50,7 @@ import {
   DatabaseOutlined,
   DollarOutlined,
   DownOutlined,
+  FileTextOutlined,
   HomeOutlined,
   PercentageOutlined,
   LineChartOutlined,
@@ -75,6 +78,8 @@ import { ContasReceberListaPage } from './pages/ContasReceber/ContasReceberLista
 import { DashboardPage } from './pages/Dashboard/DashboardPage'
 import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
 import { FornecedoresListaPage } from './pages/Fornecedores/FornecedoresListaPage'
+import { OrcamentoPage } from './pages/Orcamentos/OrcamentoPage'
+import { OrcamentosListaPage } from './pages/Orcamentos/OrcamentosListaPage'
 import { PedidoPage } from './pages/Pedidos/PedidoPage'
 import { PedidosListaPage } from './pages/Pedidos/PedidosListaPage'
 import { PedidoCompraPage } from './pages/PedidosCompra/PedidoCompraPage'
@@ -102,6 +107,7 @@ const secoes = [
   {
     titulo: 'Ordem Vendas/Compras',
     itens: [
+      { key: '/orcamentos', icon: <FileTextOutlined />, label: 'Orçamentos' },
       { key: '/pedidos', icon: <ShoppingCartOutlined />, label: 'Pedidos de Venda' },
       { key: '/pedidos-compra', icon: <ShoppingOutlined />, label: 'Pedidos de Compra' },
     ],
@@ -154,6 +160,10 @@ function ehRotaDoItem(chave: string, pathname: string): boolean {
 
 /** Título da subpágina de um módulo (a última parte do breadcrumb), ou undefined na página principal. */
 function tituloDaSubpagina(pathname: string): string | undefined {
+  if (pathname === '/orcamentos/novo') return 'Novo orçamento'
+  const numeroOrcamento = /^\/orcamentos\/(\d+)$/.exec(pathname)?.[1]
+  if (numeroOrcamento) return `Orçamento nº ${numeroOrcamento}`
+
   if (pathname === '/pedidos/novo') return 'Novo pedido de venda'
   const numero = /^\/pedidos\/(\d+)$/.exec(pathname)?.[1]
   if (numero) return `Pedido de venda nº ${numero}`
@@ -269,6 +279,9 @@ export default function App() {
             <Route path="/vendedores" element={<VendedoresListaPage />} />
             <Route path="/produtos" element={<ProdutosListaPage />} />
             <Route path="/categorias" element={<CategoriasListaPage />} />
+            <Route path="/orcamentos" element={<OrcamentosListaPage />} />
+            <Route path="/orcamentos/novo" element={<OrcamentoPage />} />
+            <Route path="/orcamentos/:id" element={<OrcamentoPage />} />
             <Route path="/pedidos" element={<PedidosListaPage />} />
             <Route path="/pedidos/novo" element={<PedidoPage />} />
             <Route path="/pedidos/:id" element={<PedidoPage />} />

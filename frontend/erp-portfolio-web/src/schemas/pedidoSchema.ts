@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: pedidoSchema.ts
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 23/09/2026
  * Descrição..: Schema Zod do formulário de pedido (mesmas regras dos DTOs da API e da
  *              SPEC: 1 a 100 itens, quantidade de 0,001 a 999.999,999, UN/CX só inteiro,
@@ -14,6 +14,7 @@
  * Histórico de alterações:
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - vendedorId (opcional no rascunho), etapa 10.
+ *   1.2.0 - 23/09/2026 - paraFormulario aceita só os campos que usa (reaproveitado pelo orçamento).
  * =====================================================================
  */
 
@@ -124,8 +125,10 @@ export function itemDoProduto(produto: Produto): PedidoItemFormEntrada {
   }
 }
 
-/** Pedido vindo da API → valores do formulário (os itens mostram o preço congelado). */
-export function paraFormulario(pedido: Pedido): PedidoFormEntrada {
+/** Pedido (ou orçamento) vindo da API → valores do formulário (os itens mostram o preço congelado). */
+export function paraFormulario(
+  pedido: Pick<Pedido, 'clienteId' | 'formaPagamento' | 'vendedorId' | 'descontoPercentual' | 'itens'>,
+): PedidoFormEntrada {
   return {
     clienteId: pedido.clienteId,
     formaPagamento: pedido.formaPagamento,
