@@ -1,46 +1,34 @@
-# Plano de implementação: Devolução de venda (etapa 14)
+# Plano de implementação: Fluxo de caixa (etapa 15)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **aprovado e implementado** (24/09/2026), com o card de Devoluções no Dashboard.
+> Status: **aprovado** (24/09/2026), em implementação.
 
 ## Visão geral
 
-7 tarefas. O coração é um cálculo puro (valor, abatimento, reembolso, estorno), testado sem banco, e um serviço que aplica o resultado nos quatro módulos numa transação. As telas vêm depois da API validada por E2E.
+5 tarefas, sem mudança no banco. O coração é um cálculo puro (períodos, realizado × previsto, saldo acumulado, menor saldo), testado sem banco; o serviço só busca as parcelas e entrega ao cálculo. A tela vem depois da API validada por E2E.
 
 ## Grafo de dependências
 
 ```
-T1 Schema: devolucoes + devolucao_itens; parcelas_pagar.devolucao_id + origem Devolucao; comissoes estorno
-  └─► T2 DevolucaoCalculo (puro, xUnit): valor por item, "o que falta", abatimento, reembolso, estorno
-        └─► T3 DevolucaoService + endpoints (POST/GET), pedido com valorDevolvido, cancelar bloqueado
-              └─► T4 Contas a Pagar (origem Devolucao, não cancela) + Comissões (estorno na lista, CC6) + /dashboard/devolucoes ── CP1: API pronta (E2E)
-                    ├─► T5 Tela do pedido: modal de devolução + histórico
-                    └─► T6 Telas de Contas a Pagar, Comissões e card do Dashboard
-                          └─► T7 Fechamento (README, SPEC, grafo, memória)
+T1 FluxoCaixaCalculo (puro, xUnit): períodos dia/mês, realizado × previsto, atrasadas em hoje, saldos, menor saldo
+  └─► T2 API: DTOs + FluxoCaixaService + GET /api/fluxo-caixa (JSON, xlsx, pdf) ── CP1: API pronta (E2E na 5099)
+        └─► T3 Tela: rota/menu Financeiro, filtros, cards, tabela, exportar
+              └─► T4 Gráfico SVG: barras entradas/saídas (realizado × previsto) + linha do saldo
+                    └─► T5 Fechamento (README, SPEC, grafo, memória)
 ```
 
 ## Decisões de arquitetura
 
 | Decisão | Motivo |
 |---|---|
-| Devolução é registro próprio (`devolucoes` + itens) com os totais gravados | Histórico auditável (quanto abateu, quanto reembolsou) sem recalcular. |
-| `DevolucaoCalculo` puro, recebendo as parcelas pendentes e devolvendo o plano de ajustes | Toda a regra de dinheiro testável em xUnit; o serviço só aplica. |
-| Estorno de comissão como linha negativa em `comissoes` | Reaproveita lista, totais, gerar conta e a propagação pagar/cancelar; o desconto no fechamento sai quase de graça. |
-| Reembolso como nova origem de `parcelas_pagar` | Mesmo padrão da etapa 12 (Compra/Comissão/Avulsa); lista, filtro, pagar e Dashboard já funcionam. |
-| Entrada de estoque pelo `EstoqueService` com `pedido_id` e motivo | Sem coluna nova em `estoque_movimentacoes`; o extrato já mostra o pedido. |
+| `FluxoCaixaCalculo` puro, recebendo movimentos `(dia, valor, entrada/saída, realizado/previsto)` já no dia de Brasília | Toda a regra testável em xUnit; o serviço só consulta e converte datas. |
+| Sem tabela nova | Entradas e saídas já existem nas parcelas; saldo acumulado dispensa saldo inicial digitado. |
+| Uma rota com `formato=` (como os Relatórios) | Arquivo e tela saem da mesma consulta; reaproveita `ExportadorRelatorio.Arquivo`. |
+| Gráfico SVG próprio | Mesmo motivo do Dashboard: sem lib de gráfico no bundle. |
 
-## Riscos e mitigações
+## Riscos
 
 | Risco | Mitigação |
 |---|---|
-| Relaxar o CHECK/NOT NULL de `comissoes` quebrar a lista (parcela nula) | DTO com `numeroParcela` nulo; E2E de regressão da lista e do recebimento. |
-| Centavos não fecharem após várias devoluções | Regra do "o que falta" na devolução final + teste unitário com 3 devoluções. |
-| Cancelar pedido duplicar entrada de estoque | DV9 bloqueia (409) com teste E2E. |
-
-## Comandos de verificação
-
-```
-dotnet build ErpPortfolio.slnx -c Release
-dotnet test backend/ErpPortfolio.Tests -c Release
-cd frontend/erp-portfolio-web; npx tsc -b; npx oxlint src; npm run build
-```
+| Somar o realizado inteiro para o saldo inicial fica lento com muitos dados | Um `SUM` no banco por tabela (antes do início), não carregar linhas. |
+| Diferença de dia UTC × Brasília | Converter com `HorarioBrasilia` e testar recebimento às 22h. |

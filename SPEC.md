@@ -1,117 +1,90 @@
-# Spec: Devolução de venda (etapa 14)
+# Spec: Fluxo de caixa (etapa 15)
 
-> Status: **implementada e testada em 24/09/2026** (T1 a T7, ver `tasks/todo.md`). Critérios 1-7 conferidos: E2E da API com 36 verificações e teste de tela com Playwright com 14 (dados `ZZT…` apagados, dados reais intactos).
+> Status: **aprovada em 24/09/2026** (padrões confirmados pelo Rafael), em implementação. Tarefas em `tasks/plan.md` e `tasks/todo.md`.
 
 ## Objetivo
 
-Registrar a devolução (total ou parcial) de um pedido de venda confirmado e propagar as consequências para os outros módulos numa transação só: **estoque** (o item volta, se estiver em condições), **contas a receber** (as parcelas pendentes diminuem), **contas a pagar** (reembolso do que o cliente já pagou a mais) e **comissões** (estorno sobre o valor reembolsado).
+Mostrar o dinheiro que **entrou e saiu** (realizado) e o que **vai entrar e sair** (previsto), dia a dia ou mês a mês, com o **saldo acumulado** — para responder "quanto tenho?" e "vai faltar dinheiro em algum dia?".
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** escolha do Rafael em 24/09/2026, depois de Orçamentos.
-- **Sucesso:** devolver 1 de 3 itens de uma venda deixa estoque, parcelas, reembolso e comissão coerentes, sem nenhum ajuste manual.
+- **Por que agora:** escolha do Rafael em 24/09/2026 (primeiro da lista de módulos futuros).
+- **Sucesso:** abrir a tela e ver, para o mês atual, o saldo de cada dia, onde o realizado termina e o previsto começa, e o dia em que o saldo fica mais baixo.
 
 ### Dentro do escopo
-Devolução parcial por item/quantidade (várias devoluções no mesmo pedido até devolver tudo); valor devolvido calculado com os descontos do pedido; abatimento nas parcelas pendentes; reembolso como conta a pagar; estorno de comissão descontado no próximo fechamento; escolha por item de "volta ao estoque"; histórico de devoluções no pedido; card **Devoluções do mês** no Dashboard; ajustes nas telas de Pedido, Contas a Pagar e Comissões.
+Entradas = parcelas a receber; saídas = parcelas a pagar (todas as origens: compra, comissão, avulsa, reembolso de devolução). Realizado pela data do recebimento/pagamento; previsto pelo vencimento das pendentes. Saldo acumulado desde o início do ERP. Visão **diária** e **mensal**. Tela própria no Financeiro com resumo, gráfico, tabela e exportação Excel/PDF.
 
 ### Fora do escopo (entram depois)
-Desfazer/editar uma devolução; crédito do cliente para pedidos futuros; troca (devolução + novo pedido num passo só); devolução de compra ao fornecedor; faturamento líquido (o Dashboard e os Relatórios continuam mostrando o valor bruto do pedido; as devoluções aparecem num card próprio); indicador de devolução na lista de pedidos.
+Contas bancárias/caixas e saldo inicial digitado; categorias de despesa (próximo módulo da lista); detalhar os lançamentos de um dia ao clicar; card no Dashboard; cenários ("e se atrasar X"); juros/multa de atraso.
 
 ## Decisões já tomadas (com o Rafael, 24/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Escopo | **Parcial por item e quantidade**; várias devoluções no mesmo pedido até devolver tudo. |
-| Dinheiro | **Abate das parcelas pendentes** (da última para a primeira); o que passar disso (o cliente já tinha pago) vira **conta a pagar "Reembolso"** ao cliente. |
-| Comissão | Parcelas reduzidas já geram menos comissão quando forem recebidas. Sobre o valor **reembolsado**, nasce um **estorno** (comissão negativa) que é **descontado no próximo fechamento** do vendedor, mesmo que a comissão original já tenha sido paga. |
-| Estoque | **Escolha por item**: "volta ao estoque" marcado por padrão; desmarcado = perda (produto com defeito). |
+| Escopo | **Realizado + previsto**, com saldo projetado. |
+| Saldo inicial | **Acumulado desde o início**: tudo que entrou menos tudo que saiu antes do período. Sem cadastro novo. |
+| Visão | **Diária e mensal**, com gráfico e tabela nas duas. |
+| Onde | **Tela própria no Financeiro** (sem card no Dashboard por enquanto). |
 
 ### Decididas por padrão (confirmadas pelo Rafael em 24/09/2026)
 
 | Tema | Padrão proposto | Motivo |
 |---|---|---|
-| Desfazer | Devolução é **definitiva** (não edita nem exclui). | Já moveu estoque, parcelas, conta e comissão; errou → registre uma venda nova. |
-| Cancelar pedido com devolução | **Bloqueado (409)**. | Cancelar estorna todos os itens ao estoque e duplicaria a entrada dos devolvidos. Devolva o restante em vez de cancelar. |
-| Conta de reembolso | **Não pode ser cancelada** (409), só paga. | Faz parte da devolução, que é definitiva. |
-| Faturamento | Dashboard/Relatórios **continuam brutos**; o Dashboard ganha um **card de Devoluções do mês** (pedido do Rafael). | O bruto continua comparável com o que foi vendido; a devolução fica visível ao lado. |
+| Parcelas atrasadas (pendentes com vencimento < hoje) | Entram como **previstas no dia de hoje** e aparecem num aviso "atrasado a receber / a pagar". | Ainda não entraram nem saíram; o mais realista é esperar que aconteçam já. Deixá-las no passado sumiria com elas do saldo projetado. |
+| Limite do período | Até **366 dias** (mesma regra dos relatórios); na visão **diária**, até **93 dias**. | Mais de ~3 meses dia a dia não cabe no gráfico. |
+| Período ao abrir | Diário: **mês atual**. Mensal: **ano atual**. | Os dois cortes mais pedidos. |
+| "Hoje" e dias | **Horário de Brasília** (`HorarioBrasilia`), como o resto do ERP. | Recebimento às 22h conta no mesmo dia. |
 
 ## Regras
 
-### Devolução (DV)
+### Fluxo de caixa (FC)
 
 | # | Regra |
 |---|---|
-| DV1 | Só de pedido **Confirmado**; Rascunho/Cancelado → 409. |
-| DV2 | 1+ itens, cada um um item **deste** pedido, sem repetir; quantidade > 0, até 3 casas, inteira em UN/CX, e **≤ vendida − já devolvida** (senão 400 em `Itens`). Motivo opcional (até 200). |
-| DV3 | Valor de cada item devolvido = `quantidade × preço × (1 − desc. item) × (1 − desc. pedido)`, arredondado a 2 casas. Na devolução que zera o pedido (tudo devolvido), o valor total é **o que falta** (`valor_total do pedido − já devolvido`), para os centavos fecharem. |
-| DV4 | **Abatimento:** o valor desconta das parcelas **Pendentes**, da de maior número para a menor; parcela que chega a zero fica **Cancelada** (mantém o valor original para histórico); parcela reduzida guarda o novo valor. |
-| DV5 | **Reembolso** = valor da devolução − abatido. Se > 0, gera **uma** conta a pagar origem **`Devolucao`** (1/1, favorecido = nome do cliente, descrição "Reembolso devolução #D — pedido #P", vencimento informado ou hoje). A tela manda o vencimento vazio quando é "hoje" (o "hoje" do servidor é UTC). |
-| DV6 | **Estorno de comissão:** se o pedido tem vendedor com % > 0 e houve reembolso, nasce uma comissão **negativa** (`valor = −reembolso × %`, base = reembolso), status Pendente, ligada à devolução. |
-| DV7 | **Estoque:** item com "volta ao estoque" gera **Entrada** (motivo "Devolução #D pedido #P"); sem, não gera nada (fica registrado no item da devolução). |
-| DV8 | Tudo (devolução, itens, parcelas, conta, estorno, estoque) no **mesmo SaveChanges**; se qualquer regra falhar, nada muda. |
-| DV9 | **Cancelar pedido** que tem devolução → 409 ("devolva o restante"). |
-
-### Dashboard (DB)
-
-| # | Regra |
-|---|---|
-| DB1 | Card **Devoluções do mês**: soma de `valor_total` e quantidade das devoluções com `data_devolucao` no mês atual (UTC, mesma convenção dos outros cards); o faturamento do mês **não muda**. |
-
-### Contas a pagar e comissões (CP/CC)
-
-| # | Regra |
-|---|---|
-| CP5 | Nova origem `Devolucao` (CHECK: exige `devolucao_id`); aparece no filtro de origem; **cancelar** essa conta → 409. |
-| CC6 | **Gerar conta de comissões** inclui automaticamente **todos os estornos Pendentes** do vendedor; se a soma final for ≤ 0 → 400 ("os estornos superam as comissões selecionadas") e nada muda. Pagar/cancelar a conta propaga aos estornos como às comissões (CC3/CC4). |
-| CC7 | A lista de comissões mostra o estorno com valor negativo e a origem "Estorno · devolução #D" (sem nº de parcela). |
+| FC1 | **Entrada realizada:** parcela a receber `Recebido`, valor da parcela, no dia (Brasília) de `data_recebimento`. **Saída realizada:** parcela a pagar `Pago`, no dia de `data_pagamento`. Parcelas `Cancelado` nunca entram. |
+| FC2 | **Previsto:** parcela `Pendente` no dia do `vencimento`, só para dias **≥ hoje**. Pendente com vencimento < hoje (atrasada) entra no **dia de hoje**. |
+| FC3 | **Saldo inicial** = entradas realizadas − saídas realizadas **antes** do início do período. Se o período começa depois de hoje, soma também o previsto de hoje até a véspera do início (inclui atrasadas). |
+| FC4 | **Saldo de cada período** (dia ou mês) = saldo do anterior + entradas (realizadas + previstas) − saídas (realizadas + previstas). O primeiro parte do saldo inicial. |
+| FC5 | Uma linha **por período, mesmo sem movimento** (zeros), do início ao fim. Na visão mensal, o primeiro e o último mês consideram só os dias dentro do período. |
+| FC6 | **Resumo:** saldo inicial, total de entradas, total de saídas, saldo final, **menor saldo** e o dia/mês em que ele ocorre, e o total **atrasado** a receber e a pagar (só quando hoje está no período). |
+| FC7 | **Período:** `dataInicio` e `dataFim` obrigatórios, fim ≥ início, até 366 dias; `agrupamento=Dia` até 93 dias (senão 400 em `DataFim`). |
+| FC8 | `formato=xlsx|pdf` devolve o arquivo com os mesmos dados (resumo + tabela), pelo `ExportadorRelatorio`. |
 
 ## Modelo de dados
 
-- **`devolucoes`**: `id`, `pedido_id` (FK restrict), `data_devolucao` (timestamptz), `motivo` varchar(200), `valor_total`, `valor_abatido`, `valor_reembolso` (numeric(12,2), CHECK `valor_total = valor_abatido + valor_reembolso`, todos ≥ 0, total > 0).
-- **`devolucao_itens`**: `id`, `devolucao_id` (FK cascade), `pedido_item_id` (FK restrict), `quantidade` numeric(12,3) > 0, `valor` numeric(12,2), `volta_estoque` bool; único (`devolucao_id`, `pedido_item_id`).
-- **`parcelas_pagar`**: + `devolucao_id` (FK restrict, nulo); CHECK de origem ganha `Devolucao`.
-- **`comissoes`**: `parcela_receber_id` passa a nulo; + `devolucao_id` (FK restrict, nulo); CHECK: comissão normal (`parcela_receber_id` preenchido, valor > 0) **ou** estorno (`devolucao_id` preenchido, valor < 0). O índice único em `parcela_receber_id` continua (nulos não conflitam).
-- Uma migration.
+Sem mudança no banco: lê `parcelas_receber` e `parcelas_pagar` (índices existentes em vencimento/status). Sem migration.
 
 ## API
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/pedidos/{id}/devolucoes` | `{ itens: [{ pedidoItemId, quantidade, voltaEstoque }], motivo?, vencimentoReembolso? }` → 201 com valor total, abatido, reembolso, id da conta de reembolso e valor do estorno (DV1-DV8) |
-| GET | `/api/pedidos/{id}/devolucoes` | Histórico do pedido (com itens) |
-| GET | `/api/pedidos/{id}` | Passa a trazer `valorDevolvido` e, por item, `quantidadeDevolvida` |
-| PATCH | `/api/pedidos/{id}/cancelar` | Com devolução → 409 (DV9) |
-| GET/PATCH | `/api/contas-pagar…` | Origem `Devolucao`; cancelar → 409 (CP5) |
-| POST | `/api/comissoes/gerar-conta` | Inclui os estornos pendentes do vendedor (CC6); a resposta traz a quantidade e o valor final |
-| GET | `/api/comissoes` | Estorno com `devolucaoId`, `numeroParcela` nulo, valor negativo (CC7) |
-| GET | `/api/dashboard/devolucoes` | `{ valorTotal, quantidade }` do mês atual (DB1) |
+| GET | `/api/fluxo-caixa?dataInicio=&dataFim=&agrupamento=Dia\|Mes` | `{ saldoInicial, totalEntradas, totalSaidas, saldoFinal, menorSaldo, dataMenorSaldo, atrasadoReceber, atrasadoPagar, periodos: [{ inicio, entradasRealizadas, saidasRealizadas, entradasPrevistas, saidasPrevistas, saldo }] }` (FC1-FC7) |
+| GET | mesma rota + `&formato=xlsx\|pdf` | Arquivo `fluxo-caixa-AAAA-MM-DD_AAAA-MM-DD` (FC8) |
 
 ## Telas
 
-- **Pedido confirmado**: botão **Registrar devolução** → modal com os itens (vendido, já devolvido, quantidade a devolver, "volta ao estoque"), motivo, vencimento do reembolso e **prévia** do valor; ao salvar, mensagem com abatido/reembolso/estorno. Seção **Devoluções** com o histórico. "Cancelar pedido" some quando houver devolução.
-- **Contas a Pagar**: origem "Devolução" no filtro e na tag; sem "Cancelar" nessas contas.
-- **Dashboard**: card **Devoluções do mês** (valor e quantidade), com o mesmo loading/erro próprio dos outros cards.
-- **Comissões**: estorno em vermelho (negativo) com "Estorno · devolução #D"; o modal de gerar conta avisa que os estornos pendentes do vendedor são descontados.
+- **Financeiro → Fluxo de Caixa** (`/fluxo-caixa`): período (RangePicker) + **Diário/Mensal**, botão Gerar e Excel/PDF.
+- **Cards:** Saldo inicial, Entradas, Saídas, Saldo final e **Menor saldo** (vermelho se negativo, com a data). Aviso quando houver atrasados.
+- **Gráfico (SVG próprio, como o do Dashboard):** barras de entradas e saídas por período, **previsto com cor mais clara** que o realizado, e a **linha do saldo**; marcação de "hoje"; tooltip por período.
+- **Tabela:** período, entradas (realizado/previsto), saídas (realizado/previsto), resultado e saldo; saldo negativo em vermelho; linha de hoje destacada.
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** valor da devolução (descontos, arredondamento, "o que falta" na última); abatimento das parcelas (da última, zera → cancela, reembolso do excedente); estorno de comissão; validação do DTO.
-2. **API ponta a ponta (instância temporária, dados `ZZT…` apagados):** devolução parcial com parcelas pendentes (só abate); depois de receber tudo (só reembolso + estorno); misto; quantidade acima do disponível, item de outro pedido, pedido rascunho/cancelado → erro sem mudar nada; estoque com e sem "volta"; devolver tudo fecha os centavos; cancelar pedido com devolução → 409; conta de reembolso não cancela; gerar conta de comissões desconta o estorno; soma ≤ 0 → 400; regressão: confirmar/cancelar pedido sem devolução, receber parcela gera comissão.
-3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; teste de tela com Playwright (modal de devolução, histórico, contas a pagar, comissões).
+1. **Unitário (xUnit), `FluxoCaixaCalculo` puro:** agrupamento por dia/mês com dias vazios; realizado × previsto em volta de hoje; atrasadas caindo em hoje; saldo inicial (passado e período futuro); saldo acumulado e menor saldo; mês parcial nas pontas; validação do período.
+2. **API ponta a ponta (instância temporária na 5099, dados `ZZT…` apagados):** criar venda e compra com parcelas passadas/futuras, receber e pagar algumas, conferir cada número contra a soma direta; filtros inválidos → 400; Excel/PDF.
+3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; teste de tela com Playwright.
 
 ## Boundaries
 
-- **Sempre:** tudo numa transação; reaproveitar `CalculoPedido`, `ComissaoCalculo`, `EstoqueService` e a propagação existente de pagar/cancelar conta de comissão.
-- **Perguntar antes:** mudar o faturamento do Dashboard/Relatórios; crédito do cliente; desfazer devolução.
-- **Nunca:** alterar parcela já recebida; apagar comissão já paga (estorna com negativa); commitar segredos; push sem pedido.
+- **Sempre:** reaproveitar `HorarioBrasilia`, `RelatorioCalculo.ErroPeriodo`, `ExportadorRelatorio`, `BotoesExportar` e o estilo do gráfico do Dashboard; somas no servidor.
+- **Perguntar antes:** criar tabela nova (contas bancárias, saldo inicial); mexer no Dashboard.
+- **Nunca:** gravar nada (a tela é só leitura); commitar segredos; push sem pedido.
 
 ## Success criteria (testáveis)
 
-Conferidos em 24/09/2026; detalhes na seção "Devolução de venda (24/09/2026)" do README.
-
-1. ✅ Devolução parcial com parcelas pendentes: estoque volta (só itens marcados), parcelas pendentes reduzem da última para a primeira, sem reembolso nem estorno.
-2. ✅ Devolução depois de tudo recebido: reembolso vira conta a pagar `Devolucao` e nasce o estorno de comissão (−reembolso × %).
-3. ✅ Validações de DV1/DV2 → erro sem alterar nada; devolver tudo fecha exatamente o valor do pedido.
-4. ✅ Cancelar pedido com devolução → 409; conta de reembolso não cancela.
-5. ✅ Gerar conta de comissões desconta os estornos pendentes; soma ≤ 0 → 400; pagar/cancelar a conta propaga ao estorno.
-6. ✅ Telas de Pedido, Contas a Pagar, Comissões e o card do Dashboard ajustados e testados no navegador; o faturamento do mês não muda com a devolução.
-7. ✅ `dotnet build` 0 avisos, `dotnet test` 229/229, `tsc -b`/`oxlint`/`npm run build` limpos.
+1. Entradas/saídas realizadas de cada dia batem com a soma direta das parcelas recebidas/pagas no banco (dia de Brasília).
+2. Previstos batem com as pendentes por vencimento; atrasadas aparecem em hoje e no aviso.
+3. Saldo inicial + entradas − saídas = saldo final; menor saldo e sua data corretos, inclusive com período no futuro.
+4. Visão mensal soma igual à diária do mesmo período.
+5. Período inválido → 400 sem calcular; Excel e PDF com os mesmos números da tela.
+6. Tela no Financeiro com cards, gráfico (realizado × previsto + saldo), tabela e exportação, testada no navegador.
+7. `dotnet build` 0 avisos, `dotnet test` verde, `tsc -b`/`oxlint`/`npm run build` limpos.
