@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ComissoesListaPage.tsx
- * Versão.....: 2.1.0
+ * Versão.....: 2.2.0
  * Data.......: 23/09/2026
  * Descrição..: Tela de comissões dos vendedores (Financeiro): filtros por
  *              vendedor, status e período (data do recebimento da parcela),
@@ -11,11 +11,13 @@
  *              pagamento em si é feito em Contas a Pagar (etapa 12).
  * ---------------------------------------------------------------------
  * Fontes.....: GET  /api/comissoes?vendedorId=&status=&dataInicio=&dataFim=&pagina=&tamanhoPagina=
+ *              GET  /api/comissoes/exportar?...&formato=xlsx|pdf
  *              POST /api/comissoes/gerar-conta
- *              (via useListaComissoes / useGerarContaComissoes)
+ *              (via useListaComissoes / useExportarComissoes / useGerarContaComissoes)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   2.2.0 - 24/09/2026 - Exportar Excel/PDF com todas as comissões do filtro.
  *   2.1.0 - 24/09/2026 - Estorno de devolução (negativo, "Estorno · devolução #D") e aviso de que os
  *                        estornos pendentes são descontados ao gerar a conta (etapa 14).
  *   2.0.0 - 23/09/2026 - "Gerar conta a pagar" no lugar de "Marcar como pagas"; status e
@@ -23,15 +25,16 @@
  * =====================================================================
  */
 
-import { FileAddOutlined } from '@ant-design/icons'
+import { FileAddOutlined, FileExcelOutlined, FilePdfOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Col, DatePicker, Flex, Modal, Row, Segmented, Table, Tooltip, Typography } from 'antd'
 import type { TableProps } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import { lerErroApi } from '../../api/axiosClient'
 import { SelecaoVendedor } from '../../components/SelecaoVendedor'
-import { useGerarContaComissoes, useListaComissoes } from '../../hooks/useComissoes'
+import { useExportarComissoes, useGerarContaComissoes, useListaComissoes } from '../../hooks/useComissoes'
 import type { Comissao, ComissaoFiltro, StatusComissao } from '../../types/comissao'
+import type { FormatoArquivo } from '../../types/relatorio'
 import { formatarReal } from '../../utils/moeda'
 import { CardIndicador } from '../Dashboard/CardIndicador'
 // A tela reaproveita as classes .painel, .pagina-titulo etc. do módulo de Clientes e as .tag-status do TagStatus.css.
@@ -73,6 +76,7 @@ export function ComissoesListaPage() {
 
   const { data, isFetching, isError, error } = useListaComissoes(filtro)
   const gerarConta = useGerarContaComissoes()
+  const exportar = useExportarComissoes()
   // Aberto = modal de gerar conta visível; guarda o vencimento escolhido.
   const [vencimento, setVencimento] = useState<Dayjs | null>(null)
 
@@ -101,6 +105,17 @@ export function ComissoesListaPage() {
       message.error(lerErroApi(erro).mensagem)
     }
   }
+
+  async function baixar(formato: FormatoArquivo) {
+    try {
+      await exportar.mutateAsync({ filtro, formato })
+    } catch (erro) {
+      message.error(lerErroApi(erro).mensagem)
+    }
+  }
+
+  const exportando = (formato: FormatoArquivo) => exportar.isPending && exportar.variables?.formato === formato
+  const semLinhas = !data || data.resultado.totalItens === 0
 
   const colunas: TableProps<Comissao>['columns'] = [
     {
@@ -179,17 +194,25 @@ export function ComissoesListaPage() {
             e pague-a em Contas a Pagar.
           </p>
         </div>
-        <Tooltip title={selecionadas.length > 0 && !umVendedorSo ? 'Selecione comissões de um único vendedor' : undefined}>
-          <Button
-            type="primary"
-            size="large"
-            icon={<FileAddOutlined />}
-            disabled={selecionadas.length === 0 || !umVendedorSo}
-            onClick={() => setVencimento(dayjs())}
-          >
-            Gerar conta a pagar{selecionadas.length > 0 ? ` (${selecionadas.length})` : ''}
+        <Flex gap={8} wrap>
+          <Button size="large" icon={<FileExcelOutlined />} disabled={semLinhas} loading={exportando('xlsx')} onClick={() => baixar('xlsx')}>
+            Excel
           </Button>
-        </Tooltip>
+          <Button size="large" icon={<FilePdfOutlined />} disabled={semLinhas} loading={exportando('pdf')} onClick={() => baixar('pdf')}>
+            PDF
+          </Button>
+          <Tooltip title={selecionadas.length > 0 && !umVendedorSo ? 'Selecione comissões de um único vendedor' : undefined}>
+            <Button
+              type="primary"
+              size="large"
+              icon={<FileAddOutlined />}
+              disabled={selecionadas.length === 0 || !umVendedorSo}
+              onClick={() => setVencimento(dayjs())}
+            >
+              Gerar conta a pagar{selecionadas.length > 0 ? ` (${selecionadas.length})` : ''}
+            </Button>
+          </Tooltip>
+        </Flex>
       </Flex>
 
       <section className="painel" style={{ padding: 16, marginBottom: 16 }} aria-label="Filtros das comissões">

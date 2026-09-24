@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ComissaoService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 23/09/2026
 // Descrição..: Consulta de comissões (filtro por vendedor, status e período da data do
 //              recebimento, com totais do filtro calculados no servidor) e pagamento ao
@@ -22,6 +22,7 @@
 //   1.1.0 - 23/09/2026 - GerarContaAsync substitui PagarAsync; total Em pagamento (etapa 12).
 //   1.2.0 - 24/09/2026 - Estorno de devolução na lista; gerar conta inclui os estornos pendentes do
 //                        vendedor e recusa soma <= 0 (etapa 14, CC6/CC7).
+//   1.3.0 - 24/09/2026 - ModeloAsync: exportação da tela em Excel/PDF (ExportadorRelatorio).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -92,6 +93,69 @@ public class ComissaoService(ErpPortfolioDbContext contexto) : IComissaoService
             new ResultadoPaginadoDto<ComissaoRespostaDto>(itens, filtro.Pagina, filtro.TamanhoPagina, totalItens),
             new ComissaoTotaisDto(pendente + emPagamento + pago, pendente, emPagamento, pago));
     }
+
+    public async Task<RelatorioModelo> ModeloAsync(ComissaoFiltroDto filtro, CancellationToken cancelamento)
+    {
+        // O arquivo leva todas as linhas do filtro, não só a página da tela.
+        filtro.Pagina = 1;
+        filtro.TamanhoPagina = int.MaxValue;
+        var (resultado, totais) = await ListarAsync(filtro, cancelamento);
+
+        var vendedor = filtro.VendedorId is null
+            ? "Todos"
+            : await contexto.Vendedores.Where(v => v.Id == filtro.VendedorId).Select(v => v.Nome).FirstOrDefaultAsync(cancelamento) ?? $"#{filtro.VendedorId}";
+        var periodo = filtro.DataInicio is null && filtro.DataFim is null
+            ? "Todo o período"
+            : $"{filtro.DataInicio:dd/MM/yyyy} a {filtro.DataFim:dd/MM/yyyy}";
+        var agora = FormatoRelatorioTexto.ParaBrasilia(DateTime.UtcNow);
+
+        return new RelatorioModelo(
+            "Comissões",
+            $"comissoes-{agora:yyyy-MM-dd}",
+            agora,
+            [$"Vendedor: {vendedor}", $"Status: {(filtro.Status is StatusComissao s ? RotuloStatus(s) : "Todas")}", $"Recebido entre: {periodo}"],
+            [
+                new CampoRelatorio("Gerado", totais.TotalGerado, TipoValor.Moeda),
+                new CampoRelatorio("A pagar", totais.TotalPendente, TipoValor.Moeda),
+                new CampoRelatorio("Em pagamento", totais.TotalEmPagamento, TipoValor.Moeda),
+                new CampoRelatorio("Pago", totais.TotalPago, TipoValor.Moeda),
+            ],
+            [
+                new ColunaRelatorio("Vendedor", TipoValor.Texto),
+                new ColunaRelatorio("Pedido", TipoValor.Inteiro),
+                new ColunaRelatorio("Parcela", TipoValor.Texto),
+                new ColunaRelatorio("Cliente", TipoValor.Texto),
+                new ColunaRelatorio("Recebido", TipoValor.Moeda),
+                new ColunaRelatorio("%", TipoValor.Quantidade),
+                new ColunaRelatorio("Comissão", TipoValor.Moeda),
+                new ColunaRelatorio("Recebido em", TipoValor.DataHora),
+                new ColunaRelatorio("Status", TipoValor.Texto),
+                new ColunaRelatorio("Pago em", TipoValor.DataHora),
+            ],
+            resultado.Itens
+                .Select(c => new object?[]
+                {
+                    c.VendedorNome,
+                    c.PedidoId,
+                    c.DevolucaoId is int devolucao ? $"Estorno dev. #{devolucao}" : $"{c.NumeroParcela}/{c.TotalParcelas}",
+                    c.ClienteNome,
+                    c.ValorBase,
+                    c.Percentual,
+                    c.Valor,
+                    FormatoRelatorioTexto.ParaBrasilia(c.DataGeracao),
+                    RotuloStatus(c.Status),
+                    c.DataPagamento is DateTime pago ? FormatoRelatorioTexto.ParaBrasilia(pago) : null,
+                })
+                .ToList());
+    }
+
+    // Mesmos rótulos da tela.
+    private static string RotuloStatus(StatusComissao status) => status switch
+    {
+        StatusComissao.Pendente => "A pagar",
+        StatusComissao.EmPagamento => "Em pagamento",
+        _ => "Paga"
+    };
 
     public async Task<ComissaoContaGeradaDto> GerarContaAsync(IReadOnlyCollection<int> ids, DateOnly vencimento, CancellationToken cancelamento)
     {

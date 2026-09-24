@@ -23,6 +23,9 @@ public interface IComissaoService
     /// <summary>Página de comissões (mais recente primeiro) e os totais de TODO o filtro (CM6).</summary>
     Task<ComissaoListaDto> ListarAsync(ComissaoFiltroDto filtro, CancellationToken cancelamento);
 
+    /// <summary>Todas as comissões do filtro (ignora a paginação) no modelo do ExportadorRelatorio.</summary>
+    Task<RelatorioModelo> ModeloAsync(ComissaoFiltroDto filtro, CancellationToken cancelamento);
+
     /// <summary>
     /// Fecha comissões Pendentes de um vendedor numa conta a pagar (CC1/CC2): 1 parcela com a soma; as comissões
     /// ficam Em pagamento. Pagar/cancelar a conta propaga (ContasPagarService).

@@ -1,9 +1,10 @@
 // =====================================================================================
 // Arquivo....: ComissoesController.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Endpoints REST das comissões dos vendedores.
 //                GET  /api/comissoes        -> listagem paginada + totais do filtro
+//                GET  /api/comissoes/exportar?formato=xlsx|pdf -> arquivo com todo o filtro
 //                POST /api/comissoes/gerar-conta -> fecha comissões numa conta a pagar
 //              A geração é automática, ao receber a parcela (ContasReceberService).
 // -------------------------------------------------------------------------------------
@@ -15,6 +16,7 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - POST gerar-conta substitui POST pagar (etapa 12).
+//   1.2.0 - 24/09/2026 - GET exportar (Excel/PDF pelo ExportadorRelatorio).
 // =====================================================================================
 
 using ErpPortfolio.Api.DTOs;
@@ -34,6 +36,18 @@ public class ComissoesController(IComissaoService comissaoService) : ControllerB
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ComissaoListaDto>> Listar([FromQuery] ComissaoFiltroDto filtro, CancellationToken cancelamento) =>
         Ok(await comissaoService.ListarAsync(filtro, cancelamento));
+
+    /// <summary>Comissões do filtro (todas as páginas) em Excel ou PDF, no mesmo layout dos relatórios.</summary>
+    [HttpGet("exportar")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK, ExportadorRelatorio.TipoConteudoXlsx, ExportadorRelatorio.TipoConteudoPdf)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Exportar([FromQuery] ComissaoFiltroDto filtro, [FromQuery] FormatoRelatorio formato = FormatoRelatorio.Xlsx, CancellationToken cancelamento = default)
+    {
+        var modelo = await comissaoService.ModeloAsync(filtro, cancelamento);
+        return formato == FormatoRelatorio.Pdf
+            ? File(ExportadorRelatorio.GerarPdf(modelo), ExportadorRelatorio.TipoConteudoPdf, $"{modelo.NomeArquivo}.pdf")
+            : File(ExportadorRelatorio.GerarXlsx(modelo), ExportadorRelatorio.TipoConteudoXlsx, $"{modelo.NomeArquivo}.xlsx");
+    }
 
     /// <summary>Fecha comissões pendentes de UM vendedor numa conta a pagar (com a soma). Pague essa conta em Contas a Pagar para as comissões ficarem pagas.</summary>
     [HttpPost("gerar-conta")]

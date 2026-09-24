@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: relatoriosApi.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Chamadas HTTP do módulo de Relatórios: os dados (JSON) para a
  *              tela e o download do arquivo (.xlsx/.pdf) gerado pelo servidor
@@ -15,6 +15,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 24/09/2026 - baixarArquivo exportado (usado também pela tela de Comissões).
  * =====================================================================
  */
 
@@ -42,31 +43,32 @@ export const relatoriosApi = {
   },
 
   /** Baixa o relatório no formato pedido e dispara o download no navegador. */
-  async baixar(tipo: TipoRelatorio, filtro: RelatorioPedidosFiltro | RelatorioEstoqueFiltro, formato: FormatoArquivo) {
-    try {
-      const resposta = await axiosClient.get<Blob>(`/relatorios/${tipo}`, {
-        params: { ...filtro, formato },
-        responseType: 'blob',
-      })
-      const nome = /filename="?([^";]+)"?/.exec(resposta.headers['content-disposition'] ?? '')?.[1] ?? `relatorio-${tipo}.${formato}`
-
-      const url = URL.createObjectURL(resposta.data)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = nome
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (erro) {
-      // Com responseType blob, o ProblemDetails de erro também chega como Blob: converte para JSON
-      // para o lerErroApi mostrar a mensagem certa.
-      if (axios.isAxiosError(erro) && erro.response?.data instanceof Blob) {
-        try {
-          erro.response.data = JSON.parse(await erro.response.data.text())
-        } catch {
-          // Corpo não é JSON: fica a mensagem genérica.
-        }
-      }
-      throw erro
-    }
+  baixar(tipo: TipoRelatorio, filtro: RelatorioPedidosFiltro | RelatorioEstoqueFiltro, formato: FormatoArquivo) {
+    return baixarArquivo(`/relatorios/${tipo}`, { ...filtro, formato }, `relatorio-${tipo}.${formato}`)
   },
+}
+
+/** GET de um arquivo gerado pela API e download no navegador, com o nome do Content-Disposition. */
+export async function baixarArquivo(url: string, params: object, nomePadrao: string) {
+  try {
+    const resposta = await axiosClient.get<Blob>(url, { params, responseType: 'blob' })
+    const nome = /filename="?([^";]+)"?/.exec(resposta.headers['content-disposition'] ?? '')?.[1] ?? nomePadrao
+
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(resposta.data)
+    link.download = nome
+    link.click()
+    URL.revokeObjectURL(link.href)
+  } catch (erro) {
+    // Com responseType blob, o ProblemDetails de erro também chega como Blob: converte para JSON
+    // para o lerErroApi mostrar a mensagem certa.
+    if (axios.isAxiosError(erro) && erro.response?.data instanceof Blob) {
+      try {
+        erro.response.data = JSON.parse(await erro.response.data.text())
+      } catch {
+        // Corpo não é JSON: fica a mensagem genérica.
+      }
+    }
+    throw erro
+  }
 }
