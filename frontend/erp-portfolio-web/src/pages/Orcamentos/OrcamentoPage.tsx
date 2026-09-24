@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: OrcamentoPage.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 23/09/2026
  * Descrição..: Página do orçamento (rotas /orcamentos/novo e /orcamentos/:id), no mesmo
  *              desenho da página do pedido: cliente, vendedor, forma de pagamento,
@@ -9,31 +9,38 @@
  *              observações e resumo recalculado a cada digitação. Só o orçamento Aberto
  *              (vencido ou não) é editável; salvar um vencido com validade nova o prorroga.
  *              Erros 400 da API aparecem nos campos.
+ *              Ações: Gerar pedido (salva o que estiver pendente, gera o pedido em rascunho
+ *              com os preços do orçamento e abre o pedido), Marcar como perdido (modal com
+ *              motivo opcional) e Baixar PDF (qualquer status). O aprovado mostra o pedido gerado.
  * ---------------------------------------------------------------------
  * Fontes.....: GET /api/orcamentos/{id}, POST /api/orcamentos, PUT /api/orcamentos/{id}
- *              (via useOrcamento e useSalvarOrcamento)
+ *              POST /api/orcamentos/{id}/gerar-pedido, PATCH /api/orcamentos/{id}/perder,
+ *              GET /api/orcamentos/{id}/pdf (via useOrcamento, useSalvarOrcamento,
+ *              useGerarPedido e usePerderOrcamento)
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 23/09/2026 - Criação do arquivo.
+ *   1.1.0 - 23/09/2026 - Gerar pedido, Marcar como perdido e Baixar PDF (T6).
  * =====================================================================
  */
 
-import { ArrowLeftOutlined, CheckOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckOutlined, FilePdfOutlined, ShoppingCartOutlined, StopOutlined } from '@ant-design/icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Alert, App, Button, Col, DatePicker, Flex, Form, Input, InputNumber, Row, Select, Spin } from 'antd'
+import { Alert, App, Button, Col, DatePicker, Flex, Form, Input, InputNumber, Modal, Row, Select, Spin, Tooltip } from 'antd'
 import { useQueryClient } from '@tanstack/react-query'
 import { isAxiosError } from 'axios'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFieldArray, useForm, useWatch, type Control, type FieldError } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { lerErroApi } from '../../api/axiosClient'
+import { orcamentosApi } from '../../api/orcamentosApi'
 import { ItemFormulario } from '../../components/ItemFormulario'
 import { SelecaoCliente } from '../../components/SelecaoCliente'
 import { SelecaoProduto } from '../../components/SelecaoProduto'
 import { SelecaoVendedor } from '../../components/SelecaoVendedor'
 import { TagStatusOrcamento } from '../../components/TagStatusOrcamento'
-import { useOrcamento, useSalvarOrcamento } from '../../hooks/useOrcamentos'
+import { useGerarPedido, useOrcamento, usePerderOrcamento, useSalvarOrcamento } from '../../hooks/useOrcamentos'
 import {
   orcamentoSchema,
   paraFormulario,
@@ -99,10 +106,14 @@ export function OrcamentoPage() {
 
 /** Formulário do orçamento: vazio em /orcamentos/novo; com os dados do servidor em /orcamentos/:id. */
 function OrcamentoFormulario({ orcamento }: { orcamento?: Orcamento }) {
-  const { message } = App.useApp()
+  const { message, modal } = App.useApp()
   const navegar = useNavigate()
   const queryClient = useQueryClient()
   const salvarOrcamento = useSalvarOrcamento()
+  const gerarPedido = useGerarPedido()
+  const perderOrcamento = usePerderOrcamento()
+  // Motivo digitado no modal de "Marcar como perdido"; null = modal fechado.
+  const [motivoPerda, setMotivoPerda] = useState<string | null>(null)
   const somenteLeitura = orcamento !== undefined && orcamento.status !== 'Aberto'
   // Muda a cada produto adicionado: recria o seletor, que volta vazio e pronto para outra busca.
   const [chaveSeletor, setChaveSeletor] = useState(0)
@@ -196,9 +207,44 @@ function OrcamentoFormulario({ orcamento }: { orcamento?: Orcamento }) {
     }
   }
 
+  /** Gerar pedido: valida a tela, pede confirmação, salva o que estiver pendente e gera o pedido. */
+  function pedirGeracao(valores: OrcamentoFormValores) {
+    if (!orcamento) return
+    modal.confirm({
+      title: `Gerar o pedido de venda a partir do orçamento nº ${orcamento.id}?`,
+      content:
+        'O pedido nasce como rascunho, com os preços e descontos deste orçamento. O orçamento fica Aprovado e não pode mais ser editado.',
+      okText: 'Gerar pedido',
+      cancelText: 'Voltar',
+      onOk: async () => {
+        try {
+          await salvarOrcamento.mutateAsync({ id: orcamento.id, dados: paraPayload(valores) })
+          const pedidoId = await gerarPedido.mutateAsync(orcamento.id)
+          message.success(`Pedido de venda nº ${pedidoId} gerado. Confira e confirme o pedido.`)
+          navegar(`/pedidos/${pedidoId}`)
+        } catch (erro) {
+          mostrarErroApi(erro)
+        }
+      },
+    })
+  }
+
+  async function marcarComoPerdido() {
+    if (!orcamento || motivoPerda === null) return
+    try {
+      await perderOrcamento.mutateAsync({ id: orcamento.id, motivo: motivoPerda.trim() || null })
+      message.success(`Orçamento nº ${orcamento.id} marcado como perdido.`)
+      setMotivoPerda(null)
+    } catch (erro) {
+      setMotivoPerda(null)
+      mostrarErroApi(erro)
+    }
+  }
+
   const erroItens = errors.itens?.root?.message ?? errors.itens?.message
 
   return (
+    <>
     <Form
       id={ID_FORMULARIO}
       layout="vertical"
@@ -213,9 +259,15 @@ function OrcamentoFormulario({ orcamento }: { orcamento?: Orcamento }) {
           showIcon
           style={{ marginBottom: 24 }}
           title={
-            orcamento.status === 'Aprovado'
-              ? `Orçamento aprovado: virou o pedido de venda nº ${orcamento.pedidoId} e não pode mais ser editado.`
-              : `Orçamento perdido: somente leitura.${orcamento.motivoPerda ? ` Motivo: ${orcamento.motivoPerda}` : ''}`
+            orcamento.status === 'Aprovado' ? (
+              <>
+                Orçamento aprovado: virou o{' '}
+                <Link to={`/pedidos/${orcamento.pedidoId}`}>pedido de venda nº {orcamento.pedidoId}</Link> e não pode
+                mais ser editado.
+              </>
+            ) : (
+              `Orçamento perdido: somente leitura.${orcamento.motivoPerda ? ` Motivo: ${orcamento.motivoPerda}` : ''}`
+            )
           }
         />
       )}
@@ -422,20 +474,90 @@ function OrcamentoFormulario({ orcamento }: { orcamento?: Orcamento }) {
         </Row>
       </section>
 
-      {!somenteLeitura && (
-        <div className="pedido-rodape">
+      <div className="pedido-rodape">
+        {orcamento && !somenteLeitura && (
+          <Button
+            danger
+            size="large"
+            icon={<StopOutlined />}
+            className="pedido-rodape-cancelar"
+            onClick={() => setMotivoPerda('')}
+          >
+            Marcar como perdido
+          </Button>
+        )}
+        {orcamento && (
+          // O PDF é o que está gravado: alterações não salvas não entram.
+          <Button size="large" icon={<FilePdfOutlined />} href={orcamentosApi.urlPdf(orcamento.id)}>
+            Baixar PDF
+          </Button>
+        )}
+        {orcamento?.status === 'Aprovado' && (
           <Button
             type="primary"
             size="large"
-            icon={<CheckOutlined />}
-            htmlType="submit"
-            form={ID_FORMULARIO}
-            loading={salvarOrcamento.isPending}
+            icon={<ShoppingCartOutlined />}
+            onClick={() => navegar(`/pedidos/${orcamento.pedidoId}`)}
           >
-            Salvar orçamento
+            Abrir pedido nº {orcamento.pedidoId}
           </Button>
-        </div>
-      )}
+        )}
+        {!somenteLeitura && (
+          <>
+            <Button
+              type={orcamento ? 'default' : 'primary'}
+              size="large"
+              icon={<CheckOutlined />}
+              htmlType="submit"
+              form={ID_FORMULARIO}
+              loading={salvarOrcamento.isPending && !gerarPedido.isPending}
+            >
+              Salvar orçamento
+            </Button>
+            {orcamento && (
+              <Tooltip title={orcamento.vencido ? 'Orçamento vencido: informe uma nova validade e salve.' : undefined}>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<ShoppingCartOutlined />}
+                  disabled={orcamento.vencido}
+                  onClick={() => handleSubmit(pedirGeracao)()}
+                  loading={gerarPedido.isPending}
+                >
+                  Gerar pedido
+                </Button>
+              </Tooltip>
+            )}
+          </>
+        )}
+      </div>
     </Form>
+
+    <Modal
+      open={motivoPerda !== null}
+      title={`Marcar o orçamento nº ${orcamento?.id} como perdido?`}
+      okText="Marcar como perdido"
+      okButtonProps={{ danger: true }}
+      cancelText="Voltar"
+      confirmLoading={perderOrcamento.isPending}
+      onOk={marcarComoPerdido}
+      onCancel={() => setMotivoPerda(null)}
+      destroyOnHidden
+    >
+      <p>O orçamento fica somente leitura e não pode mais gerar pedido.</p>
+      <label className="rotulo-filtro" htmlFor="orcamento-motivo-perda">
+        Motivo (opcional)
+      </label>
+      <Input.TextArea
+        id="orcamento-motivo-perda"
+        rows={3}
+        maxLength={200}
+        showCount
+        placeholder="Ex.: cliente achou mais barato no concorrente"
+        value={motivoPerda ?? ''}
+        onChange={(e) => setMotivoPerda(e.target.value)}
+      />
+    </Modal>
+    </>
   )
 }

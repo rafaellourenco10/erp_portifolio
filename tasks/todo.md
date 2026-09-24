@@ -31,9 +31,10 @@
   - Verificar: `tsc -b`, `oxlint`.
   - Resultado: o formulário virou **página** (`/orcamentos/novo`, `/orcamentos/:id`) em vez de gaveta, igual ao pedido, que é o padrão da casa para cabeçalho + itens. `orcamentoSchema` = `pedidoSchema.safeExtend({ validade, observacoes })` (mantém o limite do total); conversões reaproveitam as do pedido (`paraFormulario` do pedido passou a aceitar um `Pick`). A tabela de itens é a `ItensPedidoTabela` (cast comentado do `control`). Lista com colunas Validade e Status (tag + link "Pedido #N" no aprovado), filtro com Vencido; `TagStatusOrcamento` (Aberto azul, Vencido laranja `--cor-alerta`, Aprovado verde, Perdido cinza). Menu "Orçamentos" (ícone `FileTextOutlined`) antes de Pedidos de Venda, rotas e breadcrumb. `tsc -b` e `oxlint` limpos.
 
-- [ ] **T6: Ações da tela** (S)
+- [x] **T6: Ações da tela** (S) — *concluída em 23/09/2026*
   - Gerar pedido (confirmação → link para o pedido), Marcar como perdido (modal com motivo), Baixar PDF, link "Pedido #N" no Aprovado.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: rodapé da página com **Marcar como perdido** (modal com motivo opcional, até 200), **Baixar PDF** (link direto para `/orcamentos/N/pdf`, que já vem como anexo), **Salvar orçamento** e **Gerar pedido** (confirmação; salva o que estiver pendente, gera e abre o pedido; desabilitado com dica quando vencido). Aprovado: aviso com link e botão "Abrir pedido nº N". `tsc -b`, `oxlint` e `npm run build` limpos. **Teste de tela** (Playwright + Edge headless, API 5099 + Vite 5174, `.claude/ferramentas-locais/ui-orcamentos-run.ps1`): **25/25** — lista com as 4 situações, link do pedido, filtro Vencido; aberto com preço congelado e total; vencido desabilita Gerar e prorrogar pela validade reabilita; perdido/aprovado somente leitura; novo com validade hoje+15, erros de campo, salvar e breadcrumb; marcar como perdido; gerar pedido abre o rascunho com o preço do orçamento; celular sem rolagem horizontal; nenhum erro/aviso no console. Capturas conferidas; dados de teste apagados e dados reais idênticos.
 
 ## Fase 3: Fechamento
 
