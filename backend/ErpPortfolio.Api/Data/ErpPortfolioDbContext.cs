@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.12.0
+// Versão.....: 1.13.0
 // Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -47,7 +47,8 @@
 //                - IDX : ix_comissoes_vendedor_id, ix_comissoes_pedido_id, ix_comissoes_data_geracao
 //                - FK  : fk_comissoes_parcelas_receber, fk_comissoes_pedidos, fk_comissoes_vendedores,
 //                        fk_comissoes_parcelas_pagar (restrict); IDX ix_comissoes_parcela_pagar_id
-//                - CK  : ck_comissoes_valor, ck_comissoes_percentual
+//                - CK  : ck_comissoes_valor (normal > 0 ou estorno < 0), ck_comissoes_percentual
+//                - FK  : fk_comissoes_devolucoes (devolucao_id, restrict); IDX ix_comissoes_devolucao_id
 //              public.pedido_itens
 //                - PK  : pk_pedido_itens (id, identity)
 //                - UK  : ux_pedido_itens_pedido_produto (pedido_id, produto_id)
@@ -90,6 +91,7 @@
 //                - FK  : fk_parcelas_pagar_vendedores (vendedor_id -> vendedores.id, restrict)
 //                - CK  : ck_parcelas_pagar_valor, ck_parcelas_pagar_numero_parcela,
 //                        ck_parcelas_pagar_total_parcelas, ck_parcelas_pagar_origem
+//                - FK  : fk_parcelas_pagar_devolucoes (devolucao_id, restrict); IDX ix_parcelas_pagar_devolucao_id
 //              public.orcamentos
 //                - PK  : pk_orcamentos (id, identity)
 //                - UK  : ux_orcamentos_pedido_id (pedido_id)
@@ -103,6 +105,16 @@
 //                - FK  : fk_orcamento_itens_orcamentos (cascade), fk_orcamento_itens_produtos (restrict)
 //                - CK  : ck_orcamento_itens_quantidade, ck_orcamento_itens_preco_unitario,
 //                        ck_orcamento_itens_desconto_percentual
+//              public.devolucoes
+//                - PK  : pk_devolucoes (id, identity)
+//                - IDX : ix_devolucoes_pedido_id, ix_devolucoes_data_devolucao
+//                - FK  : fk_devolucoes_pedidos (restrict)
+//                - CK  : ck_devolucoes_valores (total = abatido + reembolso, todos >= 0, total > 0)
+//              public.devolucao_itens
+//                - PK  : pk_devolucao_itens (id, identity)
+//                - UK  : ux_devolucao_itens_devolucao_item (devolucao_id, pedido_item_id)
+//                - FK  : fk_devolucao_itens_devolucoes (cascade), fk_devolucao_itens_pedido_itens (restrict)
+//                - CK  : ck_devolucao_itens_quantidade, ck_devolucao_itens_valor
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -122,6 +134,8 @@
 //   1.11.0 - 23/09/2026 - parcelas_pagar com origem/vendedor/descrição/favorecido/total_parcelas;
 //                         comissoes.parcela_pagar_id (etapa 12).
 //   1.12.0 - 23/09/2026 - Mapeamento de Orcamento e OrcamentoItem (etapa 13).
+//   1.13.0 - 24/09/2026 - Devolucao e DevolucaoItem; parcelas_pagar.devolucao_id e origem Devolucao;
+//                         comissoes.devolucao_id e estorno negativo (etapa 14).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -160,6 +174,10 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
     public DbSet<Orcamento> Orcamentos => Set<Orcamento>();
 
     public DbSet<OrcamentoItem> OrcamentoItens => Set<OrcamentoItem>();
+
+    public DbSet<Devolucao> Devolucoes => Set<Devolucao>();
+
+    public DbSet<DevolucaoItem> DevolucaoItens => Set<DevolucaoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -231,7 +249,8 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 tabela.HasCheckConstraint("ck_parcelas_pagar_origem",
                     "(origem = 'Compra' AND pedido_compra_id IS NOT NULL) OR " +
                     "(origem = 'Comissao' AND vendedor_id IS NOT NULL) OR " +
-                    "(origem = 'Avulsa' AND descricao IS NOT NULL)");
+                    "(origem = 'Avulsa' AND descricao IS NOT NULL) OR " +
+                    "(origem = 'Devolucao' AND devolucao_id IS NOT NULL)");
             });
 
             entidade.HasKey(p => p.Id).HasName("pk_parcelas_pagar");
@@ -266,6 +285,18 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
             entidade.Property(p => p.Favorecido)
                 .HasColumnName("favorecido")
                 .HasMaxLength(150);
+
+            entidade.Property(p => p.DevolucaoId)
+                .HasColumnName("devolucao_id");
+
+            entidade.HasOne(p => p.Devolucao)
+                .WithMany()
+                .HasForeignKey(p => p.DevolucaoId)
+                .HasConstraintName("fk_parcelas_pagar_devolucoes")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasIndex(p => p.DevolucaoId)
+                .HasDatabaseName("ix_parcelas_pagar_devolucao_id");
 
             entidade.Property(p => p.TotalParcelas)
                 .HasColumnName("total_parcelas")
@@ -686,6 +717,116 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasDatabaseName("ix_orcamento_itens_produto_id");
         });
 
+        modelBuilder.Entity<Devolucao>(entidade =>
+        {
+            entidade.ToTable("devolucoes", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_devolucoes_valores",
+                    "valor_total > 0 AND valor_abatido >= 0 AND valor_reembolso >= 0 AND valor_total = valor_abatido + valor_reembolso");
+            });
+
+            entidade.HasKey(d => d.Id).HasName("pk_devolucoes");
+
+            entidade.Property(d => d.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(d => d.PedidoId)
+                .HasColumnName("pedido_id");
+
+            // Restrict: devolução é histórico financeiro; o pedido nunca é apagado.
+            entidade.HasOne(d => d.Pedido)
+                .WithMany()
+                .HasForeignKey(d => d.PedidoId)
+                .HasConstraintName("fk_devolucoes_pedidos")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(d => d.DataDevolucao)
+                .HasColumnName("data_devolucao")
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("now()")
+                .IsRequired();
+
+            entidade.Property(d => d.Motivo)
+                .HasColumnName("motivo")
+                .HasMaxLength(200);
+
+            entidade.Property(d => d.ValorTotal)
+                .HasColumnName("valor_total")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(d => d.ValorAbatido)
+                .HasColumnName("valor_abatido")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(d => d.ValorReembolso)
+                .HasColumnName("valor_reembolso")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.HasIndex(d => d.PedidoId)
+                .HasDatabaseName("ix_devolucoes_pedido_id");
+
+            entidade.HasIndex(d => d.DataDevolucao)
+                .HasDatabaseName("ix_devolucoes_data_devolucao");
+        });
+
+        modelBuilder.Entity<DevolucaoItem>(entidade =>
+        {
+            entidade.ToTable("devolucao_itens", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_devolucao_itens_quantidade", "quantidade > 0");
+                tabela.HasCheckConstraint("ck_devolucao_itens_valor", "valor >= 0");
+            });
+
+            entidade.HasKey(i => i.Id).HasName("pk_devolucao_itens");
+
+            entidade.Property(i => i.Id)
+                .HasColumnName("id")
+                .UseIdentityAlwaysColumn();
+
+            entidade.Property(i => i.DevolucaoId)
+                .HasColumnName("devolucao_id");
+
+            entidade.HasOne(i => i.Devolucao)
+                .WithMany(d => d.Itens)
+                .HasForeignKey(i => i.DevolucaoId)
+                .HasConstraintName("fk_devolucao_itens_devolucoes")
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entidade.Property(i => i.PedidoItemId)
+                .HasColumnName("pedido_item_id");
+
+            entidade.HasOne(i => i.PedidoItem)
+                .WithMany()
+                .HasForeignKey(i => i.PedidoItemId)
+                .HasConstraintName("fk_devolucao_itens_pedido_itens")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.Property(i => i.Quantidade)
+                .HasColumnName("quantidade")
+                .HasColumnType("numeric(12,3)")
+                .IsRequired();
+
+            entidade.Property(i => i.Valor)
+                .HasColumnName("valor")
+                .HasColumnType("numeric(12,2)")
+                .IsRequired();
+
+            entidade.Property(i => i.VoltaEstoque)
+                .HasColumnName("volta_estoque")
+                .IsRequired();
+
+            entidade.HasIndex(i => new { i.DevolucaoId, i.PedidoItemId })
+                .IsUnique()
+                .HasDatabaseName("ux_devolucao_itens_devolucao_item");
+
+            entidade.HasIndex(i => i.PedidoItemId)
+                .HasDatabaseName("ix_devolucao_itens_pedido_item_id");
+        });
+
         modelBuilder.Entity<Categoria>(entidade =>
         {
             entidade.ToTable("categorias");
@@ -853,7 +994,10 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
         {
             entidade.ToTable("comissoes", tabela =>
             {
-                tabela.HasCheckConstraint("ck_comissoes_valor", "valor > 0");
+                // DV6: comissão normal (parcela recebida, valor positivo) ou estorno de devolução (valor negativo).
+                tabela.HasCheckConstraint("ck_comissoes_valor",
+                    "(parcela_receber_id IS NOT NULL AND devolucao_id IS NULL AND valor > 0) OR " +
+                    "(parcela_receber_id IS NULL AND devolucao_id IS NOT NULL AND valor < 0)");
                 tabela.HasCheckConstraint("ck_comissoes_percentual", "percentual > 0 AND percentual <= 100");
             });
 
@@ -895,6 +1039,16 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .OnDelete(DeleteBehavior.Restrict);
 
             entidade.HasIndex(c => c.ParcelaPagarId).HasDatabaseName("ix_comissoes_parcela_pagar_id");
+
+            entidade.Property(c => c.DevolucaoId).HasColumnName("devolucao_id");
+
+            entidade.HasOne(c => c.Devolucao)
+                .WithMany()
+                .HasForeignKey(c => c.DevolucaoId)
+                .HasConstraintName("fk_comissoes_devolucoes")
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasIndex(c => c.DevolucaoId).HasDatabaseName("ix_comissoes_devolucao_id");
 
             entidade.Property(c => c.ValorBase)
                 .HasColumnName("valor_base")

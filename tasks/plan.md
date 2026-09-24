@@ -1,40 +1,41 @@
-# Plano de implementação: Orçamentos (etapa 13)
+# Plano de implementação: Devolução de venda (etapa 14)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **aprovado e implementado** (23/09/2026).
+> Status: **aprovado** (24/09/2026), com o card de Devoluções no Dashboard.
 
 ## Visão geral
 
-7 tarefas. O orçamento é um "irmão" do pedido de venda: mesma forma (cabeçalho + itens), mesmo cálculo e as mesmas validações de item. Por isso a base é reaproveitar o que o `PedidoService` já faz, e não copiar.
+7 tarefas. O coração é um cálculo puro (valor, abatimento, reembolso, estorno), testado sem banco, e um serviço que aplica o resultado nos quatro módulos numa transação. As telas vêm depois da API validada por E2E.
 
 ## Grafo de dependências
 
 ```
-T1 Schema: orcamentos + orcamento_itens (models, DbContext, migration)
-  └─► T2 API: listar/obter/criar/editar + vencido (+ xUnit)
-        ├─► T3 Gerar pedido + perder ── CP1: API pronta (E2E)
-        └─► T4 PDF do orçamento (QuestPDF)
-              └─► T5 Front: tipos/api/hooks + lista + formulário + menu
-                    └─► T6 Front: ações (gerar pedido, perder, PDF)
-                          └─► T7 Fechamento
+T1 Schema: devolucoes + devolucao_itens; parcelas_pagar.devolucao_id + origem Devolucao; comissoes estorno
+  └─► T2 DevolucaoCalculo (puro, xUnit): valor por item, "o que falta", abatimento, reembolso, estorno
+        └─► T3 DevolucaoService + endpoints (POST/GET), pedido com valorDevolvido, cancelar bloqueado
+              └─► T4 Contas a Pagar (origem Devolucao, não cancela) + Comissões (estorno na lista, CC6) + /dashboard/devolucoes ── CP1: API pronta (E2E)
+                    ├─► T5 Tela do pedido: modal de devolução + histórico
+                    └─► T6 Telas de Contas a Pagar, Comissões e card do Dashboard
+                          └─► T7 Fechamento (README, SPEC, grafo, memória)
 ```
 
 ## Decisões de arquitetura
 
 | Decisão | Motivo |
 |---|---|
-| Tabelas próprias (`orcamentos`, `orcamento_itens`) em vez de um status "Orçamento" no pedido | Não mexe no fluxo, nos relatórios nem no dashboard de pedidos; a numeração de pedidos continua só de vendas. |
-| Validações de item e cálculo do `PedidoService` extraídas para métodos estáticos compartilhados (`CalculoPedido` já é) | Uma regra só para quantidade/unidade/produto ativo; o orçamento não duplica código. |
-| Gerar pedido monta o `Pedido` direto no `OrcamentoService` (mesmo `DbContext`, um `SaveChanges`) | Precisa gravar o **preço do orçamento**, e o `PedidoService.CriarAsync` copia o preço atual do produto (R3). |
-| `vencido` calculado, não gravado | Sem job agendado; é sempre coerente com a data de hoje. |
-| PDF em classe própria (`ExportadorOrcamento`) | O `ExportadorRelatorio` é tabular genérico; o orçamento tem layout de documento. Reaproveita a licença QuestPDF já configurada. |
+| Devolução é registro próprio (`devolucoes` + itens) com os totais gravados | Histórico auditável (quanto abateu, quanto reembolsou) sem recalcular. |
+| `DevolucaoCalculo` puro, recebendo as parcelas pendentes e devolvendo o plano de ajustes | Toda a regra de dinheiro testável em xUnit; o serviço só aplica. |
+| Estorno de comissão como linha negativa em `comissoes` | Reaproveita lista, totais, gerar conta e a propagação pagar/cancelar; o desconto no fechamento sai quase de graça. |
+| Reembolso como nova origem de `parcelas_pagar` | Mesmo padrão da etapa 12 (Compra/Comissão/Avulsa); lista, filtro, pagar e Dashboard já funcionam. |
+| Entrada de estoque pelo `EstoqueService` com `pedido_id` e motivo | Sem coluna nova em `estoque_movimentacoes`; o extrato já mostra o pedido. |
 
 ## Riscos e mitigações
 
 | Risco | Mitigação |
 |---|---|
-| Extrair as validações do `PedidoService` quebrar o pedido | Refatoração sem mudança de comportamento, com os testes existentes passando + E2E de regressão do pedido na T3. |
-| Filtro "Aberto" x "Vencido" depender do fuso | Mesma referência de "hoje" de Contas a Receber (UTC) e teste unitário da borda (validade = hoje não está vencido). |
+| Relaxar o CHECK/NOT NULL de `comissoes` quebrar a lista (parcela nula) | DTO com `numeroParcela` nulo; E2E de regressão da lista e do recebimento. |
+| Centavos não fecharem após várias devoluções | Regra do "o que falta" na devolução final + teste unitário com 3 devoluções. |
+| Cancelar pedido duplicar entrada de estoque | DV9 bloqueia (409) com teste E2E. |
 
 ## Comandos de verificação
 

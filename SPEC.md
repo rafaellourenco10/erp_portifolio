@@ -1,109 +1,115 @@
-# Spec: Orçamentos (etapa 13)
+# Spec: Devolução de venda (etapa 14)
 
-> Status: **implementada e testada em 23/09/2026** (T1 a T7, ver `tasks/todo.md`). Critérios 1-7 conferidos: E2E da API com 54 verificações e teste de tela com Playwright com 25 (dados `ZZT…` apagados, dados reais intactos).
+> Status: **aprovada em 24/09/2026** (com o card de Devoluções no Dashboard); implementação em andamento.
 
 ## Objetivo
 
-Registrar a proposta feita ao cliente **antes** da venda: um orçamento com itens, descontos e validade, que pode ser enviado em **PDF** e, quando o cliente aprova, vira um **pedido de venda com um clique**, mantendo os preços combinados.
+Registrar a devolução (total ou parcial) de um pedido de venda confirmado e propagar as consequências para os outros módulos numa transação só: **estoque** (o item volta, se estiver em condições), **contas a receber** (as parcelas pendentes diminuem), **contas a pagar** (reembolso do que o cliente já pagou a mais) e **comissões** (estorno sobre o valor reembolsado).
 
 - **Quem usa:** o dono do ERP de portfólio (sem login).
-- **Por que agora:** escolha do Rafael em 23/09/2026, depois da etapa 12.
-- **Sucesso:** um orçamento aprovado gera o pedido de venda sem redigitar nada, e o PDF está pronto para mandar ao cliente.
+- **Por que agora:** escolha do Rafael em 24/09/2026, depois de Orçamentos.
+- **Sucesso:** devolver 1 de 3 itens de uma venda deixa estoque, parcelas, reembolso e comissão coerentes, sem nenhum ajuste manual.
 
 ### Dentro do escopo
-Cadastro de orçamento (cliente, vendedor, itens, descontos, forma de pagamento, validade, observações); lista com busca e filtro de status; situação **Vencido** calculada; **Gerar pedido** (rascunho, com os preços do orçamento); **Marcar como perdido** (com motivo); **PDF** do orçamento; tela no menu.
+Devolução parcial por item/quantidade (várias devoluções no mesmo pedido até devolver tudo); valor devolvido calculado com os descontos do pedido; abatimento nas parcelas pendentes; reembolso como conta a pagar; estorno de comissão descontado no próximo fechamento; escolha por item de "volta ao estoque"; histórico de devoluções no pedido; card **Devoluções do mês** no Dashboard; ajustes nas telas de Pedido, Contas a Pagar e Comissões.
 
 ### Fora do escopo (entram depois)
-Reabrir orçamento perdido ou aprovado; duplicar orçamento; orçamento para quem não é cliente cadastrado; envio por e-mail; orçamentos no Dashboard ou em Relatórios (taxa de conversão); desfazer a aprovação se o pedido gerado for cancelado; reservar estoque.
+Desfazer/editar uma devolução; crédito do cliente para pedidos futuros; troca (devolução + novo pedido num passo só); devolução de compra ao fornecedor; faturamento líquido (o Dashboard e os Relatórios continuam mostrando o valor bruto do pedido; as devoluções aparecem num card próprio); indicador de devolução na lista de pedidos.
 
-## Decisões já tomadas (com o Rafael, 23/09/2026)
+## Decisões já tomadas (com o Rafael, 24/09/2026)
 
 | Tema | Decisão |
 |---|---|
-| Conversão | "Gerar pedido" cria um **pedido de venda em Rascunho**; a confirmação segue o fluxo normal (estoque, parcelas, vendedor). |
-| Preço | O pedido gerado usa o **preço e os descontos do orçamento**, mesmo que o produto tenha mudado de preço depois. |
-| Status | **Aberto**, **Aprovado** (automático ao gerar pedido) e **Perdido** (manual, com motivo opcional). **Vencido** é calculado (Aberto com a validade já passada): não gera pedido, mas pode ser editado para prorrogar a validade. |
-| Cliente | Obrigatório e **cadastrado** (mesmo seletor do pedido). |
+| Escopo | **Parcial por item e quantidade**; várias devoluções no mesmo pedido até devolver tudo. |
+| Dinheiro | **Abate das parcelas pendentes** (da última para a primeira); o que passar disso (o cliente já tinha pago) vira **conta a pagar "Reembolso"** ao cliente. |
+| Comissão | Parcelas reduzidas já geram menos comissão quando forem recebidas. Sobre o valor **reembolsado**, nasce um **estorno** (comissão negativa) que é **descontado no próximo fechamento** do vendedor, mesmo que a comissão original já tenha sido paga. |
+| Estoque | **Escolha por item**: "volta ao estoque" marcado por padrão; desmarcado = perda (produto com defeito). |
+
+### Decididas por padrão (confirmadas pelo Rafael em 24/09/2026)
+
+| Tema | Padrão proposto | Motivo |
+|---|---|---|
+| Desfazer | Devolução é **definitiva** (não edita nem exclui). | Já moveu estoque, parcelas, conta e comissão; errou → registre uma venda nova. |
+| Cancelar pedido com devolução | **Bloqueado (409)**. | Cancelar estorna todos os itens ao estoque e duplicaria a entrada dos devolvidos. Devolva o restante em vez de cancelar. |
+| Conta de reembolso | **Não pode ser cancelada** (409), só paga. | Faz parte da devolução, que é definitiva. |
+| Faturamento | Dashboard/Relatórios **continuam brutos**; o Dashboard ganha um **card de Devoluções do mês** (pedido do Rafael). | O bruto continua comparável com o que foi vendido; a devolução fica visível ao lado. |
 
 ## Regras
 
-### Orçamento (OR)
+### Devolução (DV)
 
 | # | Regra |
 |---|---|
-| OR1 | Campos: cliente (obrigatório, ativo), vendedor (opcional, ativo), forma de pagamento (opcional), desconto do orçamento 0-100 (2 casas), **validade** (data, obrigatória, ≥ hoje ao criar ou editar), observações (opcional, até 500), 1-100 itens sem produto repetido. Mesmas regras de quantidade/unidade e desconto de item do pedido (R4, R5, R8). |
-| OR2 | Preço do item copiado do produto **ao adicionar o item** e congelado (igual ao pedido, R3). Total calculado pelo `CalculoPedido` (mesma conta do pedido). |
-| OR3 | Tela sugere validade = hoje + 15 dias. "Hoje" = `DateOnly.FromDateTime(DateTime.UtcNow)`, a mesma referência de Contas a Receber. |
-| OR4 | **Vencido** = status Aberto e validade < hoje. Não é gravado; a API devolve `vencido: true/false`. |
-| OR5 | Só orçamento **Aberto** (vencido ou não) pode ser editado; Aprovado ou Perdido → 409. Editar com validade nova ≥ hoje "prorroga" o vencido. |
+| DV1 | Só de pedido **Confirmado**; Rascunho/Cancelado → 409. |
+| DV2 | 1+ itens, cada um um item **deste** pedido, sem repetir; quantidade > 0, até 3 casas, inteira em UN/CX, e **≤ vendida − já devolvida** (senão 400 em `Itens`). Motivo opcional (até 200). |
+| DV3 | Valor de cada item devolvido = `quantidade × preço × (1 − desc. item) × (1 − desc. pedido)`, arredondado a 2 casas. Na devolução que zera o pedido (tudo devolvido), o valor total é **o que falta** (`valor_total do pedido − já devolvido`), para os centavos fecharem. |
+| DV4 | **Abatimento:** o valor desconta das parcelas **Pendentes**, da de maior número para a menor; parcela que chega a zero fica **Cancelada** (mantém o valor original para histórico); parcela reduzida guarda o novo valor. |
+| DV5 | **Reembolso** = valor da devolução − abatido. Se > 0, gera **uma** conta a pagar origem **`Devolucao`** (1/1, favorecido = nome do cliente, descrição "Reembolso devolução #D — pedido #P", vencimento informado ou hoje). |
+| DV6 | **Estorno de comissão:** se o pedido tem vendedor com % > 0 e houve reembolso, nasce uma comissão **negativa** (`valor = −reembolso × %`, base = reembolso), status Pendente, ligada à devolução. |
+| DV7 | **Estoque:** item com "volta ao estoque" gera **Entrada** (motivo "Devolução #D pedido #P"); sem, não gera nada (fica registrado no item da devolução). |
+| DV8 | Tudo (devolução, itens, parcelas, conta, estorno, estoque) no **mesmo SaveChanges**; se qualquer regra falhar, nada muda. |
+| DV9 | **Cancelar pedido** que tem devolução → 409 ("devolva o restante"). |
 
-### Gerar pedido (GP)
-
-| # | Regra |
-|---|---|
-| GP1 | Só de orçamento Aberto e **não vencido**; Aprovado/Perdido → 409; vencido → 400 ("prorrogue a validade"). |
-| GP2 | Cliente precisa estar ativo; produtos inativos → 400 listando os nomes; vendedor inativo é **deixado em branco** no pedido (é opcional no rascunho). |
-| GP3 | Cria o pedido **Rascunho** com cliente, vendedor, forma de pagamento, desconto e itens (quantidade, **preço unitário e desconto do orçamento**). |
-| GP4 | O orçamento passa a **Aprovado** e guarda o nº do pedido gerado, na **mesma transação**. Resposta: `201` com o id do pedido. |
-| GP5 | Se o pedido gerado for cancelado depois, o orçamento continua Aprovado (fora do escopo desfazer). |
-
-### Perdido (PE)
+### Dashboard (DB)
 
 | # | Regra |
 |---|---|
-| PE1 | Marcar como perdido: de Aberto (vencido ou não), com motivo opcional (até 200). Repetir em um Perdido → 204 sem mudar nada (idempotente). Aprovado → 409. |
+| DB1 | Card **Devoluções do mês**: soma de `valor_total` e quantidade das devoluções com `data_devolucao` no mês atual (UTC, mesma convenção dos outros cards); o faturamento do mês **não muda**. |
 
-### PDF (PD)
+### Contas a pagar e comissões (CP/CC)
 
 | # | Regra |
 |---|---|
-| PD1 | `GET /api/orcamentos/{id}/pdf`, qualquer status. A4 retrato (QuestPDF): cabeçalho "Ambition ERP — Orçamento Nº N", data e validade; cliente (nome, CPF/CNPJ formatado, e-mail, telefone, cidade/UF); vendedor; tabela (produto, qtd, un, preço unitário, desc. %, subtotal); subtotal dos itens, desconto do orçamento, **total**; forma de pagamento; observações; rodapé "Orçamento válido até dd/mm/aaaa · Página X de Y". |
+| CP5 | Nova origem `Devolucao` (CHECK: exige `devolucao_id`); aparece no filtro de origem; **cancelar** essa conta → 409. |
+| CC6 | **Gerar conta de comissões** inclui automaticamente **todos os estornos Pendentes** do vendedor; se a soma final for ≤ 0 → 400 ("os estornos superam as comissões selecionadas") e nada muda. Pagar/cancelar a conta propaga aos estornos como às comissões (CC3/CC4). |
+| CC7 | A lista de comissões mostra o estorno com valor negativo e a origem "Estorno · devolução #D" (sem nº de parcela). |
 
 ## Modelo de dados
 
-- **`orcamentos`**: `id`, `cliente_id` (FK restrict), `vendedor_id` (FK restrict, nulo), `data_orcamento` (timestamptz), `validade` (date), `status` varchar(20) (`Aberto`/`Aprovado`/`Perdido`, CHECK), `forma_pagamento` (nulo), `desconto_percentual` numeric(5,2), `valor_total` numeric(12,2), `observacoes` varchar(500), `motivo_perda` varchar(200), `pedido_id` (FK → pedidos, restrict, nulo, **único**).
-- **`orcamento_itens`**: `id`, `orcamento_id` (FK cascade), `produto_id` (FK restrict), `quantidade` numeric(12,3), `preco_unitario` numeric(12,2), `desconto_percentual` numeric(5,2); índice único (`orcamento_id`, `produto_id`).
-- Uma migration. `pedidos` não muda.
+- **`devolucoes`**: `id`, `pedido_id` (FK restrict), `data_devolucao` (timestamptz), `motivo` varchar(200), `valor_total`, `valor_abatido`, `valor_reembolso` (numeric(12,2), CHECK `valor_total = valor_abatido + valor_reembolso`, todos ≥ 0, total > 0).
+- **`devolucao_itens`**: `id`, `devolucao_id` (FK cascade), `pedido_item_id` (FK restrict), `quantidade` numeric(12,3) > 0, `valor` numeric(12,2), `volta_estoque` bool; único (`devolucao_id`, `pedido_item_id`).
+- **`parcelas_pagar`**: + `devolucao_id` (FK restrict, nulo); CHECK de origem ganha `Devolucao`.
+- **`comissoes`**: `parcela_receber_id` passa a nulo; + `devolucao_id` (FK restrict, nulo); CHECK: comissão normal (`parcela_receber_id` preenchido, valor > 0) **ou** estorno (`devolucao_id` preenchido, valor < 0). O índice único em `parcela_receber_id` continua (nulos não conflitam).
+- Uma migration.
 
 ## API
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/orcamentos?busca=&status=&pagina=&tamanhoPagina=` | Paginada; busca por nº ou nome do cliente; `status` = `Aberto` (não vencidos), `Vencido`, `Aprovado`, `Perdido` |
-| GET | `/api/orcamentos/{id}` | Detalhe com itens, `vencido`, `pedidoId`, `motivoPerda` |
-| POST | `/api/orcamentos` | Cria (OR1-OR3) → 201 |
-| PUT | `/api/orcamentos/{id}` | Edita o Aberto (OR5); itens atualizados no lugar, como no pedido |
-| POST | `/api/orcamentos/{id}/gerar-pedido` | GP1-GP4 → 201 `{ pedidoId }` |
-| PATCH | `/api/orcamentos/{id}/perder` | `{ motivo? }` (PE1) |
-| GET | `/api/orcamentos/{id}/pdf` | Arquivo PDF (PD1) |
+| POST | `/api/pedidos/{id}/devolucoes` | `{ itens: [{ pedidoItemId, quantidade, voltaEstoque }], motivo?, vencimentoReembolso? }` → 201 com valor total, abatido, reembolso, id da conta de reembolso e valor do estorno (DV1-DV8) |
+| GET | `/api/pedidos/{id}/devolucoes` | Histórico do pedido (com itens) |
+| GET | `/api/pedidos/{id}` | Passa a trazer `valorDevolvido` e, por item, `quantidadeDevolvida` |
+| PATCH | `/api/pedidos/{id}/cancelar` | Com devolução → 409 (DV9) |
+| GET/PATCH | `/api/contas-pagar…` | Origem `Devolucao`; cancelar → 409 (CP5) |
+| POST | `/api/comissoes/gerar-conta` | Inclui os estornos pendentes do vendedor (CC6); a resposta traz a quantidade e o valor final |
+| GET | `/api/comissoes` | Estorno com `devolucaoId`, `numeroParcela` nulo, valor negativo (CC7) |
+| GET | `/api/dashboard/devolucoes` | `{ valorTotal, quantidade }` do mês atual (DB1) |
 
 ## Telas
 
-- **Menu**: "Orçamentos" em **Ordem Vendas/Compras**, antes de Pedidos de Venda (rota `/orcamentos`).
-- **Lista**: nº, cliente, data, validade, total, status (tag; **Vencido** em laranja); busca e filtro de status no mesmo padrão de Pedidos.
-- **Formulário** (página própria `/orcamentos/novo` e `/orcamentos/:id`, como Pedidos): cliente, vendedor, forma de pagamento, validade (padrão +15 dias), itens, desconto, observações, total ao vivo.
-- **Ações**: Editar (Aberto); **Gerar pedido** (confirmação → mensagem com link para o pedido gerado); **Marcar como perdido** (modal com motivo); **Baixar PDF** (qualquer status); no Aprovado, link "Pedido #N".
+- **Pedido confirmado**: botão **Registrar devolução** → modal com os itens (vendido, já devolvido, quantidade a devolver, "volta ao estoque"), motivo, vencimento do reembolso e **prévia** do valor; ao salvar, mensagem com abatido/reembolso/estorno. Seção **Devoluções** com o histórico. "Cancelar pedido" some quando houver devolução.
+- **Contas a Pagar**: origem "Devolução" no filtro e na tag; sem "Cancelar" nessas contas.
+- **Dashboard**: card **Devoluções do mês** (valor e quantidade), com o mesmo loading/erro próprio dos outros cards.
+- **Comissões**: estorno em vermelho (negativo) com "Estorno · devolução #D"; o modal de gerar conta avisa que os estornos pendentes do vendedor são descontados.
 
 ## Testing strategy
 
-1. **Unitário (xUnit):** `vencido` (validade ontem, hoje, amanhã); validação dos DTOs (validade passada, observações longas, itens repetidos); transições (editar/gerar/perder por status).
-2. **API ponta a ponta (instância temporária, dados `ZZT…` apagados):** criar com preço congelado; editar e prorrogar; filtros Aberto/Vencido/Aprovado/Perdido; gerar pedido → rascunho com preços do orçamento mesmo após mudar o preço do produto; orçamento Aprovado com `pedidoId`; gerar de novo → 409; vencido → 400; produto inativo → 400; perder (idempotente, Aprovado → 409); PDF → 200 `application/pdf` com bytes `%PDF`; o pedido gerado confirma normalmente (estoque e parcelas).
-3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; verificação visual com o Rafael.
+1. **Unitário (xUnit):** valor da devolução (descontos, arredondamento, "o que falta" na última); abatimento das parcelas (da última, zera → cancela, reembolso do excedente); estorno de comissão; validação do DTO.
+2. **API ponta a ponta (instância temporária, dados `ZZT…` apagados):** devolução parcial com parcelas pendentes (só abate); depois de receber tudo (só reembolso + estorno); misto; quantidade acima do disponível, item de outro pedido, pedido rascunho/cancelado → erro sem mudar nada; estoque com e sem "volta"; devolver tudo fecha os centavos; cancelar pedido com devolução → 409; conta de reembolso não cancela; gerar conta de comissões desconta o estorno; soma ≤ 0 → 400; regressão: confirmar/cancelar pedido sem devolução, receber parcela gera comissão.
+3. **Tela:** `tsc -b`, `oxlint`, `npm run build` limpos; teste de tela com Playwright (modal de devolução, histórico, contas a pagar, comissões).
 
 ## Boundaries
 
-- **Sempre:** reaproveitar `CalculoPedido`, as validações de item e os seletores do pedido; gerar pedido numa transação só; manter o fluxo do pedido igual.
-- **Perguntar antes:** dependência nova; mexer na tabela `pedidos`; e-mail.
-- **Nunca:** alterar orçamento Aprovado/Perdido; commitar segredos; push sem pedido.
+- **Sempre:** tudo numa transação; reaproveitar `CalculoPedido`, `ComissaoCalculo`, `EstoqueService` e a propagação existente de pagar/cancelar conta de comissão.
+- **Perguntar antes:** mudar o faturamento do Dashboard/Relatórios; crédito do cliente; desfazer devolução.
+- **Nunca:** alterar parcela já recebida; apagar comissão já paga (estorna com negativa); commitar segredos; push sem pedido.
 
 ## Success criteria (testáveis)
 
-Conferidos em 23/09/2026; detalhes na seção "Orçamentos (23/09/2026)" do README.
-
-1. ✅ Criar/editar orçamento com as validações de OR1 → 400 por campo; preço congelado no item.
-2. ✅ Vencido calculado corretamente e filtros de status devolvem os conjuntos certos.
-3. ✅ Gerar pedido cria um rascunho com os preços/descontos do orçamento e deixa o orçamento Aprovado com `pedidoId`; as regras de GP1/GP2 barram sem alterar nada.
-4. ✅ O pedido gerado confirma pelo fluxo normal (estoque baixa, parcelas geradas).
-5. ✅ Marcar como perdido funciona, é idempotente e bloqueia a edição.
-6. ✅ PDF gerado com cliente, itens e totais corretos.
-7. ✅ Tela completa (teste de tela com Playwright, 25/25); `tsc -b`/`oxlint`/`npm run build` limpos; `dotnet build` 0 avisos e `dotnet test` 207/207.
+1. Devolução parcial com parcelas pendentes: estoque volta (só itens marcados), parcelas pendentes reduzem da última para a primeira, sem reembolso nem estorno.
+2. Devolução depois de tudo recebido: reembolso vira conta a pagar `Devolucao` e nasce o estorno de comissão (−reembolso × %).
+3. Validações de DV1/DV2 → erro sem alterar nada; devolver tudo fecha exatamente o valor do pedido.
+4. Cancelar pedido com devolução → 409; conta de reembolso não cancela.
+5. Gerar conta de comissões desconta os estornos pendentes; soma ≤ 0 → 400; pagar/cancelar a conta propaga ao estorno.
+6. Telas de Pedido, Contas a Pagar, Comissões e o card do Dashboard ajustados e testados no navegador; o faturamento do mês não muda com a devolução.
+7. `dotnet build` 0 avisos, `dotnet test` todos passando, `tsc -b`/`oxlint`/`npm run build` limpos.

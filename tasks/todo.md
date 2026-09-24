@@ -1,43 +1,37 @@
-# Checklist: Orçamentos (etapa 13)
+# Checklist: Devolução de venda (etapa 14)
 
 > Origem: [plan.md](plan.md). Marcar `[x]` ao concluir cada tarefa e registrar o resultado.
 
 ## Fase 1: Backend
 
-- [x] **T1: Schema** (M) — *concluída em 23/09/2026*
-  - `Orcamento`, `OrcamentoItem`, `StatusOrcamento` (Aberto/Aprovado/Perdido); mapeamento no DbContext (CHECK de status, único em `pedido_id` e em (`orcamento_id`, `produto_id`)); migration `CriacaoTabelasOrcamentos`.
-  - Verificar: build 0 avisos; migration aplicada; tabelas e índices no banco.
-  - Resultado: migration `20260923235828_CriacaoTabelasOrcamentos` aplicada; `\d` confere PK, FKs (restrict; itens cascade), únicos e CHECKs. `ck_orcamentos_status` amarra Aprovado ⇔ `pedido_id` preenchido. `Orcamento.EstaVencido(hoje)` implementa OR4 no model. Build Release 0 avisos (a API do Rafael estava rodando em Debug, por isso migrations/builds em Release).
+- [x] **T1: Schema** (M) — *concluída em 24/09/2026*
+  - `Devolucao`, `DevolucaoItem`; `ParcelaPagar.DevolucaoId` + origem `Devolucao`; `Comissao.ParcelaReceberId` nulo + `DevolucaoId`; CHECKs; migration `AdicionaDevolucoes`.
+  - Verificar: build 0 avisos; migration aplicada; dados existentes intactos (comissões e contas continuam válidas nos CHECKs novos).
+  - Resultado: backup `backup_pre_devolucao_20260924.dump` (ferramentas locais) antes; migration `20260924004530_AdicionaDevolucoes` aplicada: tabelas `devolucoes` (CHECK total = abatido + reembolso) e `devolucao_itens`; `parcelas_pagar.devolucao_id` + CHECK de origem com `Devolucao`; `comissoes.parcela_receber_id` nulo + `devolucao_id` e CHECK `ck_comissoes_valor` (normal > 0 com parcela ou estorno < 0 com devolução). As 2 comissões e as 4 contas reais passaram nos CHECKs novos. Build 0 avisos, `dotnet test` 207/207.
 
-- [x] **T2: API básica** (M) — *concluída em 23/09/2026*
-  - DTOs (criação/edição com validade e observações, resposta com `vencido`, resumo, filtro); `OrcamentoService` listar/obter/criar/editar; validações de item compartilhadas com o `PedidoService`; `OrcamentosController`; xUnit (vencido, DTOs, transições).
-  - Verificar: build; `dotnet test` (os testes do pedido continuam passando).
-  - Resultado: `DTOs/OrcamentoDtos.cs` (itens de entrada/resposta reaproveitam `PedidoItemEntradaDto`/`PedidoItemRespostaDto`); `OrcamentoService` com filtro Aberto/Vencido/Aprovado/Perdido e `vencido` calculado na projeção; validade ≥ hoje no serviço (400 no campo `Validade`); edição só do Aberto (409), itens no lugar como no pedido. `PedidoService` 1.9: helpers de cliente/vendedor/produto/quantidade viraram `internal static` (sem mudar comportamento). Transições por status ficam para o E2E da T3 (dependem do banco). `OrcamentoTests` (+18): `dotnet test` 203/203, build 0 avisos.
+- [ ] **T2: DevolucaoCalculo** (S)
+  - Valor por item com descontos; "o que falta" na devolução final; abatimento das pendentes (da última, zera → cancela); reembolso; estorno de comissão. xUnit.
+  - Verificar: `dotnet test`.
 
-- [x] **T3: Gerar pedido + perder** (M) — *concluída em 23/09/2026*
-  - `POST /{id}/gerar-pedido` (GP1-GP4), `PATCH /{id}/perder` (PE1).
-  - Verificar: E2E dos critérios 1-5 contra instância temporária (dados `ZZT…` apagados), incluindo a regressão do pedido.
-  - Resultado: `GerarPedidoAsync` monta o `Pedido` Rascunho com os preços/descontos do orçamento e aprova o orçamento num `SaveChanges` só (201 + `Location: /api/pedidos/N`); `PerderAsync` idempotente sem trocar o motivo. Sem trava de concorrência (anotado com `ponytail:`, como o resto do ERP). E2E (API temporária 5099, `.claude/ferramentas-locais/e2e-orcamentos.ps1`): **51/51** — criar/validar (validade passada/hoje, itens, UN fracionada, observações, cliente inativo), editar com preço congelado e item novo com preço atual, vencido/prorrogar, filtros Aberto/Vencido/Aprovado/Perdido e busca `#N`, gerar pedido (produto inativo → 400 sem gravar; pedido com preço 100 com o produto a 130; total igual; Aprovado + `pedidoId`; de novo 409; vendedor inativo em branco; cliente inativado 400), pedido gerado confirma (2 saídas de estoque, 2 parcelas somando o total), perder (motivo aparado, idempotente, sem corpo, 201 caracteres 400, vencido ok, Aprovado 409). Dados de teste apagados; dados reais e contagens idênticos.
+- [ ] **T3: API de devolução** (M)
+  - DTOs, `DevolucaoService` (DV1-DV8), `POST/GET /api/pedidos/{id}/devolucoes`, `valorDevolvido`/`quantidadeDevolvida` no pedido, cancelar pedido com devolução → 409 (DV9).
+  - Verificar: build; `dotnet test`.
 
-- [x] **T4: PDF** (S) — *concluída em 23/09/2026*
-  - `ExportadorOrcamento.GerarPdf` + `GET /{id}/pdf` (PD1).
-  - Verificar: 200 `application/pdf`; abrir o arquivo e conferir o layout.
-  - Resultado: `ExportadorOrcamento` (QuestPDF, A4 retrato): cabeçalho com nº, data (Brasília), "Válido até" e a situação quando não é um aberto válido (Aprovado com nº do pedido / Perdido / Vencido); quadro do cliente (CPF/CNPJ formatado, e-mail · telefone, cidade/UF, vendedor); tabela com SKU sob o nome; subtotal, desconto (só se houver) e total; forma de pagamento; observações; rodapé "Orçamento válido até … · Página X de Y". `GET /api/orcamentos/{id}/pdf` → `orcamento-N.pdf`. E2E com `-pdf`: **54/54** (200, `%PDF`, nome do arquivo, 404); PDF aberto e conferido (totais batem com a tela). +4 xUnit de máscara CPF/CNPJ (inclusive alfanumérico): 207/207, build 0 avisos.
+- [ ] **T4: Contas a Pagar e Comissões** (S)
+  - Origem `Devolucao` (lista/filtro, não cancela); lista de comissões com estorno; gerar conta inclui estornos (CC6); `GET /api/dashboard/devolucoes` (DB1).
+  - Verificar: E2E dos critérios 1-5 contra instância temporária (dados `ZZT…` apagados), com regressão.
 
 ## Fase 2: Frontend
 
-- [x] **T5: Tela de Orçamentos** (M) — *concluída em 23/09/2026*
-  - Tipos, `orcamentosApi`, `useOrcamentos`, schema Zod; página com lista, busca, filtro de status (tag Vencido) e formulário em gaveta (reaproveitando `SelecaoCliente`, `SelecaoVendedor`, `ItemFormulario`); item no menu e rota `/orcamentos`.
+- [ ] **T5: Tela do pedido** (M)
+  - Tipos/api/hooks; modal "Registrar devolução" com prévia; seção Devoluções; "Cancelar pedido" some com devolução.
   - Verificar: `tsc -b`, `oxlint`.
-  - Resultado: o formulário virou **página** (`/orcamentos/novo`, `/orcamentos/:id`) em vez de gaveta, igual ao pedido, que é o padrão da casa para cabeçalho + itens. `orcamentoSchema` = `pedidoSchema.safeExtend({ validade, observacoes })` (mantém o limite do total); conversões reaproveitam as do pedido (`paraFormulario` do pedido passou a aceitar um `Pick`). A tabela de itens é a `ItensPedidoTabela` (cast comentado do `control`). Lista com colunas Validade e Status (tag + link "Pedido #N" no aprovado), filtro com Vencido; `TagStatusOrcamento` (Aberto azul, Vencido laranja `--cor-alerta`, Aprovado verde, Perdido cinza). Menu "Orçamentos" (ícone `FileTextOutlined`) antes de Pedidos de Venda, rotas e breadcrumb. `tsc -b` e `oxlint` limpos.
 
-- [x] **T6: Ações da tela** (S) — *concluída em 23/09/2026*
-  - Gerar pedido (confirmação → link para o pedido), Marcar como perdido (modal com motivo), Baixar PDF, link "Pedido #N" no Aprovado.
-  - Verificar: `tsc -b`, `oxlint`, `npm run build`.
-  - Resultado: rodapé da página com **Marcar como perdido** (modal com motivo opcional, até 200), **Baixar PDF** (link direto para `/orcamentos/N/pdf`, que já vem como anexo), **Salvar orçamento** e **Gerar pedido** (confirmação; salva o que estiver pendente, gera e abre o pedido; desabilitado com dica quando vencido). Aprovado: aviso com link e botão "Abrir pedido nº N". `tsc -b`, `oxlint` e `npm run build` limpos. **Teste de tela** (Playwright + Edge headless, API 5099 + Vite 5174, `.claude/ferramentas-locais/ui-orcamentos-run.ps1`): **25/25** — lista com as 4 situações, link do pedido, filtro Vencido; aberto com preço congelado e total; vencido desabilita Gerar e prorrogar pela validade reabilita; perdido/aprovado somente leitura; novo com validade hoje+15, erros de campo, salvar e breadcrumb; marcar como perdido; gerar pedido abre o rascunho com o preço do orçamento; celular sem rolagem horizontal; nenhum erro/aviso no console. Capturas conferidas; dados de teste apagados e dados reais idênticos.
+- [ ] **T6: Contas a Pagar, Comissões e Dashboard na tela** (S)
+  - Origem Devolução (filtro/tag, sem cancelar); estorno na lista de comissões; aviso no modal de gerar conta; card Devoluções do mês.
+  - Verificar: `tsc -b`, `oxlint`, `npm run build`; teste de tela (Playwright).
 
 ## Fase 3: Fechamento
 
-- [x] **T7: Documentação e verificação final** (S) — *concluída em 23/09/2026*
-  - README (etapa 13; Login passa a 14), SPEC marcada como implementada, `python -m graphify update .`, memória.
-  - Resultado: README com a etapa 13 na tabela (Login → 14), menu, seção de funcionalidades, estrutura de pastas, endpoints, tabelas `orcamentos`/`orcamento_itens`, testes realizados e próximas etapas. SPEC 7/7 ✅ (formulário corrigido para página; PE1 204). Grafo atualizado preservando os conceitos (+9 conceitos da etapa, nenhum ausente; reexecução idempotente), comunidades novas nomeadas e HTML exportado. Memória atualizada. Verificação final: build Release 0 avisos, `dotnet test` 207/207, `tsc -b`/`oxlint`/`npm run build` limpos.
+- [ ] **T7: Documentação e verificação final** (S)
+  - README (etapa 14; Login passa a 15), SPEC marcada como implementada, grafo, memória.

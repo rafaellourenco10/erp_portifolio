@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Comissao.cs
-// Versão.....: 1.1.0
+// Versão.....: 1.2.0
 // Data.......: 23/09/2026
 // Descrição..: Comissão de um vendedor sobre UMA parcela recebida (SPEC.md, CM1/CM2).
 //              Guarda a base (valor da parcela), a % (congelada no pedido) e o valor,
@@ -14,6 +14,8 @@
 // Histórico de alterações:
 //   1.0.0 - 23/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - Status EmPagamento e vínculo com a conta a pagar (etapa 12).
+//   1.2.0 - 24/09/2026 - Estorno de devolução: valor negativo, DevolucaoId e ParcelaReceberId
+//                        nulo (SPEC.md etapa 14, DV6).
 // =====================================================================================
 
 using System.Text.Json.Serialization;
@@ -24,7 +26,8 @@ public class Comissao
 {
     public int Id { get; set; }
 
-    public int ParcelaReceberId { get; set; }
+    /// <summary>Parcela recebida que gerou a comissão; nula no estorno de devolução.</summary>
+    public int? ParcelaReceberId { get; set; }
 
     public ParcelaReceber? ParcelaReceber { get; set; }
 
@@ -42,6 +45,7 @@ public class Comissao
     /// <summary>% de comissão congelada no pedido ao confirmar.</summary>
     public decimal Percentual { get; set; }
 
+    /// <summary>Positivo na comissão normal; negativo no estorno de devolução (descontado no próximo fechamento).</summary>
     public decimal Valor { get; set; }
 
     /// <summary>Data/hora (UTC) em que a parcela foi recebida.</summary>
@@ -56,6 +60,11 @@ public class Comissao
     public int? ParcelaPagarId { get; set; }
 
     public ParcelaPagar? ParcelaPagar { get; set; }
+
+    /// <summary>Só no estorno: a devolução que o gerou (DV6).</summary>
+    public int? DevolucaoId { get; set; }
+
+    public Devolucao? Devolucao { get; set; }
 }
 
 /// <summary>Situação do repasse da comissão ao vendedor; gravado como texto ("Pendente", "EmPagamento", "Paga").</summary>
