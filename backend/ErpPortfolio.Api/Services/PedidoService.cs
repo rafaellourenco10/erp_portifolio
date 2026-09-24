@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoService.cs
-// Versão.....: 1.8.0
+// Versão.....: 1.9.0
 // Data.......: 23/09/2026
 // Descrição..: Regras de negócio e persistência de pedidos de venda. O servidor decide o
 //              preço (copiado do produto, R3) e o total (CalculoPedido); a API nunca
@@ -42,6 +42,8 @@
 //                        faturamento diário do mês atual), para o Dashboard.
 //   1.8.0 - 23/09/2026 - Vendedor no pedido (PV1) e confirmar exige vendedor ativo e congela a %
 //                        de comissão (PV2/PV3), etapa 10.
+//   1.9.0 - 23/09/2026 - Validações de cliente/vendedor/produto/item internal static, reaproveitadas
+//                        pelo OrcamentoService (etapa 13).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -53,7 +55,7 @@ namespace ErpPortfolio.Api.Services;
 
 public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoqueService, IContasReceberService contasReceberService) : IPedidoService
 {
-    private const string CampoItens = "Itens";
+    internal const string CampoItens = "Itens";
 
     public async Task<ResultadoPaginadoDto<PedidoResumoDto>> ListarAsync(PedidoFiltroDto filtro, CancellationToken cancelamento)
     {
@@ -101,10 +103,10 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
 
     public async Task<PedidoRespostaDto> CriarAsync(PedidoCriacaoDto dados, CancellationToken cancelamento)
     {
-        var cliente = await ObterClienteAtivoAsync(dados.ClienteId!.Value, cancelamento);
+        var cliente = await ObterClienteAtivoAsync(contexto, dados.ClienteId!.Value, cancelamento);
         // PV1: vendedor é opcional no rascunho, mas se vier precisa existir e estar ativo.
-        var vendedor = dados.VendedorId is int vendedorId ? await ObterVendedorAtivoAsync(vendedorId, cancelamento) : null;
-        var produtos = await ObterProdutosAsync(dados.Itens.Select(i => i.ProdutoId), cancelamento);
+        var vendedor = dados.VendedorId is int vendedorId ? await ObterVendedorAtivoAsync(contexto, vendedorId, cancelamento) : null;
+        var produtos = await ObterProdutosAsync(contexto, dados.Itens.Select(i => i.ProdutoId), cancelamento);
 
         var pedido = new Pedido
         {
@@ -145,7 +147,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         var clienteId = dados.ClienteId!.Value;
         if (clienteId != pedido.ClienteId)
         {
-            var cliente = await ObterClienteAtivoAsync(clienteId, cancelamento);
+            var cliente = await ObterClienteAtivoAsync(contexto, clienteId, cancelamento);
             pedido.Cliente = cliente;
             pedido.ClienteId = cliente.Id;
         }
@@ -156,12 +158,12 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         // PV1: mesma regra do cliente — só exige "ativo" se o vendedor foi trocado; pode voltar a ficar vazio.
         if (dados.VendedorId != pedido.VendedorId)
         {
-            var vendedor = dados.VendedorId is int vendedorId ? await ObterVendedorAtivoAsync(vendedorId, cancelamento) : null;
+            var vendedor = dados.VendedorId is int vendedorId ? await ObterVendedorAtivoAsync(contexto, vendedorId, cancelamento) : null;
             pedido.Vendedor = vendedor;
             pedido.VendedorId = vendedor?.Id;
         }
 
-        var produtos = await ObterProdutosAsync(dados.Itens.Select(i => i.ProdutoId), cancelamento);
+        var produtos = await ObterProdutosAsync(contexto, dados.Itens.Select(i => i.ProdutoId), cancelamento);
 
         // Itens atualizados NO LUGAR, casando por produto: o item que já existia mantém o preço congelado (R3) e
         // não há DELETE + INSERT da mesma chave (pedido, produto) no mesmo salvamento, que quebraria o índice único.
@@ -325,7 +327,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
             throw new DadoInvalidoException(CampoItens, "O total do pedido não pode passar de R$ 9.999.999.999,99.");
     }
 
-    private async Task<Cliente> ObterClienteAtivoAsync(int clienteId, CancellationToken cancelamento)
+    internal static async Task<Cliente> ObterClienteAtivoAsync(ErpPortfolioDbContext contexto, int clienteId, CancellationToken cancelamento)
     {
         var cliente = await contexto.Clientes.FirstOrDefaultAsync(c => c.Id == clienteId, cancelamento);
         if (cliente is null || !cliente.Ativo)
@@ -334,7 +336,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         return cliente;
     }
 
-    private async Task<Vendedor> ObterVendedorAtivoAsync(int vendedorId, CancellationToken cancelamento)
+    internal static async Task<Vendedor> ObterVendedorAtivoAsync(ErpPortfolioDbContext contexto, int vendedorId, CancellationToken cancelamento)
     {
         var vendedor = await contexto.Vendedores.FirstOrDefaultAsync(v => v.Id == vendedorId, cancelamento);
         if (vendedor is null || !vendedor.Ativo)
@@ -343,14 +345,14 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         return vendedor;
     }
 
-    private async Task<Dictionary<int, Produto>> ObterProdutosAsync(IEnumerable<int> ids, CancellationToken cancelamento)
+    internal static async Task<Dictionary<int, Produto>> ObterProdutosAsync(ErpPortfolioDbContext contexto, IEnumerable<int> ids, CancellationToken cancelamento)
     {
         var lista = ids.Distinct().ToList();
         return await contexto.Produtos.Where(p => lista.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancelamento);
     }
 
     // Item novo: o produto precisa existir, estar ativo e aceitar a quantidade na sua unidade (R5 e R8).
-    private static Produto ValidarProdutoDoItem(Dictionary<int, Produto> produtos, PedidoItemEntradaDto entrada)
+    internal static Produto ValidarProdutoDoItem(Dictionary<int, Produto> produtos, PedidoItemEntradaDto entrada)
     {
         if (!produtos.TryGetValue(entrada.ProdutoId, out var produto))
             throw new DadoInvalidoException(CampoItens, $"Produto {entrada.ProdutoId} inexistente.");
@@ -363,7 +365,7 @@ public class PedidoService(ErpPortfolioDbContext contexto, IEstoqueService estoq
         return produto;
     }
 
-    private static void ValidarQuantidadeNaUnidade(Produto produto, PedidoItemEntradaDto entrada)
+    internal static void ValidarQuantidadeNaUnidade(Produto produto, PedidoItemEntradaDto entrada)
     {
         if (!CalculoPedido.QuantidadeValidaParaUnidade(produto.Unidade, entrada.Quantidade!.Value))
             throw new DadoInvalidoException(CampoItens, $"A quantidade de \"{produto.Nome}\" deve ser inteira (unidade {produto.Unidade}).");

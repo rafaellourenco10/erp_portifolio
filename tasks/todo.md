@@ -9,9 +9,10 @@
   - Verificar: build 0 avisos; migration aplicada; tabelas e índices no banco.
   - Resultado: migration `20260923235828_CriacaoTabelasOrcamentos` aplicada; `\d` confere PK, FKs (restrict; itens cascade), únicos e CHECKs. `ck_orcamentos_status` amarra Aprovado ⇔ `pedido_id` preenchido. `Orcamento.EstaVencido(hoje)` implementa OR4 no model. Build Release 0 avisos (a API do Rafael estava rodando em Debug, por isso migrations/builds em Release).
 
-- [ ] **T2: API básica** (M)
+- [x] **T2: API básica** (M) — *concluída em 23/09/2026*
   - DTOs (criação/edição com validade e observações, resposta com `vencido`, resumo, filtro); `OrcamentoService` listar/obter/criar/editar; validações de item compartilhadas com o `PedidoService`; `OrcamentosController`; xUnit (vencido, DTOs, transições).
   - Verificar: build; `dotnet test` (os testes do pedido continuam passando).
+  - Resultado: `DTOs/OrcamentoDtos.cs` (itens de entrada/resposta reaproveitam `PedidoItemEntradaDto`/`PedidoItemRespostaDto`); `OrcamentoService` com filtro Aberto/Vencido/Aprovado/Perdido e `vencido` calculado na projeção; validade ≥ hoje no serviço (400 no campo `Validade`); edição só do Aberto (409), itens no lugar como no pedido. `PedidoService` 1.9: helpers de cliente/vendedor/produto/quantidade viraram `internal static` (sem mudar comportamento). Transições por status ficam para o E2E da T3 (dependem do banco). `OrcamentoTests` (+18): `dotnet test` 203/203, build 0 avisos.
 
 - [ ] **T3: Gerar pedido + perder** (M)
   - `POST /{id}/gerar-pedido` (GP1-GP4), `PATCH /{id}/perder` (PE1).
