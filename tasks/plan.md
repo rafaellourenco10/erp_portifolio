@@ -1,7 +1,7 @@
 # Plano de implementação: Devolução de venda (etapa 14)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **aprovado** (24/09/2026), com o card de Devoluções no Dashboard.
+> Status: **aprovado e implementado** (24/09/2026), com o card de Devoluções no Dashboard.
 
 ## Visão geral
 

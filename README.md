@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, e **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique, e **Devolução de venda** (etapa 14): parcial ou total, que devolve ao estoque, abate as parcelas pendentes, gera o reembolso do que já foi pago e estorna a comissão do vendedor. O **Dashboard** (etapa 6) resume os outros módulos.
 
 O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Orçamentos, Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
 
@@ -23,7 +23,8 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 11 | Comissões (geradas no recebimento da parcela, pagamento ao vendedor) | Back-end testado de ponta a ponta; tela confirmada pelo Rafael (23/09/2026) |
 | 12 | Comissão vira conta a pagar + contas avulsas (origem Compra/Comissão/Avulsa, cancelar) | Back-end testado de ponta a ponta; telas não verificadas visualmente (23/09/2026) |
 | 13 | Orçamentos (validade, situação Vencido calculada, gerar pedido com os preços do orçamento, marcar como perdido, PDF) | Back-end testado de ponta a ponta; tela testada com Playwright (23/09/2026) |
-| 14+ | Login | Planejada |
+| 14 | Devolução de venda (parcial, estoque por item, abatimento nas parcelas, reembolso em Contas a Pagar, estorno de comissão, card no Dashboard) | Back-end testado de ponta a ponta; tela testada com Playwright (24/09/2026) |
+| 15+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -220,6 +221,16 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - **Baixar PDF** (qualquer situação): A4 com número, data, validade, dados do cliente (CPF/CNPJ formatado, contato, cidade/UF), vendedor, itens com SKU, subtotal, desconto, total, forma de pagamento, observações e "válido até" no rodapé
 - Fora do escopo por enquanto: reabrir ou duplicar orçamento, orçamento para quem não é cliente, envio por e-mail, orçamentos no Dashboard/Relatórios (taxa de conversão), desfazer a aprovação se o pedido for cancelado
 
+## Funcionalidades (etapa 14 — Devolução de venda)
+
+- No **pedido confirmado**, o botão **Registrar devolução** abre um modal com os itens ainda não devolvidos: quantidade a devolver (até o disponível; inteira em UN/CX), **volta ao estoque** (marcado por padrão; desmarque se for perda, ex.: defeito), motivo e vencimento do reembolso, com a **prévia do valor**
+- Devolução **parcial ou total**, em quantas vezes quiser até devolver tudo. O valor de cada item leva os descontos do item e do pedido; na devolução que zera o pedido vale **o que falta**, para os centavos fecharem com o total
+- **Dinheiro:** o valor devolvido abate primeiro as **parcelas pendentes**, da última para a primeira (parcela zerada fica cancelada); o que o cliente já tinha pago vira uma conta a pagar **"Reembolso"** (origem Devolução) em Contas a Pagar, que não pode ser cancelada
+- **Comissão:** as parcelas reduzidas já geram comissão menor quando forem recebidas; sobre o valor reembolsado nasce um **estorno** (comissão negativa), descontado automaticamente no próximo "Gerar conta a pagar" do vendedor (se os estornos superarem as comissões, a conta não é gerada)
+- Tudo acontece numa **transação só**; a devolução é **definitiva** e o pedido com devolução **não pode mais ser cancelado** (devolva o restante)
+- O pedido mostra o **histórico de devoluções** (itens, perda, motivo, valor, abatido, reembolso, estorno); o **Dashboard** ganhou o card **Devoluções do mês** ao lado do faturamento, que continua bruto
+- Fora do escopo por enquanto: desfazer/editar devolução, crédito do cliente, troca num passo só, devolução de compra ao fornecedor, faturamento líquido nos relatórios
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -308,6 +319,7 @@ erp_portifolio/
 │       │   ├── CategoriasController.cs      # endpoints REST de categorias
 │       │   ├── PedidosController.cs         # endpoints REST de pedidos
 │       │   ├── OrcamentosController.cs      # orçamentos: CRUD do aberto, gerar pedido, perder, PDF
+│       │   ├── DevolucoesController.cs      # /pedidos/{id}/devolucoes: registrar e histórico
 │       │   ├── EstoqueController.cs         # endpoints REST de estoque
 │       │   ├── ContasReceberController.cs   # endpoints REST de contas a receber
 │       │   ├── DashboardController.cs       # endpoints REST do Dashboard (so delegam)
@@ -408,6 +420,9 @@ erp_portifolio/
 │       │   ├── IOrcamentoService.cs
 │       │   ├── OrcamentoService.cs          # orçamento (validações de item do PedidoService), gerar pedido, perder
 │       │   ├── ExportadorOrcamento.cs       # PDF do orçamento (QuestPDF, layout de documento)
+│       │   ├── IDevolucaoService.cs
+│       │   ├── DevolucaoService.cs          # devolução numa transação: parcelas, reembolso, estorno, estoque
+│       │   ├── DevolucaoCalculo.cs          # valor, "o que falta", abatimento, reembolso e estorno (puro, com xUnit)
 │       │   ├── IPedidoCompraService.cs
 │       │   ├── PedidoCompraService.cs       # criar/editar/confirmar/cancelar, reaproveitando CalculoPedido/TransicoesPedido
 │       │   ├── IContasPagarService.cs
@@ -459,6 +474,7 @@ erp_portifolio/
             │   ├── vendedoresApi.ts         # chamadas da API de vendedores
             │   ├── comissoesApi.ts          # chamadas da API de comissões
             │   ├── orcamentosApi.ts         # chamadas da API de orçamentos (+ URL do PDF)
+            │   ├── devolucoesApi.ts         # registrar e listar devoluções de um pedido
             │   └── pedidosCompraApi.ts      # chamadas da API de pedidos de compra
             ├── hooks/
             │   ├── useClientes.ts           # useQuery / useMutation
@@ -473,6 +489,7 @@ erp_portifolio/
             │   ├── useVendedores.ts         # useQuery / useMutation
             │   ├── useComissoes.ts          # lista com totais e marcar como pagas
             │   ├── useOrcamentos.ts         # lista, detalhe, salvar, gerar pedido e perder
+            │   ├── useDevolucoes.ts         # histórico e registrar (invalida os módulos afetados)
             │   └── usePedidosCompra.ts      # useQuery / useMutation de pedidos de compra
             ├── pages/Clientes/
             │   ├── ClientesListaPage.tsx    # filtros, tabela, paginação, ações
@@ -491,6 +508,8 @@ erp_portifolio/
             │   ├── PedidosListaPage.tsx     # filtro (número/cliente + status), tabela, paginação
             │   ├── PedidoPage.tsx           # formulário: cliente, itens, desconto, resumo, ações
             │   ├── ItensPedidoTabela.tsx    # tabela de itens (tela larga) / cartões (celular)
+            │   ├── DevolucaoModal.tsx       # registrar devolução: itens, volta ao estoque, prévia
+            │   ├── DevolucoesPedido.tsx     # histórico de devoluções na página do pedido
             │   └── pedido.css               # estilos da página do pedido
             ├── pages/Estoque/
             │   ├── EstoqueListaPage.tsx     # busca, tabela com saldo, paginação, ações
@@ -789,6 +808,16 @@ Orçamentos (etapa 13; itens com o mesmo formato dos de pedido):
 | PATCH | `/orcamentos/{id}/perder` | Corpo opcional `{ "motivo": "..." }` (até 200); repetir num perdido → 204 sem mudar o motivo; aprovado → 409 | 204, 400, 404, 409 |
 | GET | `/orcamentos/{id}/pdf` | Arquivo `orcamento-N.pdf` (qualquer situação) | 200, 404 |
 
+Devoluções de venda (etapa 14):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/pedidos/{id}/devolucoes` | Histórico do pedido, com itens, conta de reembolso e estorno | 200, 404 |
+| POST | `/pedidos/{id}/devolucoes` | Corpo `{ "itens": [{ "pedidoItemId": 10, "quantidade": 1, "voltaEstoque": true }], "motivo": "...", "vencimentoReembolso": "2026-09-30" }` (motivo e vencimento opcionais). Pedido não confirmado → 409; item de outro pedido, quantidade acima do disponível ou fracionada em UN/CX, vencimento passado → 400 e nada muda. Resposta com `valorTotal`, `valorAbatido`, `valorReembolso`, `parcelaPagarId` e `estornoComissao` | 201, 400, 404, 409 |
+| GET | `/dashboard/devolucoes` | `{ valorTotal, quantidade }` das devoluções do mês atual | 200 |
+
+`GET /pedidos/{id}` passou a trazer `valorDevolvido` e, por item, `quantidadeDevolvida`; `PATCH /pedidos/{id}/cancelar` responde 409 se o pedido tem devolução. Em Contas a Pagar, a origem `Devolucao` entra no filtro e cancelar essa conta → 409. Em Comissões, o estorno vem com `devolucaoId`, `numeroParcela` nulo e valor negativo, e `POST /comissoes/gerar-conta` inclui os estornos pendentes do vendedor (soma ≤ 0 → 400).
+
 `PATCH /contas-receber/{id}/receber` passou a gerar a comissão por dentro (mesma transação). Status da comissão: `Pendente` → `EmPagamento` (conta gerada) → `Paga` (conta paga); os totais incluem `totalEmPagamento`.
 
 Pedidos de Compra (mesmo desenho de Pedidos, sem forma de pagamento):
@@ -1078,6 +1107,20 @@ Tabela `public.orcamentos` (etapa 13):
 | `pedido_id` | integer | FK `fk_orcamentos_pedidos` (restrict), **único** (`ux_orcamentos_pedido_id`); `CHECK ck_orcamentos_status`: preenchido **só** no `Aprovado` |
 
 `public.orcamento_itens` é o espelho de `pedido_itens` (`orcamento_id` com FK cascade, `produto_id` restrict, `quantidade`, `preco_unitario` congelado, `desconto_percentual`, índice único `ux_orcamento_itens_orcamento_produto`). Migration: `20260923235828_CriacaoTabelasOrcamentos`.
+
+Tabelas `public.devolucoes` e `public.devolucao_itens` (etapa 14):
+
+| Coluna | Tipo | Observação |
+|---|---|---|
+| `devolucoes.id` | integer | PK `pk_devolucoes`, identity; é o número da devolução |
+| `devolucoes.pedido_id` | integer | FK `fk_devolucoes_pedidos` (restrict); índice `ix_devolucoes_pedido_id` |
+| `devolucoes.data_devolucao` | timestamptz | UTC, padrão `now()`; índice `ix_devolucoes_data_devolucao` |
+| `devolucoes.motivo` | varchar(200) | opcional |
+| `devolucoes.valor_total` / `valor_abatido` / `valor_reembolso` | numeric(12,2) | `CHECK ck_devolucoes_valores`: total > 0, os dois ≥ 0 e total = abatido + reembolso |
+| `devolucao_itens.devolucao_id` / `pedido_item_id` | integer | FKs cascade / restrict; único `ux_devolucao_itens_devolucao_item` |
+| `devolucao_itens.quantidade` / `valor` / `volta_estoque` | numeric(12,3) / numeric(12,2) / boolean | `CHECK` quantidade > 0 e valor ≥ 0 |
+
+Na mesma migration (`20260924004530_AdicionaDevolucoes`), `parcelas_pagar` ganhou `devolucao_id` (FK `fk_parcelas_pagar_devolucoes`, restrict) e o `CHECK ck_parcelas_pagar_origem` passou a aceitar `Devolucao` (exige `devolucao_id`); `comissoes.parcela_receber_id` passou a ser opcional e ganhou `devolucao_id` (FK `fk_comissoes_devolucoes`, restrict), com o `CHECK ck_comissoes_valor` exigindo **ou** comissão normal (parcela, valor > 0) **ou** estorno (devolução, valor < 0).
 
 Tabela `public.fornecedores` (espelho exato de `public.clientes`):
 
@@ -1530,6 +1573,25 @@ Back-end testado ponta a ponta numa **instância temporária** da API (build Rel
 
 Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (207 aprovados, 22 novos em `OrcamentoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
 
+### Devolução de venda (24/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script PowerShell com 36 verificações, e a **tela** com Playwright (Edge headless) contra essa API e um Vite temporário (porta 5174), com 14 verificações. Pedido de teste: 3 mouses a R$ 100 (10% no item) + 2 kg de arroz a R$ 10, 5% no pedido = R$ 275,50 em 3 parcelas, vendedor a 10%. Dados de teste (`ZZT Dev…`, SKUs `680000xx`) apagados via SQL ao final; dados reais, contagens e soma das comissões idênticos antes e depois. Backup do banco antes da migration em `.claude/ferramentas-locais/`.
+
+| Verificação | Resultado |
+|---|---|
+| Parcial com parcelas pendentes: 1 mouse = R$ 85,50, abatido da última parcela (91,84 → 6,34), sem reembolso nem estorno; estoque +1; pedido com `quantidadeDevolvida`/`valorDevolvido`; faturamento do mês inalterado | ✅ |
+| 8 validações (acima do disponível, UN fracionada, repetido, sem itens, vencimento passado, item de outro pedido, rascunho/cancelado 409, inexistente 404) sem alterar nada | ✅ |
+| Misto depois de receber 2 parcelas, como perda: 6,34 abatido (parcela cancelada mantendo o valor) + 79,16 de reembolso (conta `Devolucao`, favorecido = cliente, vencimento informado) + estorno −7,92; estoque inalterado | ✅ |
+| Devolução do restante fecha exatamente 275,50 (estorno −10,45); nada mais a devolver → 400; histórico com as 3 devoluções | ✅ |
+| Cancelar pedido com devolução → 409 (antes virava 500: o endpoint não tratava a exceção — corrigido); cancelar reembolso → 409; pagar reembolso funciona | ✅ |
+| Fechamento de comissões: estornos maiores que as comissões → 400; com mais uma comissão, a conta inclui os estornos (5 itens, R$ 9,99); cancelar/pagar a conta propaga aos estornos | ✅ |
+| Card do Dashboard (+3 devoluções, +R$ 275,50); regressão do cancelar sem devolução e da lista de comissões | ✅ |
+| Tela: botões e histórico antes/depois, prévias R$ 85,50 e R$ 190,00, mensagem com abatido/reembolso/estorno, perda e motivo no histórico, reembolso em Contas a Pagar sem cancelar, estorno em Comissões, card do Dashboard, celular, console limpo | ✅ |
+
+Achados da tela, corrigidos: o vencimento "hoje" do modal era recusado entre 21h e 24h (o servidor usa UTC) — agora "hoje" vai vazio e o servidor usa o dele; rótulos do modal espremiam a data; aviso do antd já existente em Contas a Pagar (`Tag bordered`).
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (229 aprovados, 22 novos em `DevolucaoCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
 ---
 
 ## Padrões do projeto
@@ -1628,6 +1690,8 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
-- **Autenticação/login** (etapa 14)
+- **Autenticação/login** (etapa 15)
+- Devolução: desfazer/editar, crédito do cliente, troca num passo só, devolução de compra ao fornecedor, faturamento líquido nos Relatórios
+- Usar o fuso de Brasília como "hoje" no servidor (hoje é UTC: entre 21h e 24h o servidor já está no dia seguinte — afeta vencidos, validade e atrasados)
 - Orçamentos: duplicar, reabrir, orçamento para não cliente, envio por e-mail, taxa de conversão no Dashboard/Relatórios; trava de concorrência ao gerar pedido se o ERP virar multiusuário
 - Testes automatizados de integração para a API de Clientes/Produtos/Categorias/Fornecedores (Pedidos, Estoque, Contas a Receber, Dashboard e Pedidos de Compra já têm testes unitários e/ou scripts de ponta a ponta)

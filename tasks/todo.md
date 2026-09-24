@@ -38,5 +38,6 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T7: Documentação e verificação final** (S)
+- [x] **T7: Documentação e verificação final** (S) — *concluída em 24/09/2026*
   - README (etapa 14; Login passa a 15), SPEC marcada como implementada, grafo, memória.
+  - Resultado: README com a etapa 14 (tabela, resumo, funcionalidades, estrutura, API, tabelas, testes e próximas etapas, incluindo o "hoje" em UTC como melhoria). SPEC 7/7 ✅. Grafo atualizado preservando os conceitos (+8 da etapa; os da etapa 13 conferidos), comunidades novas nomeadas, HTML exportado. Memória atualizada. Verificação final: build Release 0 avisos, `dotnet test` 229/229, `tsc -b`/`oxlint`/`npm run build` limpos.

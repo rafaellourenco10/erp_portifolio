@@ -1,6 +1,6 @@
 # Spec: Devolução de venda (etapa 14)
 
-> Status: **aprovada em 24/09/2026** (com o card de Devoluções no Dashboard); implementação em andamento.
+> Status: **implementada e testada em 24/09/2026** (T1 a T7, ver `tasks/todo.md`). Critérios 1-7 conferidos: E2E da API com 36 verificações e teste de tela com Playwright com 14 (dados `ZZT…` apagados, dados reais intactos).
 
 ## Objetivo
 
@@ -44,7 +44,7 @@ Desfazer/editar uma devolução; crédito do cliente para pedidos futuros; troca
 | DV2 | 1+ itens, cada um um item **deste** pedido, sem repetir; quantidade > 0, até 3 casas, inteira em UN/CX, e **≤ vendida − já devolvida** (senão 400 em `Itens`). Motivo opcional (até 200). |
 | DV3 | Valor de cada item devolvido = `quantidade × preço × (1 − desc. item) × (1 − desc. pedido)`, arredondado a 2 casas. Na devolução que zera o pedido (tudo devolvido), o valor total é **o que falta** (`valor_total do pedido − já devolvido`), para os centavos fecharem. |
 | DV4 | **Abatimento:** o valor desconta das parcelas **Pendentes**, da de maior número para a menor; parcela que chega a zero fica **Cancelada** (mantém o valor original para histórico); parcela reduzida guarda o novo valor. |
-| DV5 | **Reembolso** = valor da devolução − abatido. Se > 0, gera **uma** conta a pagar origem **`Devolucao`** (1/1, favorecido = nome do cliente, descrição "Reembolso devolução #D — pedido #P", vencimento informado ou hoje). |
+| DV5 | **Reembolso** = valor da devolução − abatido. Se > 0, gera **uma** conta a pagar origem **`Devolucao`** (1/1, favorecido = nome do cliente, descrição "Reembolso devolução #D — pedido #P", vencimento informado ou hoje). A tela manda o vencimento vazio quando é "hoje" (o "hoje" do servidor é UTC). |
 | DV6 | **Estorno de comissão:** se o pedido tem vendedor com % > 0 e houve reembolso, nasce uma comissão **negativa** (`valor = −reembolso × %`, base = reembolso), status Pendente, ligada à devolução. |
 | DV7 | **Estoque:** item com "volta ao estoque" gera **Entrada** (motivo "Devolução #D pedido #P"); sem, não gera nada (fica registrado no item da devolução). |
 | DV8 | Tudo (devolução, itens, parcelas, conta, estorno, estoque) no **mesmo SaveChanges**; se qualquer regra falhar, nada muda. |
@@ -106,10 +106,12 @@ Desfazer/editar uma devolução; crédito do cliente para pedidos futuros; troca
 
 ## Success criteria (testáveis)
 
-1. Devolução parcial com parcelas pendentes: estoque volta (só itens marcados), parcelas pendentes reduzem da última para a primeira, sem reembolso nem estorno.
-2. Devolução depois de tudo recebido: reembolso vira conta a pagar `Devolucao` e nasce o estorno de comissão (−reembolso × %).
-3. Validações de DV1/DV2 → erro sem alterar nada; devolver tudo fecha exatamente o valor do pedido.
-4. Cancelar pedido com devolução → 409; conta de reembolso não cancela.
-5. Gerar conta de comissões desconta os estornos pendentes; soma ≤ 0 → 400; pagar/cancelar a conta propaga ao estorno.
-6. Telas de Pedido, Contas a Pagar, Comissões e o card do Dashboard ajustados e testados no navegador; o faturamento do mês não muda com a devolução.
-7. `dotnet build` 0 avisos, `dotnet test` todos passando, `tsc -b`/`oxlint`/`npm run build` limpos.
+Conferidos em 24/09/2026; detalhes na seção "Devolução de venda (24/09/2026)" do README.
+
+1. ✅ Devolução parcial com parcelas pendentes: estoque volta (só itens marcados), parcelas pendentes reduzem da última para a primeira, sem reembolso nem estorno.
+2. ✅ Devolução depois de tudo recebido: reembolso vira conta a pagar `Devolucao` e nasce o estorno de comissão (−reembolso × %).
+3. ✅ Validações de DV1/DV2 → erro sem alterar nada; devolver tudo fecha exatamente o valor do pedido.
+4. ✅ Cancelar pedido com devolução → 409; conta de reembolso não cancela.
+5. ✅ Gerar conta de comissões desconta os estornos pendentes; soma ≤ 0 → 400; pagar/cancelar a conta propaga ao estorno.
+6. ✅ Telas de Pedido, Contas a Pagar, Comissões e o card do Dashboard ajustados e testados no navegador; o faturamento do mês não muda com a devolução.
+7. ✅ `dotnet build` 0 avisos, `dotnet test` 229/229, `tsc -b`/`oxlint`/`npm run build` limpos.
