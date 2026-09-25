@@ -32,15 +32,50 @@
   padding: 0;
 }
 
+/* Cada seção do menu (Cadastro, Ordem Vendas/Compras...) num bloco com contorno, para separar os módulos. */
+.app-grupo-menu {
+  margin: 10px 10px 0;
+  padding-bottom: 4px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cor-texto) 3%, transparent);
+}
+
+/* O Dashboard não tem título de seção: respiro igual em cima e embaixo. */
+.app-grupo-painel {
+  padding-top: 4px;
+}
+
+.app-grupo-menu:last-child {
+  margin-bottom: 12px;
+}
+
+/* Recolhido (72px, só ícones): sem contorno, que espremeria os ícones. */
+.ant-layout-sider-collapsed .app-grupo-menu {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+/* ...mas uma linha fina entre os grupos, para os ícones continuarem separados por módulo. */
+.ant-layout-sider-collapsed .app-grupo-menu + .app-grupo-menu::before {
+  content: '';
+  display: block;
+  margin: 8px 16px 0;
+  border-top: 1px solid var(--cor-borda);
+}
+
 /* Título da seção: um botão que abre/fecha a lista de telas (App.tsx, TituloSecao). */
 .app-secao-menu {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 20px 24px 8px;
+  padding: 12px 16px 6px;
   border: none;
   background: none;
+  border-radius: 10px;
   cursor: pointer;
   font: inherit;
   font-size: 12px;

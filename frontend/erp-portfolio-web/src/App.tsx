@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.18.0
+ * Versão.....: 1.19.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
@@ -41,6 +41,7 @@
  *   1.17.0 - 23/09/2026 - Item de menu e rotas de Orçamentos (/orcamentos, /orcamentos/novo,
  *                         /orcamentos/:id) em Ordem Vendas/Compras, etapa 13.
  *   1.18.0 - 24/09/2026 - Rota e item de menu de Fluxo de Caixa (Financeiro), etapa 15.
+ *   1.19.0 - 24/09/2026 - Cada seção do menu (e o Dashboard) num bloco com contorno (app-grupo-menu), no lateral e no celular.
  * =====================================================================
  */
 
@@ -231,9 +232,11 @@ export default function App() {
           <div className="app-logo">
             <LogoAmbition compacto={recolhido} />
           </div>
-          <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensPainel} onClick={({ key }) => navegar(key)} />
+          <div className="app-grupo-menu app-grupo-painel">
+            <Menu mode="inline" selectedKeys={chavesSelecionadas} items={itensPainel} onClick={({ key }) => navegar(key)} />
+          </div>
           {secoes.map((secao) => (
-            <div key={secao.titulo}>
+            <div key={secao.titulo} className="app-grupo-menu">
               {!recolhido && (
                 <TituloSecao
                   titulo={secao.titulo}
@@ -314,17 +317,19 @@ export default function App() {
         title={<LogoAmbition tamanho={28} />}
         className="app-menu-celular"
       >
-        <Menu
-          mode="inline"
-          selectedKeys={chavesSelecionadas}
-          items={itensPainel}
-          onClick={({ key }) => {
-            navegar(key)
-            setMenuCelularAberto(false)
-          }}
-        />
+        <div className="app-grupo-menu app-grupo-painel">
+          <Menu
+            mode="inline"
+            selectedKeys={chavesSelecionadas}
+            items={itensPainel}
+            onClick={({ key }) => {
+              navegar(key)
+              setMenuCelularAberto(false)
+            }}
+          />
+        </div>
         {secoes.map((secao) => (
-          <div key={secao.titulo}>
+          <div key={secao.titulo} className="app-grupo-menu">
             <TituloSecao
               titulo={secao.titulo}
               aberta={!secoesFechadas.includes(secao.titulo)}
