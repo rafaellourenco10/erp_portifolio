@@ -1,0 +1,19 @@
+/* Fluxo de Caixa (FluxoCaixaPage.tsx): destaque da linha de hoje e do trecho previsto. */
+
+.pagina-fluxo-caixa .linha-hoje > td {
+  background: color-mix(in srgb, var(--cor-primaria) 12%, transparent) !important;
+}
+
+/* Previsto (depois de hoje): texto um pouco mais apagado que o realizado. */
+.pagina-fluxo-caixa .linha-prevista > td {
+  color: var(--cor-texto-secundario);
+}
+
+.marca-hoje {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--cor-fundo);
+  background: var(--cor-primaria);
+}

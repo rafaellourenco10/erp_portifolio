@@ -1,13 +1,13 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.17.0
+ * Versão.....: 1.18.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
  *              com breadcrumb e área de conteúdo. As telas são trocadas
  *              por rota (/, /clientes, /fornecedores, /produtos, /categorias,
- *              /vendedores, /orcamentos, /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /comissoes, /relatorios/*) com o
+ *              /vendedores, /orcamentos, /pedidos, /pedidos-compra, /estoque, /contas-receber, /contas-pagar, /comissoes, /fluxo-caixa, /relatorios/*) com o
  *              React Router. O menu é dividido por departamento (Cadastro,
  *              Ordem Vendas/Compras, Depósito, Financeiro); o Dashboard (/)
  *              fica fora das seções: resume vários módulos.
@@ -40,6 +40,7 @@
  *   1.16.0 - 23/09/2026 - Rota e item de menu de Comissões (Financeiro), etapa 11.
  *   1.17.0 - 23/09/2026 - Item de menu e rotas de Orçamentos (/orcamentos, /orcamentos/novo,
  *                         /orcamentos/:id) em Ordem Vendas/Compras, etapa 13.
+ *   1.18.0 - 24/09/2026 - Rota e item de menu de Fluxo de Caixa (Financeiro), etapa 15.
  * =====================================================================
  */
 
@@ -51,6 +52,7 @@ import {
   DollarOutlined,
   DownOutlined,
   FileTextOutlined,
+  FundOutlined,
   HomeOutlined,
   PercentageOutlined,
   LineChartOutlined,
@@ -73,6 +75,7 @@ import { LogoAmbition } from './components/LogoAmbition'
 import { CategoriasListaPage } from './pages/Categorias/CategoriasListaPage'
 import { ClientesListaPage } from './pages/Clientes/ClientesListaPage'
 import { ComissoesListaPage } from './pages/Comissoes/ComissoesListaPage'
+import { FluxoCaixaPage } from './pages/FluxoCaixa/FluxoCaixaPage'
 import { ContasPagarListaPage } from './pages/ContasPagar/ContasPagarListaPage'
 import { ContasReceberListaPage } from './pages/ContasReceber/ContasReceberListaPage'
 import { DashboardPage } from './pages/Dashboard/DashboardPage'
@@ -119,6 +122,7 @@ const secoes = [
       { key: '/contas-receber', icon: <DollarOutlined />, label: 'Contas a Receber' },
       { key: '/contas-pagar', icon: <WalletOutlined />, label: 'Contas a Pagar' },
       { key: '/comissoes', icon: <PercentageOutlined />, label: 'Comissões' },
+      { key: '/fluxo-caixa', icon: <FundOutlined />, label: 'Fluxo de Caixa' },
     ],
   },
   {
@@ -292,6 +296,7 @@ export default function App() {
             <Route path="/contas-receber" element={<ContasReceberListaPage />} />
             <Route path="/contas-pagar" element={<ContasPagarListaPage />} />
             <Route path="/comissoes" element={<ComissoesListaPage />} />
+            <Route path="/fluxo-caixa" element={<FluxoCaixaPage />} />
             {/* key diferente: trocar entre vendas e compras recria a tela (não leva o cliente escolhido como fornecedor). */}
             <Route path="/relatorios/vendas" element={<RelatorioPedidosPage key="vendas" tipo="vendas" />} />
             <Route path="/relatorios/compras" element={<RelatorioPedidosPage key="compras" tipo="compras" />} />

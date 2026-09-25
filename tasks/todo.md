@@ -16,9 +16,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T3: Tela** (M)
+- [x] **T3: Tela** (M) — *concluída em 24/09/2026*
   - Tipos/api/hook; rota `/fluxo-caixa` e item no menu Financeiro; período + Diário/Mensal; cards; aviso de atrasados; tabela; Excel/PDF.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: `types/fluxoCaixa.ts`, `api/fluxoCaixaApi.ts` (obter + exportar pelo `baixarArquivo`), `hooks/useFluxoCaixa.ts`, `pages/FluxoCaixa/FluxoCaixaPage.tsx` + `fluxoCaixa.css`. Abre calculado no mês atual (diário); trocar para Mensal vai para o ano atual (seletor de meses); período novo com "Gerar"; `BotoesExportar`. Cards Saldo inicial / Entradas / Saídas / Saldo final / Menor saldo (com a data, vermelho se negativo); alertas de saldo negativo e de atrasados; tabela com Entradas e Saídas (realizadas/previstas), Resultado e Saldo, linha de hoje destacada e trecho previsto mais apagado. Menu Financeiro → Fluxo de Caixa. `tsc -b`, `oxlint` e `npm run build` limpos.
 
 - [ ] **T4: Gráfico** (M)
   - SVG: barras de entradas e saídas (previsto mais claro), linha do saldo, marca de hoje, tooltip; teste de tela com Playwright.
