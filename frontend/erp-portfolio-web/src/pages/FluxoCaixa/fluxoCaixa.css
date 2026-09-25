@@ -17,3 +17,57 @@
   color: var(--cor-fundo);
   background: var(--cor-primaria);
 }
+
+/* Gráfico (GraficoFluxoCaixa.tsx): legenda em texto neutro, chaves com a cor; eixos recessivos. */
+.grafico-fluxo-caixa {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.grafico-fluxo-caixa .grafico-rolagem {
+  overflow-x: auto;
+}
+
+.grafico-fluxo-caixa svg {
+  display: block;
+  min-width: 640px;
+}
+
+.grafico-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--cor-texto-secundario);
+}
+
+.grafico-legenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chave-cor {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.chave-linha {
+  width: 14px;
+  height: 2px;
+  background: var(--cor-primaria);
+}
+
+.eixo-rotulo {
+  font-size: 11px;
+  fill: var(--cor-texto-secundario);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reserva a altura mesmo sem período ativo, pra não pular o layout ao passar o mouse. */
+.grafico-fluxo-caixa .grafico-tooltip {
+  min-height: 22px;
+  font-size: 13px;
+}

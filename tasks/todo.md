@@ -21,9 +21,10 @@
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
   - Resultado: `types/fluxoCaixa.ts`, `api/fluxoCaixaApi.ts` (obter + exportar pelo `baixarArquivo`), `hooks/useFluxoCaixa.ts`, `pages/FluxoCaixa/FluxoCaixaPage.tsx` + `fluxoCaixa.css`. Abre calculado no mês atual (diário); trocar para Mensal vai para o ano atual (seletor de meses); período novo com "Gerar"; `BotoesExportar`. Cards Saldo inicial / Entradas / Saídas / Saldo final / Menor saldo (com a data, vermelho se negativo); alertas de saldo negativo e de atrasados; tabela com Entradas e Saídas (realizadas/previstas), Resultado e Saldo, linha de hoje destacada e trecho previsto mais apagado. Menu Financeiro → Fluxo de Caixa. `tsc -b`, `oxlint` e `npm run build` limpos.
 
-- [ ] **T4: Gráfico** (M)
+- [x] **T4: Gráfico** (M) — *concluída em 24/09/2026*
   - SVG: barras de entradas e saídas (previsto mais claro), linha do saldo, marca de hoje, tooltip; teste de tela com Playwright.
   - Verificar: critério 6 da SPEC no navegador.
+  - Resultado: `GraficoFluxoCaixa.tsx` em **dois painéis com o mesmo eixo X** (linha do saldo em cima; colunas de entradas para cima e saídas para baixo embaixo) — a skill de dataviz proíbe dois eixos Y no mesmo plot. Cores validadas pelo `validate_palette.js` no fundo escuro: azul `#3987E5` × laranja `#D95926` (CVD ΔE 26,8); verde × vermelho reprovava (ΔE 3,7 para deuteranopia). Previsto com 45% de opacidade empilhado depois do realizado (2px de fundo), ponta arredondada de 4px, marca de hoje, crosshair e tooltip por mouse e teclado, legenda; no celular rola de lado. Ajustes vistos nas capturas: rótulo final do eixo sobreposto, card "Menor saldo" quebrando o valor, rótulo "hoje" encostando na linha. Teste de tela (`.claude/ferramentas-locais/ui-fluxo-caixa-run.ps1` + `ui-fluxo-caixa.mjs`, com uma conta grande para o saldo ficar negativo): **17/17** — menu, mês atual com linha de hoje, cards e menor saldo = API, alertas de negativo e de atrasados, gráfico (legenda, alvos, hover, teclado, hoje), Mensal com 12 meses, Excel, celular sem rolagem da página, console limpo; dados de teste apagados e reais idênticos. `tsc -b`, `oxlint`, `npm run build` limpos.
 
 ## Fase 3: Fechamento
 

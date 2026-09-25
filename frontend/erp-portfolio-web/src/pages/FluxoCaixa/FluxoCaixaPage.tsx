@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: FluxoCaixaPage.tsx
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 24/09/2026
  * Descrição..: Tela do Fluxo de Caixa (Financeiro, etapa 15): visão Diária
  *              (abre no mês atual) ou Mensal (ano atual), cards de saldo
@@ -14,6 +14,7 @@
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 24/09/2026 - Criação do arquivo.
+ *   1.1.0 - 24/09/2026 - Gráfico (GraficoFluxoCaixa) entre os cards e a tabela (T4).
  * =====================================================================
  */
 
@@ -29,6 +30,7 @@ import { useFluxoCaixa } from '../../hooks/useFluxoCaixa'
 import type { AgrupamentoFluxoCaixa, FluxoCaixaFiltro, PeriodoFluxoCaixa } from '../../types/fluxoCaixa'
 import { formatarReal } from '../../utils/moeda'
 import { CardIndicador } from '../Dashboard/CardIndicador'
+import { GraficoFluxoCaixa } from './GraficoFluxoCaixa'
 // A tela reaproveita as classes .painel, .pagina-titulo etc. do módulo de Clientes.
 import '../Clientes/clientes.css'
 import './fluxoCaixa.css'
@@ -209,24 +211,24 @@ export function FluxoCaixaPage() {
           { titulo: 'Saídas', valor: data?.totalSaidas, tipo: 'danger' as const },
           { titulo: 'Saldo final', valor: data?.saldoFinal, negativo: (data?.saldoFinal ?? 0) < 0 },
         ].map((card) => (
-          <Col key={card.titulo} xs={24} sm={12} xl={5}>
+          <Col key={card.titulo} flex="1 1 190px">
             <CardIndicador titulo={card.titulo} loading={carregando} erro={isError}>
               <Typography.Title
                 level={3}
                 type={card.negativo ? 'danger' : card.tipo}
                 className="numeros-tabulares"
-                style={{ margin: 0 }}
+                style={{ margin: 0, whiteSpace: 'nowrap' }}
               >
                 {card.valor !== undefined && formatarReal(card.valor)}
               </Typography.Title>
             </CardIndicador>
           </Col>
         ))}
-        <Col xs={24} sm={24} xl={4}>
+        <Col flex="1 1 190px">
           <CardIndicador titulo="Menor saldo" loading={carregando} erro={isError}>
             {data && (
               <>
-                <Typography.Title level={3} type={data.menorSaldo < 0 ? 'danger' : undefined} className="numeros-tabulares" style={{ margin: 0 }}>
+                <Typography.Title level={3} type={data.menorSaldo < 0 ? 'danger' : undefined} className="numeros-tabulares" style={{ margin: 0, whiteSpace: 'nowrap' }}>
                   {formatarReal(data.menorSaldo)}
                 </Typography.Title>
                 <span className="texto-discreto numeros-tabulares">
@@ -237,6 +239,12 @@ export function FluxoCaixaPage() {
           </CardIndicador>
         </Col>
       </Row>
+
+      {data && data.periodos.length > 0 && (
+        <section className="painel" style={{ padding: 16, marginBottom: 16, opacity: isFetching ? 0.6 : 1 }} aria-label="Gráfico do fluxo de caixa">
+          <GraficoFluxoCaixa periodos={data.periodos} chaveHoje={chaveHoje} rotulo={(inicio) => rotuloPeriodo(inicio, filtro.agrupamento)} />
+        </section>
+      )}
 
       <section className="painel painel-tabela" aria-label="Fluxo de caixa por período">
         <Table<PeriodoFluxoCaixa>
