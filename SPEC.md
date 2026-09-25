@@ -1,6 +1,6 @@
 # Spec: Fluxo de caixa (etapa 15)
 
-> Status: **aprovada em 24/09/2026** (padrões confirmados pelo Rafael), em implementação. Tarefas em `tasks/plan.md` e `tasks/todo.md`.
+> Status: **implementada e testada em 24/09/2026** (T1 a T5, ver `tasks/todo.md`). Critérios 1-7 conferidos: E2E da API com 28 verificações e teste de tela com Playwright com 17 (dados `ZZT…` apagados, dados reais intactos).
 
 ## Objetivo
 
@@ -81,10 +81,12 @@ Sem mudança no banco: lê `parcelas_receber` e `parcelas_pagar` (índices exist
 
 ## Success criteria (testáveis)
 
-1. Entradas/saídas realizadas de cada dia batem com a soma direta das parcelas recebidas/pagas no banco (dia de Brasília).
-2. Previstos batem com as pendentes por vencimento; atrasadas aparecem em hoje e no aviso.
-3. Saldo inicial + entradas − saídas = saldo final; menor saldo e sua data corretos, inclusive com período no futuro.
-4. Visão mensal soma igual à diária do mesmo período.
-5. Período inválido → 400 sem calcular; Excel e PDF com os mesmos números da tela.
-6. Tela no Financeiro com cards, gráfico (realizado × previsto + saldo), tabela e exportação, testada no navegador.
-7. `dotnet build` 0 avisos, `dotnet test` verde, `tsc -b`/`oxlint`/`npm run build` limpos.
+Conferidos em 24/09/2026; detalhes na seção "Fluxo de caixa (24/09/2026)" do README.
+
+1. ✅ Entradas/saídas realizadas de cada dia batem com a soma direta das parcelas recebidas/pagas no banco (dia de Brasília).
+2. ✅ Previstos batem com as pendentes por vencimento; atrasadas aparecem em hoje e no aviso.
+3. ✅ Saldo inicial + entradas − saídas = saldo final; menor saldo e sua data corretos, inclusive com período no futuro.
+4. ✅ Visão mensal soma igual à diária do mesmo período.
+5. ✅ Período inválido → 400 sem calcular; Excel e PDF com os mesmos números da tela.
+6. ✅ Tela no Financeiro com cards, gráfico (realizado × previsto + saldo), tabela e exportação, testada no navegador.
+7. ✅ `dotnet build` 0 avisos, `dotnet test` 246/246, `tsc -b`/`oxlint`/`npm run build` limpos.

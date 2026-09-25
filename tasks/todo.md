@@ -28,6 +28,7 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T5: Fechamento** (S)
+- [x] **T5: Fechamento** (S) — *concluída em 24/09/2026*
   - README (etapa 15, rota, decisões), SPEC marcada como implementada, `graphify update`, memória.
   - Verificar: critério 7 da SPEC.
+  - Resultado: README com a etapa 15 (tabela de etapas, introdução, funcionalidades, rota, estrutura de pastas, seção de testes) e "Próximas etapas" sem os itens já feitos hoje (exportar Comissões, fuso de Brasília); login passa a etapa 16. SPEC com os critérios 1-7 conferidos. Grafo gravado com `grava_grafo_etapa15.py` (6 conceitos novos: decisões do fluxo, cálculo puro, gráfico em dois painéis, HorarioBrasilia, ExportadorRelatorio.Arquivo, BotoesExportar; nenhum conceito perdido, 22 hiperarestas) e HTML exportado. Build 0 avisos, `dotnet test` 246/246, `tsc -b`/`oxlint`/`npm run build` limpos.

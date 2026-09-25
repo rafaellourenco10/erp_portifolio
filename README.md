@@ -1,7 +1,7 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique, e **Devolução de venda** (etapa 14): parcial ou total, que devolve ao estoque, abate as parcelas pendentes, gera o reembolso do que já foi pago e estorna a comissão do vendedor. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique, e **Devolução de venda** (etapa 14): parcial ou total, que devolve ao estoque, abate as parcelas pendentes, gera o reembolso do que já foi pago e estorna a comissão do vendedor, e **Fluxo de caixa** (etapa 15): o que entrou e saiu e o que vai entrar e sair, dia a dia ou mês a mês, com o saldo acumulado. O **Dashboard** (etapa 6) resume os outros módulos.
 
 O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Orçamentos, Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
 
@@ -24,7 +24,8 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 12 | Comissão vira conta a pagar + contas avulsas (origem Compra/Comissão/Avulsa, cancelar) | Back-end testado de ponta a ponta; telas não verificadas visualmente (23/09/2026) |
 | 13 | Orçamentos (validade, situação Vencido calculada, gerar pedido com os preços do orçamento, marcar como perdido, PDF) | Back-end testado de ponta a ponta; tela testada com Playwright (23/09/2026) |
 | 14 | Devolução de venda (parcial, estoque por item, abatimento nas parcelas, reembolso em Contas a Pagar, estorno de comissão, card no Dashboard) | Back-end testado de ponta a ponta; tela testada com Playwright (24/09/2026) |
-| 15+ | Login | Planejada |
+| 15 | Fluxo de caixa (realizado + previsto, saldo acumulado, visão diária e mensal, gráfico, Excel/PDF) | Back-end testado de ponta a ponta; tela testada com Playwright (24/09/2026) |
+| 16+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -231,6 +232,16 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - O pedido mostra o **histórico de devoluções** (itens, perda, motivo, valor, abatido, reembolso, estorno); o **Dashboard** ganhou o card **Devoluções do mês** ao lado do faturamento, que continua bruto
 - Fora do escopo por enquanto: desfazer/editar devolução, crédito do cliente, troca num passo só, devolução de compra ao fornecedor, faturamento líquido nos relatórios
 
+## Funcionalidades (etapa 15 — Fluxo de caixa)
+
+- Tela **Financeiro → Fluxo de Caixa**: entradas (parcelas a receber) e saídas (parcelas a pagar de todas as origens: compra, comissão, avulsa, reembolso)
+- **Realizado** pela data em que a parcela foi recebida/paga; **previsto** pelo vencimento das pendentes, de hoje em diante. Pendente já vencida (atrasada) conta como prevista **hoje**, com um aviso "Em atraso"
+- **Saldo acumulado desde o início do ERP**: o saldo inicial do período é tudo o que entrou menos tudo o que saiu antes dele (num período futuro, soma também o previsto até lá); não há saldo para cadastrar
+- Visão **Diária** (abre no mês atual; até 93 dias) ou **Mensal** (abre no ano atual; até 366 dias), com cards de saldo inicial, entradas, saídas, saldo final e **menor saldo** (com a data); alerta quando o saldo fica negativo
+- **Gráfico** em dois painéis com o mesmo eixo: a linha do saldo e as colunas de entradas (azul, para cima) e saídas (laranja, para baixo), com o previsto mais claro e a marca de hoje; **tabela** com realizado × previsto, resultado e saldo; exportação **Excel/PDF**
+- Dias em horário de Brasília (recebimento às 22h conta no mesmo dia); só leitura, sem tabela nova
+- Fora do escopo por enquanto: contas bancárias/caixas e saldo inicial digitado, categorias de despesa, abrir os lançamentos de um dia, card no Dashboard, cenários
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -328,6 +339,7 @@ erp_portifolio/
 │       │   ├── ComissoesController.cs       # listar comissões com totais e pagar em lote
 │       │   ├── PedidosCompraController.cs   # endpoints REST de pedidos de compra
 │       │   ├── ContasPagarController.cs     # endpoints REST de contas a pagar
+│       │   ├── FluxoCaixaController.cs      # fluxo de caixa: JSON ou arquivo (?formato=xlsx|pdf)
 │       │   └── RelatoriosController.cs      # relatórios: JSON para a tela ou arquivo (?formato=xlsx|pdf)
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
@@ -376,6 +388,7 @@ erp_portifolio/
 │       │   ├── RelatorioFiltroDtos.cs       # filtros dos relatórios (período validado: R1)
 │       │   ├── RelatorioRespostaDtos.cs     # linhas + resumo dos 3 relatórios
 │       │   ├── FormatoRelatorio.cs          # enum: Json, Xlsx, Pdf
+│       │   ├── FluxoCaixaDtos.cs            # filtro (período validado: FC7) e resposta do fluxo de caixa
 │       │   ├── EstoqueResumoDashboardDto.cs # saída de /dashboard/estoque
 │       │   ├── Fornecedor{Criacao,Atualizacao,Resposta,Filtro}Dto.cs  # mesmo desenho, para fornecedores
 │       │   ├── VendedorDtos.cs              # criação, atualização, filtro e resposta de vendedores
@@ -428,6 +441,10 @@ erp_portifolio/
 │       │   ├── IContasPagarService.cs
 │       │   ├── ContasPagarService.cs        # lista (origem/favorecido), pagar, cancelar, conta avulsa, parcelas da compra; propaga para comissões
 │       │   ├── ContasPagarCalculo.cs        # parcelas da conta avulsa (valor e vencimento), função pura
+│       │   ├── IFluxoCaixaService.cs
+│       │   ├── FluxoCaixaService.cs         # lê as parcelas (realizado no dia de Brasília, pendentes) e monta o arquivo
+│       │   ├── FluxoCaixaCalculo.cs         # períodos, realizado × previsto, saldos e menor saldo (puro, com xUnit)
+│       │   ├── HorarioBrasilia.cs           # "hoje" e limites de dia/mês em horário de Brasília
 │       │   ├── IRelatorioService.cs
 │       │   ├── RelatorioService.cs          # consultas dos relatórios + montagem do modelo de exportação
 │       │   ├── RelatorioCalculo.cs          # período válido e resumo (funções puras, com xUnit)
@@ -531,6 +548,9 @@ erp_portifolio/
             ├── pages/Fornecedores/
             │   ├── FornecedoresListaPage.tsx  # filtros, tabela, paginação, ações (espelho de Clientes)
             │   └── FornecedorFormDrawer.tsx   # painel lateral de inclusão/edição
+            ├── pages/FluxoCaixa/
+            │   ├── FluxoCaixaPage.tsx         # visão, período, cards, alertas, tabela, exportar
+            │   └── GraficoFluxoCaixa.tsx      # SVG: saldo + entradas/saídas (realizado × previsto)
             ├── pages/Comissoes/
             │   └── ComissoesListaPage.tsx     # filtros, cards, tabela com seleção, marcar como pagas
             ├── pages/Vendedores/
@@ -854,6 +874,12 @@ Relatórios (só leitura; `formato` = `json` (padrão), `xlsx` ou `pdf` — com 
 | GET | `/relatorios/vendas?dataInicio=&dataFim=&status=&clienteId=&formato=` | Pedidos de venda do período (datas `AAAA-MM-DD`, inclusivas, obrigatórias, no máximo 366 dias), um por linha, com quantidade, valor total e ticket médio | 200, 400 |
 | GET | `/relatorios/compras?dataInicio=&dataFim=&status=&fornecedorId=&formato=` | Mesmo formato, para pedidos de compra | 200, 400 |
 | GET | `/relatorios/estoque?categoriaId=&somenteAbaixoMinimo=&formato=` | Posição atual dos produtos ativos: saldo, custo, valor em estoque, abaixo do mínimo | 200, 400 |
+
+Fluxo de caixa (só leitura; mesmo `formato` dos relatórios):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET | `/fluxo-caixa?dataInicio=&dataFim=&agrupamento=Dia\|Mes&formato=` | `{ saldoInicial, totalEntradas, totalSaidas, saldoFinal, menorSaldo, dataMenorSaldo, atrasadoReceber, atrasadoPagar, hoje, periodos: [{ inicio, entradasRealizadas, saidasRealizadas, entradasPrevistas, saidasPrevistas, saldo }] }`; datas obrigatórias, até 366 dias (93 no `Dia`); arquivo `fluxo-caixa-<inicio>_<fim>` | 200, 400 |
 
 O CORS expõe o cabeçalho `Content-Disposition` para o front ler o nome do arquivo.
 
@@ -1595,6 +1621,23 @@ Achados da tela, corrigidos: o vencimento "hoje" do modal era recusado entre 21h
 
 Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (229 aprovados, 22 novos em `DevolucaoCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
 
+### Fluxo de caixa (24/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script PowerShell com 28 verificações, e a **tela** com Playwright (Edge headless) contra essa API e um Vite temporário (porta 5174), com 17 verificações. Fixtures: venda de R$ 300,00 em 3x (uma recebida ontem às 22h30 de Brasília, uma atrasada, uma futura) e conta avulsa de R$ 100,00 em 2x (uma paga hoje); na tela, mais uma conta grande para o saldo ficar negativo. Dados de teste (`ZZT Fx…`, SKU `690000xx`) apagados via SQL ao final; dados reais idênticos antes e depois.
+
+| Verificação | Resultado |
+|---|---|
+| Entradas e saídas realizadas de cada dia = soma direta no banco pelo dia de Brasília; recebimento às 22h30 conta no dia anterior (UTC já é o dia seguinte) | ✅ |
+| Previstos = pendentes pelo vencimento; atrasada em hoje e no aviso; nenhum previsto antes de hoje; período passado só com realizado | ✅ |
+| Saldo inicial = realizado antes do início; período futuro soma o previsto até a véspera; cadeia de saldos, saldo final e menor saldo | ✅ |
+| Mensal soma igual ao diário; ano inteiro com 12 meses | ✅ |
+| 6 validações de período (sem datas, fim antes do início, 94 dias no diário, 367 no mensal, agrupamento inválido) → 400; 93 dias → 200; Excel e PDF | ✅ |
+| Tela: menu, mês atual com a linha de hoje, cards e menor saldo = API, alertas de saldo negativo e de atrasados, gráfico (legenda, hover, teclado, hoje), Mensal, Excel, celular, console limpo | ✅ |
+
+Achados das capturas de tela, corrigidos: rótulos finais do eixo sobrepostos, card "Menor saldo" quebrando o valor negativo, gráfico ilegível no celular (agora rola de lado). As cores do gráfico foram validadas para daltonismo (azul × laranja; verde × vermelho reprovava).
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (246 aprovados, 15 novos em `FluxoCaixaCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
 ---
 
 ## Padrões do projeto
@@ -1688,13 +1731,12 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Gerar parcelas para pedidos (venda ou compra) confirmados antes dos módulos de Contas a Receber/Pagar
 - Recebimento parcial de mercadoria no Pedido de Compra (hoje é recebido inteiro ao confirmar)
 - Seletor de período no Dashboard (hoje é sempre o mês atual)
-- Comissões: exportação Excel/PDF da tela, estorno de comissão
 - Contas a pagar: recorrência automática (todo mês), categorias/plano de contas, editar conta lançada, anexos
-- Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens; considerar o fuso de Brasília no filtro de período (hoje em UTC, igual ao Dashboard)
+- Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
-- **Autenticação/login** (etapa 15)
+- **Autenticação/login** (etapa 16)
+- Fluxo de caixa: contas bancárias/caixas e saldo inicial, categorias de despesa, lançamentos do dia ao clicar, card no Dashboard
 - Devolução: desfazer/editar, crédito do cliente, troca num passo só, devolução de compra ao fornecedor, faturamento líquido nos Relatórios
-- Usar o fuso de Brasília como "hoje" no servidor (hoje é UTC: entre 21h e 24h o servidor já está no dia seguinte — afeta vencidos, validade e atrasados)
 - Orçamentos: duplicar, reabrir, orçamento para não cliente, envio por e-mail, taxa de conversão no Dashboard/Relatórios; trava de concorrência ao gerar pedido se o ERP virar multiusuário
 - Testes automatizados de integração para a API de Clientes/Produtos/Categorias/Fornecedores (Pedidos, Estoque, Contas a Receber, Dashboard e Pedidos de Compra já têm testes unitários e/ou scripts de ponta a ponta)

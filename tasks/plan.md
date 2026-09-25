@@ -1,7 +1,7 @@
 # Plano de implementação: Fluxo de caixa (etapa 15)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **aprovado** (24/09/2026), em implementação.
+> Status: **aprovado e implementado** (24/09/2026).
 
 ## Visão geral
 
