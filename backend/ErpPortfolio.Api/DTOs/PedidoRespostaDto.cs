@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: PedidoRespostaDto.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 23/09/2026
 // Descrição..: DTO de saída com um pedido completo (cabeçalho, cliente e itens) e o
 //              subtotal de cada item. O subtotal do item é derivado (CalculoPedido), não
@@ -16,6 +16,7 @@
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
 //   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada (etapa 10).
 //   1.2.0 - 24/09/2026 - QuantidadeDevolvida por item e ValorDevolvido (etapa 14).
+//   1.3.0 - 28/09/2026 - NotaFiscalId, NumeroNfe e ChaveNfe da NF-e de saída (etapa 16).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -63,7 +64,10 @@ public record PedidoRespostaDto(
     decimal SubtotalItens,
     decimal ValorTotal,
     IReadOnlyList<PedidoItemRespostaDto> Itens,
-    decimal ValorDevolvido = 0)
+    decimal ValorDevolvido = 0,
+    int? NotaFiscalId = null,
+    int? NumeroNfe = null,
+    string? ChaveNfe = null)
 {
     /// <param name="pedido">Com cliente, vendedor e itens (com produto) carregados.</param>
     /// <param name="devolvidoPorItem">Quantidade já devolvida por id do item (etapa 14); ausente = nada devolvido.</param>

@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: HorarioBrasilia.cs
-// Versão.....: 1.0.0
+// Versão.....: 1.1.0
 // Data.......: 24/09/2026
 // Descrição..: O "hoje" e os limites de dia/mês do ERP em horário de Brasília. As datas
 //              continuam gravadas em UTC; só a conta de "que dia é" usa o fuso, para que
@@ -12,6 +12,7 @@
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 24/09/2026 - Criação do arquivo (ParaBrasilia veio do FormatoRelatorioTexto).
+//   1.1.0 - 28/09/2026 - ComFuso (dhEmi da NF-e, etapa 16).
 // =====================================================================================
 
 namespace ErpPortfolio.Api.Services;
@@ -22,6 +23,13 @@ public static class HorarioBrasilia
 
     public static DateTime ParaBrasilia(DateTime utc) =>
         TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), Fuso);
+
+    /// <summary>Data/hora de Brasília com o deslocamento (ex.: 2026-09-28T10:00:00-03:00), como pede a NF-e.</summary>
+    public static DateTimeOffset ComFuso(DateTime utc)
+    {
+        var local = ParaBrasilia(utc);
+        return new DateTimeOffset(local, Fuso.GetUtcOffset(local));
+    }
 
     public static DateOnly Hoje() => DateOnly.FromDateTime(ParaBrasilia(DateTime.UtcNow));
 

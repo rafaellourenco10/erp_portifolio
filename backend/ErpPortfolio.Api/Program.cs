@@ -65,6 +65,7 @@ builder.Services.AddScoped<IPedidoCompraService, PedidoCompraService>();
 builder.Services.AddScoped<IOrcamentoService, OrcamentoService>();
 builder.Services.AddScoped<IDevolucaoService, DevolucaoService>();
 builder.Services.AddScoped<IFluxoCaixaService, FluxoCaixaService>();
+builder.Services.AddScoped<NotaFiscalService>();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
