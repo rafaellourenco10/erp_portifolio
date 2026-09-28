@@ -250,3 +250,25 @@
     padding: 12px 16px;
   }
 }
+
+/* ---------- Seção dentro do painel lateral (ex.: dados fiscais) ---------- */
+
+.drawer-secao {
+  margin: 8px 0 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.drawer-secao-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cor-texto);
+}
+
+.drawer-secao-descricao {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--cor-texto-secundario);
+}

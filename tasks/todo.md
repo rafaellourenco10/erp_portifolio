@@ -31,9 +31,10 @@
 
 ## Fase 2: Frontend
 
-- [ ] **T6: Telas de cadastro** (M)
+- [x] **T6: Telas de cadastro** (M) — *concluída em 28/09/2026*
   - Menu Fiscal; tela Empresa; grupo "Dados fiscais" em Cliente e Produto.
   - Verificar: `tsc -b`, `oxlint`, `npm run build`.
+  - Resultado: `schemas/enderecoFiscal.ts` (regras de CEP/IBGE/endereço compartilhadas, `semMascara`, `ouNull`, `formatarCep`). Cliente: seção "Dados fiscais (NF-e)" no painel (CEP, logradouro, número, complemento, bairro, IBGE, IE), todos opcionais; o erro de IBGE × UF vem da API no próprio campo. Produto: campo "NCM (para NF-e)". Empresa: `types/empresa.ts`, `api/empresaApi.ts` (404 → null), `hooks/useEmpresa.ts`, `schemas/empresaSchema.ts`, `pages/Empresa/EmpresaPage.tsx` (identificação + endereço + série; aviso quando ainda não cadastrada). Menu com a seção **Fiscal → Empresa** (`/empresa`). `tsc -b`, `oxlint` e `npm run build` limpos.
 
 - [ ] **T7: Telas de emissão** (L)
   - Botão Emitir NF-e no pedido (lista do que falta no erro; XML/DANFE depois), botão na devolução, tela Notas Fiscais (filtros, detalhe, downloads, exportar).

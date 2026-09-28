@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ProdutoFormDrawer.tsx
- * Versão.....: 1.4.0
+ * Versão.....: 1.5.0
  * Data.......: 22/09/2026
  * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
  *              de produto (React Hook Form + Zod), no mesmo layout do
@@ -19,6 +19,7 @@
  *   1.2.0 - 21/09/2026 - Categoria vira uma seleção das categorias ativas.
  *   1.3.0 - 22/09/2026 - Atalho "Nova categoria" no seletor.
  *   1.4.0 - 22/09/2026 - Campo Estoque mínimo.
+ *   1.5.0 - 28/09/2026 - Campo NCM (NF-e, etapa 16).
  * =====================================================================
  */
 
@@ -107,6 +108,7 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
             precoVenda: produto.precoVenda,
             custo: produto.custo,
             estoqueMinimo: produto.estoqueMinimo,
+            ncm: produto.ncm ?? '',
             ativo: produto.ativo,
           }
         : valoresIniciaisProduto,
@@ -320,6 +322,17 @@ export function ProdutoFormDrawer({ aberto, produto, aoFechar }: ProdutoFormDraw
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                   />
+                )}
+              />
+            </ItemFormulario>
+          </Col>
+          <Col xs={24} sm={12}>
+            <ItemFormulario rotulo="NCM (para NF-e)" erro={errors.ncm}>
+              <Controller
+                name="ncm"
+                control={control}
+                render={({ field }) => (
+                  <Input {...field} className="numeros-tabulares" maxLength={10} placeholder="8544.42.00" />
                 )}
               />
             </ItemFormulario>

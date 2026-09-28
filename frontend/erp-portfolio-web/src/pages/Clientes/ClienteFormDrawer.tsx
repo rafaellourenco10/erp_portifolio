@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: ClienteFormDrawer.tsx
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 21/09/2026
  * Descrição..: Painel lateral (Drawer) com o formulário de inclusão/edição
  *              de cliente (React Hook Form + Zod), no layout do tema
@@ -16,6 +16,7 @@
  *   1.0.0 - 18/09/2026 - Criação do arquivo (formulário migrado do modal
  *                        para painel lateral).
  *   1.1.0 - 21/09/2026 - ItemFormulario extraído para components/.
+ *   1.2.0 - 28/09/2026 - Seção "Dados fiscais (NF-e)": endereço, CEP, IBGE e IE.
  * =====================================================================
  */
 
@@ -34,12 +35,16 @@ import {
   valoresIniciaisCliente,
   type ClienteFormValores,
 } from '../../schemas/clienteSchema'
+import { formatarCep } from '../../schemas/enderecoFiscal'
 import type { Cliente } from '../../types/cliente'
 import { formatarDocumento } from '../../utils/documento'
 import { UFS, compararRelevanciaUf, ufCorrespondeBusca } from '../../utils/ufs'
 import './clientes.css'
 
 const ID_FORMULARIO = 'formulario-cliente'
+
+/** Campos de texto da seção fiscal (todos opcionais; exigidos só ao emitir NF-e). */
+type CampoFiscal = 'cep' | 'logradouro' | 'numero' | 'complemento' | 'bairro' | 'codigoMunicipio' | 'inscricaoEstadual'
 
 const opcoesUf = UFS.map((uf) => ({ value: uf.sigla, label: `${uf.nome} (${uf.sigla})`, uf }))
 
@@ -79,11 +84,30 @@ export function ClienteFormDrawer({ aberto, cliente, aoFechar }: ClienteFormDraw
             telefone: cliente.telefone ?? '',
             cidade: cliente.cidade,
             uf: cliente.uf,
+            logradouro: cliente.logradouro ?? '',
+            numero: cliente.numero ?? '',
+            complemento: cliente.complemento ?? '',
+            bairro: cliente.bairro ?? '',
+            cep: formatarCep(cliente.cep),
+            codigoMunicipio: cliente.codigoMunicipio ?? '',
+            inscricaoEstadual: cliente.inscricaoEstadual ?? '',
             ativo: cliente.ativo,
           }
         : valoresIniciaisCliente,
     )
   }, [aberto, cliente, reset])
+
+  const campoFiscal = (nome: CampoFiscal, rotulo: string, maximo: number, sm: number, placeholder?: string) => (
+    <Col xs={24} sm={sm}>
+      <ItemFormulario rotulo={rotulo} erro={errors[nome]}>
+        <Controller
+          name={nome}
+          control={control}
+          render={({ field }) => <Input {...field} maxLength={maximo} placeholder={placeholder} />}
+        />
+      </ItemFormulario>
+    </Col>
+  )
 
   async function salvar(valores: ClienteFormValores) {
     try {
@@ -237,6 +261,20 @@ export function ClienteFormDrawer({ aberto, cliente, aoFechar }: ClienteFormDraw
               />
             </ItemFormulario>
           </Col>
+        </Row>
+
+        <div className="drawer-secao">
+          <div className="drawer-secao-titulo">Dados fiscais (NF-e)</div>
+          <div className="drawer-secao-descricao">Opcionais no cadastro; exigidos para emitir nota fiscal.</div>
+        </div>
+        <Row gutter={20}>
+          {campoFiscal('cep', 'CEP', 9, 8, '00000-000')}
+          {campoFiscal('logradouro', 'Logradouro', 60, 16, 'Rua, avenida...')}
+          {campoFiscal('numero', 'Número', 10, 6, 'S/N')}
+          {campoFiscal('complemento', 'Complemento', 60, 9)}
+          {campoFiscal('bairro', 'Bairro', 60, 9)}
+          {campoFiscal('codigoMunicipio', 'Código IBGE do município', 7, 12, '3550308')}
+          {campoFiscal('inscricaoEstadual', 'Inscrição Estadual', 20, 12, 'Dígitos ou ISENTO')}
         </Row>
 
         {emEdicao && (

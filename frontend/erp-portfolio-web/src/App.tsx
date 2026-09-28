@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: App.tsx
- * Versão.....: 1.19.0
+ * Versão.....: 1.20.0
  * Data.......: 23/09/2026
  * Descrição..: Layout principal do Ambition ERP: menu lateral (256px,
  *              recolhível para 72px; vira gaveta no celular), cabeçalho
@@ -42,11 +42,13 @@
  *                         /orcamentos/:id) em Ordem Vendas/Compras, etapa 13.
  *   1.18.0 - 24/09/2026 - Rota e item de menu de Fluxo de Caixa (Financeiro), etapa 15.
  *   1.19.0 - 24/09/2026 - Cada seção do menu (e o Dashboard) num bloco com contorno (app-grupo-menu), no lateral e no celular.
+ *   1.20.0 - 28/09/2026 - Seção Fiscal com Empresa (/empresa), etapa 16.
  * =====================================================================
  */
 
 import {
   AppstoreOutlined,
+  BankOutlined,
   BarChartOutlined,
   ContainerOutlined,
   DatabaseOutlined,
@@ -80,6 +82,7 @@ import { FluxoCaixaPage } from './pages/FluxoCaixa/FluxoCaixaPage'
 import { ContasPagarListaPage } from './pages/ContasPagar/ContasPagarListaPage'
 import { ContasReceberListaPage } from './pages/ContasReceber/ContasReceberListaPage'
 import { DashboardPage } from './pages/Dashboard/DashboardPage'
+import { EmpresaPage } from './pages/Empresa/EmpresaPage'
 import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
 import { FornecedoresListaPage } from './pages/Fornecedores/FornecedoresListaPage'
 import { OrcamentoPage } from './pages/Orcamentos/OrcamentoPage'
@@ -126,6 +129,7 @@ const secoes = [
       { key: '/fluxo-caixa', icon: <FundOutlined />, label: 'Fluxo de Caixa' },
     ],
   },
+  { titulo: 'Fiscal', itens: [{ key: '/empresa', icon: <BankOutlined />, label: 'Empresa' }] },
   {
     titulo: 'Relatórios',
     itens: [
@@ -300,6 +304,7 @@ export default function App() {
             <Route path="/contas-pagar" element={<ContasPagarListaPage />} />
             <Route path="/comissoes" element={<ComissoesListaPage />} />
             <Route path="/fluxo-caixa" element={<FluxoCaixaPage />} />
+            <Route path="/empresa" element={<EmpresaPage />} />
             {/* key diferente: trocar entre vendas e compras recria a tela (não leva o cliente escolhido como fornecedor). */}
             <Route path="/relatorios/vendas" element={<RelatorioPedidosPage key="vendas" tipo="vendas" />} />
             <Route path="/relatorios/compras" element={<RelatorioPedidosPage key="compras" tipo="compras" />} />

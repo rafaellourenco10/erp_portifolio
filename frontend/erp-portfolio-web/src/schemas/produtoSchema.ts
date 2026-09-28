@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: produtoSchema.ts
- * Versão.....: 1.3.0
+ * Versão.....: 1.4.0
  * Data.......: 22/09/2026
  * Descrição..: Schema Zod do formulário de produto (mesmas regras dos DTOs
  *              da API) e conversão dos valores do formulário para o payload.
@@ -11,11 +11,13 @@
  *   1.1.0 - 21/09/2026 - SKU restrito a dígitos (número de série).
  *   1.2.0 - 21/09/2026 - categoria (texto) trocada por categoriaId (seleção).
  *   1.3.0 - 22/09/2026 - estoqueMinimo obrigatório (padrão 0 = sem mínimo).
+ *   1.4.0 - 28/09/2026 - NCM opcional (8 dígitos, com ou sem pontos).
  * =====================================================================
  */
 
 import { z } from 'zod'
 import type { ProdutoAtualizacao } from '../types/produto'
+import { ouNull, semMascara } from './enderecoFiscal'
 
 export const UNIDADES = [
   { value: 'UN', label: 'UN — Unidade' },
@@ -64,6 +66,8 @@ export const produtoSchema = z.object({
   precoVenda: dinheiro('o preço de venda'),
   custo: dinheiro('o custo'),
   estoqueMinimo,
+  // NCM: exigido só na emissão da NF-e; aqui só o formato.
+  ncm: z.string().trim().refine((v) => v === '' || /^[0-9]{8}$/.test(semMascara(v)), 'O NCM deve ter 8 dígitos.'),
   ativo: z.boolean(),
 })
 
@@ -80,9 +84,10 @@ export const valoresIniciaisProduto: ProdutoFormEntrada = {
   precoVenda: null,
   custo: null,
   estoqueMinimo: 0,
+  ncm: '',
   ativo: true,
 }
 
 export function paraPayload(valores: ProdutoFormValores): ProdutoAtualizacao {
-  return { ...valores }
+  return { ...valores, ncm: ouNull(semMascara(valores.ncm)) }
 }
