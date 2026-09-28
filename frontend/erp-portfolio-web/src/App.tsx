@@ -42,7 +42,7 @@
  *                         /orcamentos/:id) em Ordem Vendas/Compras, etapa 13.
  *   1.18.0 - 24/09/2026 - Rota e item de menu de Fluxo de Caixa (Financeiro), etapa 15.
  *   1.19.0 - 24/09/2026 - Cada seção do menu (e o Dashboard) num bloco com contorno (app-grupo-menu), no lateral e no celular.
- *   1.20.0 - 28/09/2026 - Seção Fiscal com Empresa (/empresa), etapa 16.
+ *   1.20.0 - 28/09/2026 - Seção Fiscal com Notas Fiscais (/notas-fiscais) e Empresa (/empresa), etapa 16.
  * =====================================================================
  */
 
@@ -54,6 +54,7 @@ import {
   DatabaseOutlined,
   DollarOutlined,
   DownOutlined,
+  FileProtectOutlined,
   FileTextOutlined,
   FundOutlined,
   HomeOutlined,
@@ -85,6 +86,7 @@ import { DashboardPage } from './pages/Dashboard/DashboardPage'
 import { EmpresaPage } from './pages/Empresa/EmpresaPage'
 import { EstoqueListaPage } from './pages/Estoque/EstoqueListaPage'
 import { FornecedoresListaPage } from './pages/Fornecedores/FornecedoresListaPage'
+import { NotasFiscaisListaPage } from './pages/NotasFiscais/NotasFiscaisListaPage'
 import { OrcamentoPage } from './pages/Orcamentos/OrcamentoPage'
 import { OrcamentosListaPage } from './pages/Orcamentos/OrcamentosListaPage'
 import { PedidoPage } from './pages/Pedidos/PedidoPage'
@@ -129,7 +131,13 @@ const secoes = [
       { key: '/fluxo-caixa', icon: <FundOutlined />, label: 'Fluxo de Caixa' },
     ],
   },
-  { titulo: 'Fiscal', itens: [{ key: '/empresa', icon: <BankOutlined />, label: 'Empresa' }] },
+  {
+    titulo: 'Fiscal',
+    itens: [
+      { key: '/notas-fiscais', icon: <FileProtectOutlined />, label: 'Notas Fiscais' },
+      { key: '/empresa', icon: <BankOutlined />, label: 'Empresa' },
+    ],
+  },
   {
     titulo: 'Relatórios',
     itens: [
@@ -304,6 +312,7 @@ export default function App() {
             <Route path="/contas-pagar" element={<ContasPagarListaPage />} />
             <Route path="/comissoes" element={<ComissoesListaPage />} />
             <Route path="/fluxo-caixa" element={<FluxoCaixaPage />} />
+            <Route path="/notas-fiscais" element={<NotasFiscaisListaPage />} />
             <Route path="/empresa" element={<EmpresaPage />} />
             {/* key diferente: trocar entre vendas e compras recria a tela (não leva o cliente escolhido como fornecedor). */}
             <Route path="/relatorios/vendas" element={<RelatorioPedidosPage key="vendas" tipo="vendas" />} />

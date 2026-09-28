@@ -1,13 +1,14 @@
 /**
  * =====================================================================
  * Arquivo....: devolucao.ts
- * Versão.....: 1.0.0
+ * Versão.....: 1.1.0
  * Data.......: 24/09/2026
  * Descrição..: Tipos da devolução de venda (etapa 14), espelhando DevolucaoCriacaoDto,
  *              DevolucaoRespostaDto e DevolucoesResumoDto da API.
  * ---------------------------------------------------------------------
  * Histórico de alterações:
  *   1.0.0 - 24/09/2026 - Criação do arquivo.
+ *   1.1.0 - 28/09/2026 - notaFiscalId e numeroNfe (etapa 16).
  * =====================================================================
  */
 
@@ -53,6 +54,9 @@ export interface Devolucao {
   /** Estorno de comissão (negativo) ou 0. */
   estornoComissao: number
   itens: DevolucaoItem[]
+  /** NF-e de devolução (etapa 16); null enquanto não emitida. */
+  notaFiscalId: number | null
+  numeroNfe: number | null
 }
 
 /** Card "Devoluções do mês" do Dashboard. */

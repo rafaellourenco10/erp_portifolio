@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: PedidoPage.tsx
- * Versão.....: 2.6.0
+ * Versão.....: 2.7.0
  * Data.......: 23/09/2026
  * Descrição..: Página do pedido (rotas /pedidos/novo e /pedidos/:id). Formulário com
  *              cliente (busca no servidor), forma de pagamento, itens (tabela editável;
@@ -33,6 +33,8 @@
  *                        no pedido confirmado (etapa 10).
  *   2.6.0 - 24/09/2026 - Registrar devolução (modal) e histórico de devoluções no pedido confirmado;
  *                        "Cancelar pedido" some quando já houve devolução (etapa 14).
+ *   2.7.0 - 28/09/2026 - Seção "Nota fiscal" (emitir NF-e, XML/DANFE); com NF-e o pedido não é
+ *                        mais cancelado, só devolvido (etapa 16).
  * =====================================================================
  */
 
@@ -69,6 +71,7 @@ import '../Clientes/clientes.css'
 import { DevolucaoModal } from './DevolucaoModal'
 import { DevolucoesPedido } from './DevolucoesPedido'
 import { ItensPedidoTabela } from './ItensPedidoTabela'
+import { NotaFiscalPedido } from './NotaFiscalPedido'
 import './pedido.css'
 
 const formatoPercentual = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
@@ -136,6 +139,8 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
   const [devolvendo, setDevolvendo] = useState(false)
   // Etapa 14: devolução só em pedido confirmado com algo ainda não devolvido; com devolução, não cancela mais.
   const temDevolucao = (pedido?.valorDevolvido ?? 0) > 0
+  // Etapa 16: com NF-e emitida também não cancela (a nota não tem cancelamento); só devolve.
+  const temNfe = (pedido?.notaFiscalId ?? null) !== null
   const podeDevolver = pedido?.status === 'Confirmado' && pedido.itens.some((item) => item.quantidade > item.quantidadeDevolvida)
 
   const {
@@ -295,7 +300,9 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
             pedido.status === 'Confirmado'
               ? temDevolucao
                 ? `Pedido confirmado com devolução de ${formatarReal(pedido.valorDevolvido)}: não pode ser editado nem cancelado; devoluções abaixo.`
-                : 'Pedido confirmado: não pode ser editado; pode ser cancelado ou ter itens devolvidos.'
+                : temNfe
+                  ? 'Pedido confirmado com NF-e: não pode ser editado nem cancelado; pode ter itens devolvidos.'
+                  : 'Pedido confirmado: não pode ser editado; pode ser cancelado ou ter itens devolvidos.'
               : 'Pedido cancelado: somente leitura.'
           }
         />
@@ -468,11 +475,13 @@ function PedidoFormulario({ pedido }: { pedido?: Pedido }) {
         </Row>
       </section>
 
-      {pedido && <DevolucoesPedido pedidoId={pedido.id} />}
+      {pedido?.status === 'Confirmado' && <NotaFiscalPedido pedido={pedido} />}
+
+      {pedido && <DevolucoesPedido pedidoId={pedido.id} pedidoTemNfe={temNfe} />}
 
       {pedido?.status !== 'Cancelado' && (
         <div className="pedido-rodape">
-          {pedido && !temDevolucao && (
+          {pedido && !temDevolucao && !temNfe && (
             <Button
               danger
               size="large"

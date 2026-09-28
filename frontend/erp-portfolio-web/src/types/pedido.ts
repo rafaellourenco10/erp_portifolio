@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: pedido.ts
- * Versão.....: 1.2.0
+ * Versão.....: 1.3.0
  * Data.......: 23/09/2026
  * Descrição..: Tipos do módulo de Pedidos, espelhando os DTOs da API
  *              (PedidoRespostaDto, PedidoResumoDto, PedidoCriacaoDto,
@@ -12,6 +12,7 @@
  *   1.0.0 - 21/09/2026 - Criação do arquivo.
  *   1.1.0 - 23/09/2026 - Vendedor e % de comissão congelada (etapa 10).
  *   1.2.0 - 24/09/2026 - quantidadeDevolvida por item e valorDevolvido (etapa 14).
+ *   1.3.0 - 28/09/2026 - notaFiscalId, numeroNfe e chaveNfe (etapa 16).
  * =====================================================================
  */
 
@@ -67,6 +68,10 @@ export interface Pedido {
   itens: PedidoItem[]
   /** Soma das devoluções do pedido (etapa 14). */
   valorDevolvido: number
+  /** NF-e de saída (etapa 16); null enquanto não emitida. */
+  notaFiscalId: number | null
+  numeroNfe: number | null
+  chaveNfe: string | null
 }
 
 /** Uma linha da listagem (sem os itens). */
