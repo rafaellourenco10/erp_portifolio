@@ -1,7 +1,7 @@
 /**
  * =====================================================================
  * Arquivo....: temaAmbition.ts
- * Versão.....: 1.1.0
+ * Versão.....: 1.2.0
  * Data.......: 18/09/2026
  * Descrição..: Tema visual "Ambition ERP" (modo escuro). Fonte única das
  *              cores: alimenta os tokens do Ant Design e as variáveis CSS
@@ -14,6 +14,8 @@
  *   1.0.0 - 18/09/2026 - Criação do arquivo.
  *   1.1.0 - 18/09/2026 - Fundo mais claro e mais contraste entre fundo,
  *                        cards e bordas.
+ *   1.2.0 - 28/09/2026 - Textos mais claros (principal #F5F6F7, secundário #CDD2D7)
+ *                        e texto desabilitado/legendas no tom do secundário.
  * =====================================================================
  */
 
@@ -27,8 +29,9 @@ export const cores = {
   campo: '#1F2225',
   'cabecalho-tabela': '#22262A',
   borda: '#3B4046',
-  texto: '#E6E8EA',
-  'texto-secundario': '#A3A9AF',
+  texto: '#F5F6F7',
+  // Clareado em 28/09/2026 (o Rafael achava o cinza difícil de ler): contraste ~10:1 sobre o card.
+  'texto-secundario': '#CDD2D7',
   primaria: '#22C55E',
   'primaria-hover': '#16A34A',
   'primaria-ativa': '#15803D',
@@ -71,6 +74,10 @@ export const temaAmbition: ThemeConfig = {
     colorTextSecondary: cores['texto-secundario'],
     colorTextTertiary: cores['texto-secundario'],
     colorTextPlaceholder: cores['texto-secundario'],
+    // O padrão do darkAlgorithm é branco com 25% de opacidade: ilegível em campo desabilitado (ex.: pedido confirmado).
+    colorTextQuaternary: cores['texto-secundario'],
+    colorTextDisabled: cores['texto-secundario'],
+    colorTextDescription: cores['texto-secundario'],
     fontFamily: fonte,
     fontSize: 14,
     borderRadius: 8,

@@ -8,7 +8,7 @@ html,
 body {
   margin: 0;
   background: var(--cor-fundo, #1b1e21);
-  color: var(--cor-texto, #e6e8ea);
+  color: var(--cor-texto, #f5f6f7);
   font-family: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
