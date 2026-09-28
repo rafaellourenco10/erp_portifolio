@@ -155,6 +155,17 @@ public class NfeXmlTests
     }
 
     [Fact]
+    public void Danfe_sai_do_xml_gravado_em_pdf()
+    {
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        var xml = NfeXml.Gerar(Nota(), Empresa(), Cliente("11444777000161", "RJ", "12345678"), FormaPagamento.Boleto, null);
+
+        var pdf = ExportadorDanfe.GerarPdf(xml);
+
+        Assert.Equal("%PDF", System.Text.Encoding.ASCII.GetString(pdf, 0, 4));
+    }
+
+    [Fact]
     public void Devolucao_e_entrada_finalidade_4_com_refNFe_e_sem_pagamento()
     {
         var referenciada = new string('3', 44);

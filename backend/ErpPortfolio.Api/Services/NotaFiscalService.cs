@@ -5,7 +5,8 @@
 // Descrição..: Emissão da NF-e simulada (SPEC.md etapa 16): confere os dados fiscais (NF1),
 //              numera na série com a linha da empresa travada, calcula itens e impostos pelo
 //              NfeCalculo (NF2-NF5), grava a nota já autorizada com protocolo simulado e o
-//              XML do NfeXml (NF6). A nota não muda depois (NF8).
+//              XML do NfeXml (NF6). A nota não muda depois (NF8). Também lista (NF9), detalha
+//              e entrega o XML (o DANFE sai dele, pelo ExportadorDanfe).
 // -------------------------------------------------------------------------------------
 // Banco......: PostgreSQL - erp_portfolio_db
 // Tabelas....: public.notas_fiscais, public.nota_fiscal_itens (grava); public.empresa
@@ -70,6 +71,108 @@ public class NotaFiscalService(ErpPortfolioDbContext contexto)
 
         return NotaFiscalDetalheDto.DeEntidade(nota, chaveReferenciada: null);
     }
+
+    public async Task<ResultadoPaginadoDto<NotaFiscalResumoDto>> ListarAsync(NotaFiscalFiltroDto filtro, CancellationToken cancelamento)
+    {
+        var consulta = Filtrar(filtro);
+        var total = await consulta.CountAsync(cancelamento);
+        var itens = await Resumir(consulta
+                .OrderByDescending(n => n.DataEmissao).ThenByDescending(n => n.Id)
+                .Skip((filtro.Pagina - 1) * filtro.TamanhoPagina)
+                .Take(filtro.TamanhoPagina))
+            .ToListAsync(cancelamento);
+
+        return new ResultadoPaginadoDto<NotaFiscalResumoDto>(itens, filtro.Pagina, filtro.TamanhoPagina, total);
+    }
+
+    /// <summary>Todas as notas do filtro (sem paginar) para o Excel/PDF.</summary>
+    public async Task<RelatorioModelo> ModeloAsync(NotaFiscalFiltroDto filtro, CancellationToken cancelamento)
+    {
+        var notas = await Resumir(Filtrar(filtro).OrderBy(n => n.DataEmissao).ThenBy(n => n.Id)).ToListAsync(cancelamento);
+        var descricaoFiltros = new List<string>
+        {
+            filtro.DataInicio is null && filtro.DataFim is null
+                ? "Período: todas"
+                : $"Período: {filtro.DataInicio?.ToString("dd/MM/yyyy") ?? "início"} a {filtro.DataFim?.ToString("dd/MM/yyyy") ?? "hoje"}"
+        };
+        if (filtro.Tipo is { } tipo) descricaoFiltros.Add($"Tipo: {(tipo == TipoNotaFiscal.Saida ? "Saída" : "Entrada")}");
+        if (filtro.ClienteId is not null && notas.Count > 0) descricaoFiltros.Add($"Cliente: {notas[0].DestinatarioNome}");
+        if (!string.IsNullOrWhiteSpace(filtro.Busca)) descricaoFiltros.Add($"Busca: {filtro.Busca.Trim()}");
+
+        return new RelatorioModelo(
+            "Notas Fiscais (NF-e simulada)",
+            $"notas-fiscais-{HorarioBrasilia.Hoje():yyyy-MM-dd}",
+            HorarioBrasilia.ParaBrasilia(DateTime.UtcNow),
+            descricaoFiltros,
+            [
+                new("Notas", notas.Count, TipoValor.Inteiro),
+                new("Total de saídas", notas.Where(n => n.Tipo == TipoNotaFiscal.Saida).Sum(n => n.ValorTotal), TipoValor.Moeda),
+                new("Total de entradas (devoluções)", notas.Where(n => n.Tipo == TipoNotaFiscal.Entrada).Sum(n => n.ValorTotal), TipoValor.Moeda),
+            ],
+            [
+                new("Número", TipoValor.Inteiro), new("Série", TipoValor.Inteiro), new("Tipo", TipoValor.Texto),
+                new("Emissão", TipoValor.DataHora), new("Destinatário", TipoValor.Texto), new("UF", TipoValor.Texto),
+                new("Pedido", TipoValor.Inteiro), new("Total", TipoValor.Moeda), new("Chave de acesso", TipoValor.Texto),
+            ],
+            notas.Select(n => new object?[]
+            {
+                n.Numero, n.Serie, n.Tipo == TipoNotaFiscal.Saida ? "Saída" : "Entrada",
+                HorarioBrasilia.ParaBrasilia(n.DataEmissao), n.DestinatarioNome, n.DestinatarioUf,
+                n.PedidoId, n.ValorTotal, n.Chave
+            }).ToList());
+    }
+
+    public async Task<NotaFiscalDetalheDto?> ObterAsync(int id, CancellationToken cancelamento)
+    {
+        var nota = await contexto.NotasFiscais.AsNoTracking()
+            .Include(n => n.Itens)
+            .Include(n => n.NotaReferenciada)
+            .FirstOrDefaultAsync(n => n.Id == id, cancelamento);
+        return nota is null ? null : NotaFiscalDetalheDto.DeEntidade(nota, nota.NotaReferenciada?.Chave);
+    }
+
+    /// <summary>Chave e XML da nota; nulo = inexistente.</summary>
+    public async Task<(string Chave, string Xml)?> ObterXmlAsync(int id, CancellationToken cancelamento)
+    {
+        var nota = await contexto.NotasFiscais.AsNoTracking()
+            .Where(n => n.Id == id)
+            .Select(n => new { n.Chave, n.Xml })
+            .FirstOrDefaultAsync(cancelamento);
+        return nota is null ? null : (nota.Chave, nota.Xml);
+    }
+
+    private IQueryable<NotaFiscal> Filtrar(NotaFiscalFiltroDto filtro)
+    {
+        var consulta = contexto.NotasFiscais.AsNoTracking();
+        if (filtro.DataInicio is { } inicio)
+        {
+            var desde = HorarioBrasilia.InicioDoDiaUtc(inicio);
+            consulta = consulta.Where(n => n.DataEmissao >= desde);
+        }
+        if (filtro.DataFim is { } fim)
+        {
+            var ate = HorarioBrasilia.InicioDoDiaUtc(fim.AddDays(1));
+            consulta = consulta.Where(n => n.DataEmissao < ate);
+        }
+        if (filtro.ClienteId is { } clienteId)
+            consulta = consulta.Where(n => n.ClienteId == clienteId);
+        if (filtro.Tipo is { } tipo)
+            consulta = consulta.Where(n => n.Tipo == tipo);
+        if (!string.IsNullOrWhiteSpace(filtro.Busca))
+        {
+            // Número exato da nota ou trecho da chave (com ou sem os espaços do DANFE).
+            var busca = new string(filtro.Busca.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+            consulta = int.TryParse(busca, out var numero)
+                ? consulta.Where(n => n.Numero == numero || n.Chave.Contains(busca))
+                : consulta.Where(n => n.Chave.Contains(busca));
+        }
+        return consulta;
+    }
+
+    private static IQueryable<NotaFiscalResumoDto> Resumir(IQueryable<NotaFiscal> consulta) =>
+        consulta.Select(n => new NotaFiscalResumoDto(
+            n.Id, n.Tipo, n.Serie, n.Numero, n.Chave, n.DataEmissao, n.ClienteId, n.DestinatarioNome,
+            n.DestinatarioDocumento, n.DestinatarioUf, n.PedidoId, n.DevolucaoId, n.ValorTotal));
 
     // Trava a linha da empresa até o fim da transação: duas emissões ao mesmo tempo não pegam o mesmo número.
     private async Task<Empresa?> TravarEmpresaAsync(CancellationToken cancelamento) =>
