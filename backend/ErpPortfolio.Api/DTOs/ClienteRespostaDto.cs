@@ -24,6 +24,13 @@ public record ClienteRespostaDto(
     string? Telefone,
     string Cidade,
     string Uf,
+    string? Logradouro,
+    string? Numero,
+    string? Complemento,
+    string? Bairro,
+    string? Cep,
+    string? CodigoMunicipio,
+    string? InscricaoEstadual,
     bool Ativo,
     DateTime DataCadastro)
 {
@@ -35,6 +42,13 @@ public record ClienteRespostaDto(
         cliente.Telefone,
         cliente.Cidade,
         cliente.Uf,
+        cliente.Logradouro,
+        cliente.Numero,
+        cliente.Complemento,
+        cliente.Bairro,
+        cliente.Cep,
+        cliente.CodigoMunicipio,
+        cliente.InscricaoEstadual,
         cliente.Ativo,
         cliente.DataCadastro);
 }

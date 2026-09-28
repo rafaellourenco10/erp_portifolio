@@ -9,9 +9,10 @@
   - Verificar: `dotnet test`.
   - Resultado: `Services/NfeCalculo.cs` (códigos IBGE e alíquotas internas das 27 UFs, `Cfop`, `AliquotaIcms`, `Itens` com rateio proporcional e sobra no último, `Somar`, `Chave`, `DigitoVerificador`, `NcmValido`). A lista do que falta para emitir fica no serviço (T3), que é quem conhece as entidades. `NfeCalculoTests` (+25, inclusive o DV do exemplo do manual). `dotnet test` 271/271.
 
-- [ ] **T2: Banco e cadastros** (M)
+- [x] **T2: Banco e cadastros** (M) — *concluída em 28/09/2026*
   - Migration: `empresa`, campos fiscais em `clientes` e `produtos`, `notas_fiscais`, `nota_fiscal_itens`. `GET/PUT /api/empresa`; DTOs e validações de cliente/produto com os campos novos.
   - Verificar: build 0 avisos (Release), migration aplicada, `dotnet test`.
+  - Resultado: modelos `Empresa`, `NotaFiscal` (+ `TipoNotaFiscal`), `NotaFiscalItem`; campos em `Cliente` (endereço, CEP, IBGE, IE) e `Produto` (NCM). Migration `AdicionaNotasFiscais` (só adiciona; aplicada). Índices únicos (série, número), chave, pedido da nota de saída (filtrado) e devolução; CK de tipo. **Mudança no plano:** sem coluna `proximo_numero` — o próximo número será o maior da série + 1, com a linha da empresa travada (`FOR UPDATE`) e o índice único como garantia. `EmpresaController` direto no DbContext (sem serviço: não há regra além da validação). `Validacoes/EnderecoFiscal` compartilhado (tira só a máscara, para letras serem recusadas; CEP 8 dígitos; IBGE 7 dígitos começando pelo código da UF). `DadosFiscaisValidacaoTests` (+12). Build 0 avisos, `dotnet test` 283/283.
 
 - [ ] **T3: Emissão de saída** (L)
   - `NotaFiscalService.EmitirDoPedidoAsync` (validação, numeração na transação, cálculo, gravação), `NfeXml` (nfeProc 4.00 com protNFe), `POST /api/pedidos/{id}/nfe`, 409 ao cancelar pedido com nota; `notaFiscalId`/`chaveNfe` no DTO do pedido.

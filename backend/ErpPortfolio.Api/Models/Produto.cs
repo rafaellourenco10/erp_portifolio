@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: Produto.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 22/09/2026
 // Descrição..: Entidade de domínio que representa um produto vendável.
 // -------------------------------------------------------------------------------------
@@ -8,13 +8,14 @@
 // Tabelas....: public.produtos (FK categoria_id -> public.categorias)
 // Fontes.....: Mapeada em ErpPortfolioDbContext.Produtos (EF Core / Npgsql).
 //              Colunas: id, nome, sku, categoria_id, unidade, preco_venda, custo,
-//              estoque_minimo, ativo, data_cadastro (o mapeamento de nomes fica no DbContext).
+//              estoque_minimo, ncm, ativo, data_cadastro (o mapeamento de nomes fica no DbContext).
 // -------------------------------------------------------------------------------------
 // Histórico de alterações:
 //   1.0.0 - 21/09/2026 - Criação do arquivo.
 //   1.1.0 - 21/09/2026 - Categoria deixa de ser texto livre e passa a ser um registro
 //                        (CategoriaId + navegação).
 //   1.2.0 - 22/09/2026 - EstoqueMinimo, usado pelo card "saldo baixo" do Dashboard.
+//   1.3.0 - 28/09/2026 - NCM (NF-e, etapa 16).
 // =====================================================================================
 
 namespace ErpPortfolio.Api.Models;
@@ -44,6 +45,9 @@ public class Produto
 
     /// <summary>Saldo de estoque igual ou abaixo disso conta como "baixo" no Dashboard. 0 = sem mínimo definido.</summary>
     public decimal EstoqueMinimo { get; set; }
+
+    /// <summary>NCM (8 dígitos); opcional no cadastro, obrigatório para emitir NF-e (etapa 16).</summary>
+    public string? Ncm { get; set; }
 
     public bool Ativo { get; set; } = true;
 

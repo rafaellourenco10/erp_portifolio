@@ -18,7 +18,7 @@ using ErpPortfolio.Api.DTOs.Validacoes;
 
 namespace ErpPortfolio.Api.DTOs;
 
-public class ClienteCriacaoDto
+public class ClienteCriacaoDto : IValidatableObject
 {
     /// <example>Maria da Silva</example>
     [Required(ErrorMessage = "O nome é obrigatório.")]
@@ -61,4 +61,38 @@ public class ClienteCriacaoDto
     [Required(ErrorMessage = "A UF é obrigatória.")]
     [Uf]
     public string Uf { get; set; } = string.Empty;
+
+    // Dados fiscais (etapa 16): opcionais aqui, exigidos só ao emitir NF-e. Vazio vira null.
+    /// <example>Avenida Paulista</example>
+    [StringLength(60, MinimumLength = 2, ErrorMessage = "O logradouro deve ter entre 2 e 60 caracteres.")]
+    public string? Logradouro { get; set => field = EnderecoFiscal.Opcional(value); }
+
+    /// <summary>Número do endereço ou "S/N".</summary>
+    /// <example>1000</example>
+    [StringLength(10, ErrorMessage = "O número deve ter no máximo 10 caracteres.")]
+    public string? Numero { get; set => field = EnderecoFiscal.Opcional(value); }
+
+    /// <example>Sala 12</example>
+    [StringLength(60, ErrorMessage = "O complemento deve ter no máximo 60 caracteres.")]
+    public string? Complemento { get; set => field = EnderecoFiscal.Opcional(value); }
+
+    /// <example>Bela Vista</example>
+    [StringLength(60, MinimumLength = 2, ErrorMessage = "O bairro deve ter entre 2 e 60 caracteres.")]
+    public string? Bairro { get; set => field = EnderecoFiscal.Opcional(value); }
+
+    /// <summary>Com ou sem máscara; gravado com 8 dígitos.</summary>
+    /// <example>01310-100</example>
+    public string? Cep { get; set => field = EnderecoFiscal.SemMascara(value); }
+
+    /// <summary>Código IBGE do município (7 dígitos, começando pelo código da UF).</summary>
+    /// <example>3550308</example>
+    public string? CodigoMunicipio { get; set => field = EnderecoFiscal.SemMascara(value); }
+
+    /// <summary>Inscrição Estadual (dígitos) ou "ISENTO".</summary>
+    /// <example>ISENTO</example>
+    [RegularExpression("^([0-9]{2,14}|ISENTO)$", ErrorMessage = "Inscrição Estadual inválida: use de 2 a 14 dígitos ou ISENTO.")]
+    public string? InscricaoEstadual { get; set => field = EnderecoFiscal.SemMascara(value); }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext contexto) =>
+        EnderecoFiscal.Validar(Cep, CodigoMunicipio, Uf);
 }

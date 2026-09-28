@@ -31,6 +31,7 @@ public record ProdutoRespostaDto(
     decimal PrecoVenda,
     decimal Custo,
     decimal EstoqueMinimo,
+    string? Ncm,
     bool Ativo,
     DateTime DataCadastro)
 {
@@ -45,6 +46,7 @@ public record ProdutoRespostaDto(
         produto.PrecoVenda,
         produto.Custo,
         produto.EstoqueMinimo,
+        produto.Ncm,
         produto.Ativo,
         produto.DataCadastro);
 

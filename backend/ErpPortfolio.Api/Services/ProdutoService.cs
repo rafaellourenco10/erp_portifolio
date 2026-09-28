@@ -141,6 +141,7 @@ public class ProdutoService(ErpPortfolioDbContext contexto) : IProdutoService
         produto.PrecoVenda = dados.PrecoVenda!.Value;
         produto.Custo = dados.Custo!.Value;
         produto.EstoqueMinimo = dados.EstoqueMinimo!.Value;
+        produto.Ncm = dados.Ncm;
     }
 
     // Só o banco sabe se a categoria existe e está ativa. Uma categoria inativa continua aceita

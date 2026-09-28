@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: ErpPortfolioDbContext.cs
-// Versão.....: 1.13.0
+// Versão.....: 1.14.0
 // Data.......: 23/09/2026
 // Descrição..: DbContext do EF Core. Define os DbSets e o mapeamento das entidades
 //              para as tabelas do PostgreSQL (nomes em snake_case).
@@ -115,6 +115,21 @@
 //                - UK  : ux_devolucao_itens_devolucao_item (devolucao_id, pedido_item_id)
 //                - FK  : fk_devolucao_itens_devolucoes (cascade), fk_devolucao_itens_pedido_itens (restrict)
 //                - CK  : ck_devolucao_itens_quantidade, ck_devolucao_itens_valor
+//              public.empresa (etapa 16)
+//                - PK  : pk_empresa (id = 1, sem identity); CK ck_empresa_id, ck_empresa_serie_nfe
+//              public.notas_fiscais (etapa 16)
+//                - PK  : pk_notas_fiscais (id, identity)
+//                - UK  : ux_notas_fiscais_serie_numero, ux_notas_fiscais_chave,
+//                        ux_notas_fiscais_pedido_saida (pedido_id onde tipo = 'Saida'),
+//                        ux_notas_fiscais_devolucao_id
+//                - IDX : ix_notas_fiscais_data_emissao, ix_notas_fiscais_cliente_id,
+//                        ix_notas_fiscais_nota_referenciada_id
+//                - FK  : fk_notas_fiscais_clientes, _pedidos, _devolucoes, _nota_referenciada (restrict)
+//                - CK  : ck_notas_fiscais_tipo (entrada exige devolução e nota referenciada)
+//              public.nota_fiscal_itens (etapa 16)
+//                - PK  : pk_nota_fiscal_itens (id, identity)
+//                - UK  : ux_nota_fiscal_itens_nota_numero (nota_fiscal_id, numero_item)
+//                - FK  : fk_nota_fiscal_itens_notas_fiscais (cascade), fk_nota_fiscal_itens_produtos (restrict)
 //              public.__EFMigrationsHistory (controle de migrations do EF Core)
 // Fontes.....: Npgsql.EntityFrameworkCore.PostgreSQL. Migrations em Data/Migrations.
 // -------------------------------------------------------------------------------------
@@ -136,6 +151,8 @@
 //   1.12.0 - 23/09/2026 - Mapeamento de Orcamento e OrcamentoItem (etapa 13).
 //   1.13.0 - 24/09/2026 - Devolucao e DevolucaoItem; parcelas_pagar.devolucao_id e origem Devolucao;
 //                         comissoes.devolucao_id e estorno negativo (etapa 14).
+//   1.14.0 - 28/09/2026 - Empresa, NotaFiscal e NotaFiscalItem; endereço/IE em clientes e ncm em
+//                         produtos (NF-e, etapa 16).
 // =====================================================================================
 
 using ErpPortfolio.Api.Models;
@@ -178,6 +195,12 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
     public DbSet<Devolucao> Devolucoes => Set<Devolucao>();
 
     public DbSet<DevolucaoItem> DevolucaoItens => Set<DevolucaoItem>();
+
+    public DbSet<Empresa> Empresa => Set<Empresa>();
+
+    public DbSet<NotaFiscal> NotasFiscais => Set<NotaFiscal>();
+
+    public DbSet<NotaFiscalItem> NotaFiscalItens => Set<NotaFiscalItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -827,6 +850,119 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasDatabaseName("ix_devolucao_itens_pedido_item_id");
         });
 
+        modelBuilder.Entity<Empresa>(entidade =>
+        {
+            entidade.ToTable("empresa", tabela =>
+            {
+                tabela.HasCheckConstraint("ck_empresa_id", "id = 1");
+                tabela.HasCheckConstraint("ck_empresa_serie_nfe", "serie_nfe BETWEEN 0 AND 999");
+            });
+
+            entidade.HasKey(e => e.Id).HasName("pk_empresa");
+            entidade.Property(e => e.Id).HasColumnName("id").ValueGeneratedNever();
+            entidade.Property(e => e.RazaoSocial).HasColumnName("razao_social").HasMaxLength(60).IsRequired();
+            entidade.Property(e => e.NomeFantasia).HasColumnName("nome_fantasia").HasMaxLength(60);
+            entidade.Property(e => e.Cnpj).HasColumnName("cnpj").HasColumnType("char(14)").IsRequired();
+            entidade.Property(e => e.InscricaoEstadual).HasColumnName("inscricao_estadual").HasMaxLength(14).IsRequired();
+            entidade.Property(e => e.Logradouro).HasColumnName("logradouro").HasMaxLength(60).IsRequired();
+            entidade.Property(e => e.Numero).HasColumnName("numero").HasMaxLength(10).IsRequired();
+            entidade.Property(e => e.Complemento).HasColumnName("complemento").HasMaxLength(60);
+            entidade.Property(e => e.Bairro).HasColumnName("bairro").HasMaxLength(60).IsRequired();
+            entidade.Property(e => e.Cep).HasColumnName("cep").HasColumnType("char(8)").IsRequired();
+            entidade.Property(e => e.Municipio).HasColumnName("municipio").HasMaxLength(60).IsRequired();
+            entidade.Property(e => e.CodigoMunicipio).HasColumnName("codigo_municipio").HasColumnType("char(7)").IsRequired();
+            entidade.Property(e => e.Uf).HasColumnName("uf").HasColumnType("char(2)").IsRequired();
+            entidade.Property(e => e.Telefone).HasColumnName("telefone").HasMaxLength(20);
+            entidade.Property(e => e.SerieNfe).HasColumnName("serie_nfe").HasDefaultValue(1).IsRequired();
+        });
+
+        modelBuilder.Entity<NotaFiscal>(entidade =>
+        {
+            entidade.ToTable("notas_fiscais", tabela =>
+            {
+                // A entrada (devolução) sempre aponta a devolução e a nota de saída que devolve.
+                tabela.HasCheckConstraint("ck_notas_fiscais_tipo",
+                    "(tipo = 'Saida' AND devolucao_id IS NULL AND nota_referenciada_id IS NULL) OR " +
+                    "(tipo = 'Entrada' AND devolucao_id IS NOT NULL AND nota_referenciada_id IS NOT NULL)");
+            });
+
+            entidade.HasKey(n => n.Id).HasName("pk_notas_fiscais");
+            entidade.Property(n => n.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+            entidade.Property(n => n.Tipo).HasColumnName("tipo").HasConversion<string>().HasMaxLength(10).IsRequired();
+            entidade.Property(n => n.Serie).HasColumnName("serie").IsRequired();
+            entidade.Property(n => n.Numero).HasColumnName("numero").IsRequired();
+            entidade.Property(n => n.Chave).HasColumnName("chave").HasColumnType("char(44)").IsRequired();
+            entidade.Property(n => n.DataEmissao).HasColumnName("data_emissao").HasColumnType("timestamp with time zone").IsRequired();
+            entidade.Property(n => n.Protocolo).HasColumnName("protocolo").HasColumnType("char(15)").IsRequired();
+            entidade.Property(n => n.ClienteId).HasColumnName("cliente_id");
+            entidade.Property(n => n.PedidoId).HasColumnName("pedido_id");
+            entidade.Property(n => n.DevolucaoId).HasColumnName("devolucao_id");
+            entidade.Property(n => n.NotaReferenciadaId).HasColumnName("nota_referenciada_id");
+            entidade.Property(n => n.DestinatarioNome).HasColumnName("destinatario_nome").HasMaxLength(150).IsRequired();
+            entidade.Property(n => n.DestinatarioDocumento).HasColumnName("destinatario_documento").HasMaxLength(14).IsRequired();
+            entidade.Property(n => n.DestinatarioUf).HasColumnName("destinatario_uf").HasColumnType("char(2)").IsRequired();
+            entidade.Property(n => n.ValorProdutos).HasColumnName("valor_produtos").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.ValorDesconto).HasColumnName("valor_desconto").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.BaseIcms).HasColumnName("base_icms").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.ValorIcms).HasColumnName("valor_icms").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.ValorPis).HasColumnName("valor_pis").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.ValorCofins).HasColumnName("valor_cofins").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.ValorTotal).HasColumnName("valor_total").HasColumnType("numeric(12,2)");
+            entidade.Property(n => n.Xml).HasColumnName("xml").HasColumnType("text").IsRequired();
+
+            // Restrict em tudo: nota fiscal é documento; nada que ela aponta pode sumir.
+            entidade.HasOne(n => n.Cliente).WithMany().HasForeignKey(n => n.ClienteId)
+                .HasConstraintName("fk_notas_fiscais_clientes").OnDelete(DeleteBehavior.Restrict);
+            entidade.HasOne(n => n.Pedido).WithMany().HasForeignKey(n => n.PedidoId)
+                .HasConstraintName("fk_notas_fiscais_pedidos").OnDelete(DeleteBehavior.Restrict);
+            entidade.HasOne(n => n.Devolucao).WithMany().HasForeignKey(n => n.DevolucaoId)
+                .HasConstraintName("fk_notas_fiscais_devolucoes").OnDelete(DeleteBehavior.Restrict);
+            entidade.HasOne(n => n.NotaReferenciada).WithMany().HasForeignKey(n => n.NotaReferenciadaId)
+                .HasConstraintName("fk_notas_fiscais_nota_referenciada").OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasIndex(n => new { n.Serie, n.Numero }).IsUnique().HasDatabaseName("ux_notas_fiscais_serie_numero");
+            entidade.HasIndex(n => n.Chave).IsUnique().HasDatabaseName("ux_notas_fiscais_chave");
+            // NF1: uma nota de saída por pedido (as de entrada repetem o pedido, uma por devolução).
+            entidade.HasIndex(n => n.PedidoId).IsUnique().HasFilter("tipo = 'Saida'").HasDatabaseName("ux_notas_fiscais_pedido_saida");
+            entidade.HasIndex(n => n.DevolucaoId).IsUnique().HasDatabaseName("ux_notas_fiscais_devolucao_id");
+            entidade.HasIndex(n => n.DataEmissao).HasDatabaseName("ix_notas_fiscais_data_emissao");
+            entidade.HasIndex(n => n.ClienteId).HasDatabaseName("ix_notas_fiscais_cliente_id");
+            entidade.HasIndex(n => n.NotaReferenciadaId).HasDatabaseName("ix_notas_fiscais_nota_referenciada_id");
+        });
+
+        modelBuilder.Entity<NotaFiscalItem>(entidade =>
+        {
+            entidade.ToTable("nota_fiscal_itens");
+
+            entidade.HasKey(i => i.Id).HasName("pk_nota_fiscal_itens");
+            entidade.Property(i => i.Id).HasColumnName("id").UseIdentityAlwaysColumn();
+            entidade.Property(i => i.NotaFiscalId).HasColumnName("nota_fiscal_id");
+            entidade.Property(i => i.NumeroItem).HasColumnName("numero_item").IsRequired();
+            entidade.Property(i => i.ProdutoId).HasColumnName("produto_id");
+            entidade.Property(i => i.Codigo).HasColumnName("codigo").HasMaxLength(30).IsRequired();
+            entidade.Property(i => i.Descricao).HasColumnName("descricao").HasMaxLength(150).IsRequired();
+            entidade.Property(i => i.Ncm).HasColumnName("ncm").HasColumnType("char(8)").IsRequired();
+            entidade.Property(i => i.Cfop).HasColumnName("cfop").HasColumnType("char(4)").IsRequired();
+            entidade.Property(i => i.Unidade).HasColumnName("unidade").HasMaxLength(2).IsRequired();
+            entidade.Property(i => i.Quantidade).HasColumnName("quantidade").HasColumnType("numeric(12,3)");
+            entidade.Property(i => i.ValorUnitario).HasColumnName("valor_unitario").HasColumnType("numeric(12,2)");
+            entidade.Property(i => i.ValorBruto).HasColumnName("valor_bruto").HasColumnType("numeric(12,2)");
+            entidade.Property(i => i.ValorDesconto).HasColumnName("valor_desconto").HasColumnType("numeric(12,2)");
+            entidade.Property(i => i.BaseIcms).HasColumnName("base_icms").HasColumnType("numeric(12,2)");
+            entidade.Property(i => i.AliquotaIcms).HasColumnName("aliquota_icms").HasColumnType("numeric(5,2)");
+            entidade.Property(i => i.ValorIcms).HasColumnName("valor_icms").HasColumnType("numeric(12,2)");
+            entidade.Property(i => i.ValorPis).HasColumnName("valor_pis").HasColumnType("numeric(12,2)");
+            entidade.Property(i => i.ValorCofins).HasColumnName("valor_cofins").HasColumnType("numeric(12,2)");
+
+            entidade.HasOne(i => i.NotaFiscal).WithMany(n => n.Itens).HasForeignKey(i => i.NotaFiscalId)
+                .HasConstraintName("fk_nota_fiscal_itens_notas_fiscais").OnDelete(DeleteBehavior.Cascade);
+            entidade.HasOne(i => i.Produto).WithMany().HasForeignKey(i => i.ProdutoId)
+                .HasConstraintName("fk_nota_fiscal_itens_produtos").OnDelete(DeleteBehavior.Restrict);
+
+            entidade.HasIndex(i => new { i.NotaFiscalId, i.NumeroItem }).IsUnique().HasDatabaseName("ux_nota_fiscal_itens_nota_numero");
+            entidade.HasIndex(i => i.ProdutoId).HasDatabaseName("ix_nota_fiscal_itens_produto_id");
+        });
+
         modelBuilder.Entity<Categoria>(entidade =>
         {
             entidade.ToTable("categorias");
@@ -913,6 +1049,10 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasDefaultValue(0m)
                 .IsRequired();
 
+            entidade.Property(p => p.Ncm)
+                .HasColumnName("ncm")
+                .HasColumnType("char(8)");
+
             entidade.Property(p => p.Ativo)
                 .HasColumnName("ativo")
                 .IsRequired();
@@ -971,6 +1111,15 @@ public class ErpPortfolioDbContext(DbContextOptions<ErpPortfolioDbContext> opcoe
                 .HasColumnName("uf")
                 .HasColumnType("char(2)")
                 .IsRequired();
+
+            // Tamanhos do layout da NF-e (xLgr, xCpl e xBairro vão até 60).
+            entidade.Property(c => c.Logradouro).HasColumnName("logradouro").HasMaxLength(60);
+            entidade.Property(c => c.Numero).HasColumnName("numero").HasMaxLength(10);
+            entidade.Property(c => c.Complemento).HasColumnName("complemento").HasMaxLength(60);
+            entidade.Property(c => c.Bairro).HasColumnName("bairro").HasMaxLength(60);
+            entidade.Property(c => c.Cep).HasColumnName("cep").HasColumnType("char(8)");
+            entidade.Property(c => c.CodigoMunicipio).HasColumnName("codigo_municipio").HasColumnType("char(7)");
+            entidade.Property(c => c.InscricaoEstadual).HasColumnName("inscricao_estadual").HasMaxLength(14);
 
             entidade.Property(c => c.Ativo)
                 .HasColumnName("ativo")

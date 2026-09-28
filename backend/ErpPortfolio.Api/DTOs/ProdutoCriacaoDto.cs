@@ -72,6 +72,11 @@ public class ProdutoCriacaoDto : IValidatableObject
     [Range(0, 999_999.999, ErrorMessage = "O estoque mínimo deve estar entre 0 e 999.999,999.")]
     public decimal? EstoqueMinimo { get; set; }
 
+    /// <summary>Opcional. NCM com 8 dígitos (com ou sem pontos); exigido só ao emitir NF-e.</summary>
+    /// <example>8544.42.00</example>
+    [RegularExpression("^[0-9]{8}$", ErrorMessage = "O NCM deve ter 8 dígitos.")]
+    public string? Ncm { get; set => field = Validacoes.EnderecoFiscal.SemMascara(value); }
+
     // As colunas são numeric(12,2)/(12,3): mais casas seriam arredondadas em silêncio pelo banco.
     public IEnumerable<ValidationResult> Validate(ValidationContext contexto)
     {

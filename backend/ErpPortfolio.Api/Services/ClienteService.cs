@@ -130,6 +130,13 @@ public class ClienteService(ErpPortfolioDbContext contexto) : IClienteService
         cliente.Telefone = dados.Telefone;
         cliente.Cidade = dados.Cidade.Trim();
         cliente.Uf = dados.Uf.Trim().ToUpperInvariant();
+        cliente.Logradouro = dados.Logradouro;
+        cliente.Numero = dados.Numero;
+        cliente.Complemento = dados.Complemento;
+        cliente.Bairro = dados.Bairro;
+        cliente.Cep = dados.Cep;
+        cliente.CodigoMunicipio = dados.CodigoMunicipio;
+        cliente.InscricaoEstadual = dados.InscricaoEstadual;
     }
 
     private async Task GarantirDocumentoUnicoAsync(string documento, int? idIgnorado, CancellationToken cancelamento)
