@@ -1,6 +1,6 @@
 # Spec: NF-e simulada (etapa 16)
 
-> Status: **proposta em 28/09/2026**, aguardando aprovação do Rafael.
+> Status: **aprovada e implementada em 28/09/2026** (T1 a T8, ver `tasks/todo.md`). Critérios 1-8 conferidos: E2E da API com 47 verificações e teste de tela com Playwright com 25 (dados `ZZT…` apagados, dados reais intactos, empresa restaurada).
 
 ## Objetivo
 
@@ -25,7 +25,7 @@ Envio real à SEFAZ, certificado digital e assinatura XML; **cancelamento da not
 | Emissão | **Botão no pedido confirmado**, uma nota por pedido, com validação dos dados fiscais antes. |
 | Extras | **Tela de notas emitidas** e **NF-e de devolução**. Cancelamento da nota ficou **de fora**. |
 
-### Decididas por padrão (a confirmar)
+### Decididas por padrão (confirmadas pelo Rafael em 28/09/2026)
 
 | Tema | Padrão proposto | Motivo |
 |---|---|---|
@@ -56,10 +56,10 @@ Envio real à SEFAZ, certificado digital e assinatura XML; **cancelamento da not
 
 ## Modelo de dados (1 migration)
 
-- **`empresa`** (nova, 1 linha): razao_social, nome_fantasia, cnpj, inscricao_estadual, logradouro, numero, complemento, bairro, cep, municipio, codigo_municipio (IBGE, 7), uf, telefone, serie_nfe, proximo_numero_nfe.
+- **`empresa`** (nova, 1 linha): razao_social, nome_fantasia, cnpj, inscricao_estadual, logradouro, numero, complemento, bairro, cep, municipio, codigo_municipio (IBGE, 7), uf, telefone, serie_nfe. *(Na implementação, sem `proximo_numero_nfe`: o próximo número é o maior da série + 1, com a linha da empresa travada por `FOR UPDATE` e o índice único (série, número) como garantia.)*
 - **`clientes`**: + logradouro, numero, complemento, bairro, cep, codigo_municipio, inscricao_estadual (todos opcionais).
 - **`produtos`**: + ncm (opcional, 8 dígitos).
-- **`notas_fiscais`** (nova): tipo (Saida/Entrada), numero, serie, chave (única), pedido_id, devolucao_id, nota_referenciada_id, data_emissao, protocolo, status, destinatário congelado (nome, documento, UF), valor_produtos, valor_desconto, base_icms, valor_icms, valor_pis, valor_cofins, valor_total, xml (texto). Índices únicos: (serie, numero), chave, pedido_id (saída) e devolucao_id.
+- **`notas_fiscais`** (nova): tipo (Saida/Entrada), numero, serie, chave (única), cliente_id, pedido_id, devolucao_id, nota_referenciada_id, data_emissao, protocolo, destinatário congelado (nome, documento, UF), valor_produtos, valor_desconto, base_icms, valor_icms, valor_pis, valor_cofins, valor_total, xml (texto). Índices únicos: (serie, numero), chave, pedido_id (saída) e devolucao_id.
 - **`nota_fiscal_itens`** (nova): produto_id, codigo, descricao, ncm, cfop, unidade, quantidade, valor_unitario, valor_bruto, valor_desconto, base_icms, aliquota_icms, valor_icms, valor_pis, valor_cofins.
 
 ## API
@@ -99,11 +99,13 @@ Os DTOs de pedido e devolução ganham `notaFiscalId`/`chaveNfe` para a tela sab
 
 ## Success criteria (testáveis)
 
-1. Emitir sem dados fiscais → 400 listando cada campo que falta; com os dados → nota `Autorizada`, número sequencial, e a soma dos itens = total do pedido.
-2. Chave com 44 dígitos e DV correto (conferido contra chaves reais); `Id` do XML = `NFe` + chave.
-3. ICMS, PIS e COFINS de cada item e os totais batem com o cálculo manual, para cliente na mesma UF, em outra UF (12%) e em UF de 7%.
-4. Segunda emissão e cancelamento de pedido com nota → 409.
-5. NF-e de devolução com CFOP 1202/2202, `finNFe=4` e `refNFe` da original; valores = devolução.
-6. Editar cliente/produto/empresa depois não altera a nota nem o XML.
-7. Tela: emitir pelo pedido e pela devolução, lista com filtros, baixar XML e DANFE, exportar; testada no navegador.
-8. `dotnet build` 0 avisos, `dotnet test` todo verde, `tsc -b`/`oxlint`/`npm run build` limpos.
+Conferidos em 28/09/2026; detalhes na seção "NF-e simulada (28/09/2026)" do README.
+
+1. ✅ Emitir sem dados fiscais → 400 listando cada campo que falta; com os dados → nota `Autorizada`, número sequencial, e a soma dos itens = total do pedido.
+2. ✅ Chave com 44 dígitos e DV correto (conferido contra o exemplo do manual da NF-e e recalculado de forma independente no E2E); `Id` do XML = `NFe` + chave.
+3. ✅ ICMS, PIS e COFINS de cada item e os totais batem com o cálculo manual, para cliente na mesma UF, em outra UF (12%) e em UF de 7%.
+4. ✅ Segunda emissão e cancelamento de pedido com nota → 409.
+5. ✅ NF-e de devolução com CFOP 1202/2202, `finNFe=4` e `refNFe` da original; valores = devolução.
+6. ✅ Editar cliente/produto/empresa depois não altera a nota nem o XML.
+7. ✅ Tela: emitir pelo pedido e pela devolução, lista com filtros, baixar XML e DANFE, exportar; testada no navegador.
+8. ✅ `dotnet build` 0 avisos, `dotnet test` todo verde, `tsc -b`/`oxlint`/`npm run build` limpos.

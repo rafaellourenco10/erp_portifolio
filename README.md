@@ -1,9 +1,9 @@
 # Ambition ERP
 
 ERP comercial desenvolvido como projeto de portfólio, com back-end em **ASP.NET Core** e front-end em **React**, em tema escuro próprio.
-O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique, e **Devolução de venda** (etapa 14): parcial ou total, que devolve ao estoque, abate as parcelas pendentes, gera o reembolso do que já foi pago e estorna a comissão do vendedor, e **Fluxo de caixa** (etapa 15): o que entrou e saiu e o que vai entrar e sair, dia a dia ou mês a mês, com o saldo acumulado. O **Dashboard** (etapa 6) resume os outros módulos.
+O projeto é evoluído por módulos: **Clientes** (etapa 1), **Produtos e Categorias** (etapa 2), **Pedidos de Venda** (etapa 3), que liga cliente e produtos numa venda com itens, desconto e total calculado, **Estoque** (etapa 4), que baixa e devolve saldo automaticamente a partir dos pedidos, **Contas a Receber** (etapa 5), que gera e controla as parcelas de cada venda confirmada, **Fornecedores e Pedidos de Compra** (etapa 7), que fecha o lado "compra" do estoque: confirmar um pedido de compra dá entrada automática e atualiza o custo dos produtos, **Contas a Pagar** (etapa 8), que gera e controla as parcelas de cada compra confirmada, **Relatórios** (etapa 9) de vendas, compras e estoque, com exportação para Excel e PDF, **Vendedores** (etapa 10), com o vendedor e a % de comissão congelada em cada venda confirmada, **Comissões** (etapa 11), geradas quando o cliente paga cada parcela, a **integração Comissões → Contas a Pagar com contas avulsas** (etapa 12): fechar as comissões de um vendedor gera uma conta a pagar, e o Contas a Pagar passa a aceitar também despesas como aluguel e luz, **Orçamentos** (etapa 13): a proposta ao cliente, com validade e PDF, que vira pedido de venda com um clique, e **Devolução de venda** (etapa 14): parcial ou total, que devolve ao estoque, abate as parcelas pendentes, gera o reembolso do que já foi pago e estorna a comissão do vendedor, **Fluxo de caixa** (etapa 15): o que entrou e saiu e o que vai entrar e sair, dia a dia ou mês a mês, com o saldo acumulado, e **NF-e simulada** (etapa 16): a nota fiscal eletrônica da venda e da devolução, com ICMS/PIS/COFINS, chave de acesso válida, XML no layout 4.00 e DANFE em PDF, em ambiente de homologação (sem valor fiscal). O **Dashboard** (etapa 6) resume os outros módulos.
 
-O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Orçamentos, Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões); **Relatórios** (Vendas, Compras, Estoque).
+O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadastro** (Clientes, Fornecedores, Vendedores, Produtos, Categorias); **Ordem Vendas/Compras** (Orçamentos, Pedidos de Venda, Pedidos de Compra); **Depósito** (Estoque); **Financeiro** (Contas a Receber, Contas a Pagar, Comissões, Fluxo de Caixa); **Fiscal** (Notas Fiscais, Empresa); **Relatórios** (Vendas, Compras, Estoque).
 
 | Etapa | Módulo | Situação |
 |---|---|---|
@@ -25,7 +25,8 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 | 13 | Orçamentos (validade, situação Vencido calculada, gerar pedido com os preços do orçamento, marcar como perdido, PDF) | Back-end testado de ponta a ponta; tela testada com Playwright (23/09/2026) |
 | 14 | Devolução de venda (parcial, estoque por item, abatimento nas parcelas, reembolso em Contas a Pagar, estorno de comissão, card no Dashboard) | Back-end testado de ponta a ponta; tela testada com Playwright (24/09/2026) |
 | 15 | Fluxo de caixa (realizado + previsto, saldo acumulado, visão diária e mensal, gráfico, Excel/PDF) | Back-end testado de ponta a ponta; tela testada com Playwright (24/09/2026) |
-| 16+ | Login | Planejada |
+| 16 | NF-e simulada (emitente, dados fiscais em cliente/produto, emissão pelo pedido e pela devolução, impostos, chave, XML 4.00, DANFE, lista de notas) | Back-end testado de ponta a ponta; tela testada com Playwright (28/09/2026) |
+| 17+ | Login | Planejada |
 
 > Os nomes técnicos (solution `ErpPortfolio`, projeto `ErpPortfolio.Api`, banco `erp_portfolio_db`) foram mantidos; "Ambition ERP" é o nome do produto exibido na interface e no Swagger.
 
@@ -242,6 +243,22 @@ O menu lateral agrupa as telas por departamento: **Dashboard** no topo; **Cadast
 - Dias em horário de Brasília (recebimento às 22h conta no mesmo dia); só leitura, sem tabela nova
 - Fora do escopo por enquanto: contas bancárias/caixas e saldo inicial digitado, categorias de despesa, abrir os lançamentos de um dia, card no Dashboard, cenários
 
+## Funcionalidades (etapa 16 — NF-e simulada)
+
+> A nota é **de demonstração**: XML em ambiente de homologação (`tpAmb=2`), sem assinatura digital e sem envio à SEFAZ; o DANFE sai com a marca **"SEM VALOR FISCAL"**.
+
+- **Fiscal → Empresa**: dados do emitente (razão social, CNPJ — inclusive o alfanumérico —, Inscrição Estadual, endereço, código IBGE do município conferido com a UF, série da NF-e)
+- **Dados fiscais** no cadastro: endereço completo, CEP, código IBGE e Inscrição Estadual (ou ISENTO) no **cliente**; **NCM** no **produto**. Opcionais no cadastro, exigidos só na hora de emitir
+- **Emitir NF-e** no pedido de venda confirmado (uma por pedido). Faltando dado, a tela lista tudo de uma vez (empresa, endereço do cliente, NCM de cada produto)
+- **Impostos por item (regime normal)**: ICMS CST 00 pela alíquota interna da UF do emitente (tabela das 27 UFs) ou interestadual de **12%** / **7%** (Sul/Sudeste, menos ES, para as demais UFs); PIS 1,65% e COFINS 7,6%. O **desconto do pedido é rateado** entre os itens (sobra de centavos no último) e a nota fecha com o total do pedido
+- **CFOP** 5102/6102 na venda e 1202/2202 na devolução; destinatário contribuinte (CNPJ com IE) ou não contribuinte
+- **Chave de acesso** de 44 posições com dígito verificador módulo 11 (conferido com o exemplo do manual e com CNPJ alfanumérico), numeração sequencial por série e **protocolo de autorização simulado**
+- **XML** `nfeProc` no layout 4.00 (ide, emit, dest, det, total, transp, pag, infAdic + protNFe) e **DANFE** em PDF gerado **a partir do XML gravado**
+- **NF-e de devolução** (entrada, finalidade 4) pela devolução de venda, referenciando a chave da nota original, com os produtos e as alíquotas da nota original e os valores da devolução
+- A nota é **imutável**: editar cliente, produto ou empresa depois não muda nada nela. Pedido com NF-e **não pode ser cancelado** (não há cancelamento de nota); só devolvido
+- **Fiscal → Notas Fiscais**: lista com filtros (período, cliente, tipo, número ou trecho da chave), detalhe com itens e impostos, navegação para a nota devolvida, XML, DANFE e exportação Excel/PDF
+- Fora do escopo por enquanto: envio real à SEFAZ e certificado digital, cancelamento e carta de correção, inutilização, NFC-e, IPI/ICMS-ST/DIFAL/FCP, NF-e de compra, busca de endereço pelo CEP, código de barras da chave no DANFE, Simples Nacional
+
 ## Stack e versões
 
 | Camada | Tecnologia | Versão |
@@ -340,6 +357,8 @@ erp_portifolio/
 │       │   ├── PedidosCompraController.cs   # endpoints REST de pedidos de compra
 │       │   ├── ContasPagarController.cs     # endpoints REST de contas a pagar
 │       │   ├── FluxoCaixaController.cs      # fluxo de caixa: JSON ou arquivo (?formato=xlsx|pdf)
+│       │   ├── EmpresaController.cs         # GET/PUT /empresa (emitente da NF-e)
+│       │   ├── NotasFiscaisController.cs    # emitir (pedido/devolução), lista, detalhe, XML e DANFE
 │       │   └── RelatoriosController.cs      # relatórios: JSON para a tela ou arquivo (?formato=xlsx|pdf)
 │       ├── Models/
 │       │   ├── Cliente.cs                   # entidade
@@ -444,6 +463,10 @@ erp_portifolio/
 │       │   ├── IFluxoCaixaService.cs
 │       │   ├── FluxoCaixaService.cs         # lê as parcelas (realizado no dia de Brasília, pendentes) e monta o arquivo
 │       │   ├── FluxoCaixaCalculo.cs         # períodos, realizado × previsto, saldos e menor saldo (puro, com xUnit)
+│       │   ├── NfeCalculo.cs                # CFOP, alíquotas por UF, rateio, impostos, chave + DV (puro, com xUnit)
+│       │   ├── NfeXml.cs                    # XML nfeProc no layout 4.00 (System.Xml.Linq)
+│       │   ├── NotaFiscalService.cs         # emissão (saída e devolução) numa transação, lista, detalhe
+│       │   ├── ExportadorDanfe.cs           # DANFE em PDF (QuestPDF) a partir do XML gravado
 │       │   ├── HorarioBrasilia.cs           # "hoje" e limites de dia/mês em horário de Brasília
 │       │   ├── IRelatorioService.cs
 │       │   ├── RelatorioService.cs          # consultas dos relatórios + montagem do modelo de exportação
@@ -526,7 +549,8 @@ erp_portifolio/
             │   ├── PedidoPage.tsx           # formulário: cliente, itens, desconto, resumo, ações
             │   ├── ItensPedidoTabela.tsx    # tabela de itens (tela larga) / cartões (celular)
             │   ├── DevolucaoModal.tsx       # registrar devolução: itens, volta ao estoque, prévia
-            │   ├── DevolucoesPedido.tsx     # histórico de devoluções na página do pedido
+            │   ├── DevolucoesPedido.tsx     # histórico de devoluções na página do pedido (+ coluna NF-e)
+            │   ├── NotaFiscalPedido.tsx     # seção "Nota fiscal": emitir NF-e ou número/chave/XML/DANFE
             │   └── pedido.css               # estilos da página do pedido
             ├── pages/Estoque/
             │   ├── EstoqueListaPage.tsx     # busca, tabela com saldo, paginação, ações
@@ -551,6 +575,10 @@ erp_portifolio/
             ├── pages/FluxoCaixa/
             │   ├── FluxoCaixaPage.tsx         # visão, período, cards, alertas, tabela, exportar
             │   └── GraficoFluxoCaixa.tsx      # SVG: saldo + entradas/saídas (realizado × previsto)
+            ├── pages/Empresa/
+            │   └── EmpresaPage.tsx            # dados do emitente da NF-e
+            ├── pages/NotasFiscais/
+            │   └── NotasFiscaisListaPage.tsx  # filtros, tabela, detalhe (drawer), XML/DANFE, exportar
             ├── pages/Comissoes/
             │   └── ComissoesListaPage.tsx     # filtros, cards, tabela com seleção, marcar como pagas
             ├── pages/Vendedores/
@@ -881,6 +909,19 @@ Fluxo de caixa (só leitura; mesmo `formato` dos relatórios):
 |---|---|---|---|
 | GET | `/fluxo-caixa?dataInicio=&dataFim=&agrupamento=Dia\|Mes&formato=` | `{ saldoInicial, totalEntradas, totalSaidas, saldoFinal, menorSaldo, dataMenorSaldo, atrasadoReceber, atrasadoPagar, hoje, periodos: [{ inicio, entradasRealizadas, saidasRealizadas, entradasPrevistas, saidasPrevistas, saldo }] }`; datas obrigatórias, até 366 dias (93 no `Dia`); arquivo `fluxo-caixa-<inicio>_<fim>` | 200, 400 |
 
+NF-e simulada (etapa 16):
+
+| Método | Rota | Descrição | Respostas |
+|---|---|---|---|
+| GET / PUT | `/empresa` | Dados do emitente; o PUT cria ou atualiza (CNPJ, IE, endereço, IBGE × UF, série 0-999) | 200, 400, 404 (GET sem cadastro) |
+| POST | `/pedidos/{id}/nfe` | Emite a NF-e de saída do pedido confirmado; faltando dado fiscal → 400 com `errors.Pendencias` (lista) | 201, 400, 404, 409 (não confirmado ou já emitida) |
+| POST | `/devolucoes/{id}/nfe` | Emite a NF-e de devolução (entrada, `finNFe=4`, `refNFe` da nota do pedido) | 201, 400, 404, 409 (venda sem NF-e ou já emitida) |
+| GET | `/notas-fiscais?dataInicio=&dataFim=&clienteId=&tipo=Saida\|Entrada&busca=&pagina=&tamanhoPagina=&formato=` | Lista paginada (mais recente primeiro); `busca` = número ou trecho da chave; `formato=xlsx\|pdf` exporta todas as do filtro | 200, 400 |
+| GET | `/notas-fiscais/{id}` | Detalhe com itens, impostos e a chave referenciada | 200, 404 |
+| GET | `/notas-fiscais/{id}/xml` e `/danfe` | Arquivos `NFe{chave}.xml` e `NFe{chave}.pdf` | 200, 404 |
+
+`PATCH /pedidos/{id}/cancelar` devolve **409** quando o pedido tem NF-e. O detalhe do pedido traz `notaFiscalId`, `numeroNfe` e `chaveNfe`; a lista de devoluções, `notaFiscalId` e `numeroNfe`.
+
 O CORS expõe o cabeçalho `Content-Disposition` para o front ler o nome do arquivo.
 
 ### Filtros da listagem
@@ -1150,6 +1191,20 @@ Tabelas `public.devolucoes` e `public.devolucao_itens` (etapa 14):
 | `devolucao_itens.quantidade` / `valor` / `volta_estoque` | numeric(12,3) / numeric(12,2) / boolean | `CHECK` quantidade > 0 e valor ≥ 0 |
 
 Na mesma migration (`20260924004530_AdicionaDevolucoes`), `parcelas_pagar` ganhou `devolucao_id` (FK `fk_parcelas_pagar_devolucoes`, restrict) e o `CHECK ck_parcelas_pagar_origem` passou a aceitar `Devolucao` (exige `devolucao_id`); `comissoes.parcela_receber_id` passou a ser opcional e ganhou `devolucao_id` (FK `fk_comissoes_devolucoes`, restrict), com o `CHECK ck_comissoes_valor` exigindo **ou** comissão normal (parcela, valor > 0) **ou** estorno (devolução, valor < 0).
+
+Etapa 16 (migration `20260928122428_AdicionaNotasFiscais`, só adiciona): `clientes` ganhou `logradouro`, `numero`, `complemento`, `bairro`, `cep` (char 8), `codigo_municipio` (char 7) e `inscricao_estadual`, todos opcionais; `produtos` ganhou `ncm` (char 8, opcional). Tabelas novas:
+
+| Tabela / coluna | Tipo | Observação |
+|---|---|---|
+| `empresa` | — | uma linha só (`CHECK ck_empresa_id`: id = 1): razão social, fantasia, `cnpj` char(14), IE, endereço, `codigo_municipio`, `uf`, `serie_nfe` (0-999) |
+| `notas_fiscais.tipo` | varchar(10) | `Saida` ou `Entrada`; `CHECK ck_notas_fiscais_tipo`: a entrada exige `devolucao_id` e `nota_referenciada_id` |
+| `notas_fiscais.serie` / `numero` | integer | único `ux_notas_fiscais_serie_numero`; o próximo número é o maior da série + 1, com a linha da empresa travada (`FOR UPDATE`) |
+| `notas_fiscais.chave` / `protocolo` | char(44) / char(15) | chave única `ux_notas_fiscais_chave` |
+| `notas_fiscais.cliente_id` / `pedido_id` / `devolucao_id` / `nota_referenciada_id` | integer | FKs restrict; uma saída por pedido (`ux_notas_fiscais_pedido_saida`, índice filtrado) e uma nota por devolução |
+| `notas_fiscais.destinatario_*` | texto | nome, documento e UF congelados na emissão |
+| `notas_fiscais.valor_*` / `base_icms` | numeric(12,2) | produtos, desconto, base, ICMS, PIS, COFINS, total |
+| `notas_fiscais.xml` | text | `nfeProc` completo (o DANFE sai dele) |
+| `nota_fiscal_itens` | — | FK cascade na nota; produto (restrict), código, descrição, NCM, CFOP, unidade, quantidade, valores e impostos congelados; único (nota, numero_item) |
 
 Tabela `public.fornecedores` (espelho exato de `public.clientes`):
 
@@ -1638,6 +1693,25 @@ Achados das capturas de tela, corrigidos: rótulos finais do eixo sobrepostos, c
 
 Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (246 aprovados, 15 novos em `FluxoCaixaCalculoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
 
+### NF-e simulada (28/09/2026)
+
+Back-end testado ponta a ponta numa **instância temporária** da API (build Release, porta 5099), por um script PowerShell com 47 verificações, e a **tela** com Playwright (Edge headless) contra essa API e um Vite temporário (porta 5174), com 25 verificações. A empresa de teste usa a **série 999** e a linha real da empresa (se houver) é restaurada no fim. Dados de teste (`ZZT Nf…`, SKU `691000xx`) apagados via SQL; dados reais idênticos antes e depois.
+
+| Verificação | Resultado |
+|---|---|
+| Pendências: sem empresa, sem endereço do cliente e sem NCM → 400 com as três, sem gravar nada; empresa com IBGE de outra UF → 400 | ✅ |
+| Numeração 1-2-3 na série; total da nota = total do pedido; chave com 44 posições, cUF, CNPJ, modelo, série e **DV recalculado pelo script** | ✅ |
+| Impostos conferidos à mão: SP 18% (CFOP 5102), RJ 12% com desconto no item, BA 7% com rateio do desconto do pedido (5,00 + 2,50); soma dos itens = cabeçalho | ✅ |
+| XML: `Id` = NFe+chave, protNFe da mesma chave, homologação, destinatário contribuinte com IE, interestadual, `tPag`, ICMSTot; DANFE em PDF | ✅ |
+| 409 ao emitir de novo, ao cancelar pedido com nota e em rascunho; 404; editar cliente/produto/empresa não muda a nota (md5 do XML e dos itens) | ✅ |
+| Devolução: entrada nº 4, CFOP 2202, mesma alíquota (7%), valores da devolução, **nome e NCM de antes da edição do produto**, `finNFe=4`, `refNFe`, `tPag 90`; 409 para venda sem NF-e | ✅ |
+| Lista: filtros por período, cliente, tipo e trecho da chave, paginação, 400 no período invertido, Excel e PDF | ✅ |
+| Tela: Empresa (Zod, erro de IBGE da API no campo, normalização), janela de pendências, dados fiscais do cliente e NCM do produto pelas telas, emitir no pedido e na devolução, downloads `NFe{chave}.xml/.pdf`, lista, detalhe com a nota devolvida clicável, celular sem rolagem lateral, console limpo | ✅ |
+
+Achados, corrigidos: `<Link>` dentro da janela de pendências derrubava a tela (o modal do antd fica fora do Router); IE com letra era aceita porque a máscara tirava tudo que não era dígito; DANFE com CEP sem máscara e bordas coladas; aviso do antd no `Descriptions`. Os DANFEs de venda e de devolução foram conferidos visualmente.
+
+Verificações de build: `dotnet build -c Release` sem avisos, `dotnet test` (292 aprovados, 46 novos em `NfeCalculoTests`, `NfeXmlTests` e `DadosFiscaisValidacaoTests`), `tsc -b` sem erros, `oxlint` sem apontamentos, `npm run build` sem erros.
+
 ---
 
 ## Padrões do projeto
@@ -1720,7 +1794,7 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 
 ## Próximas etapas
 
-- Campos do mockup de cliente ainda não implementados: **PF/PJ**, **Inscrição Estadual**, **Nome Fantasia** e **Observações** (exige migration)
+- Campos do mockup de cliente ainda não implementados: **PF/PJ**, **Nome Fantasia** e **Observações** (exige migration; a Inscrição Estadual entrou na etapa 16)
 - Filtro por **cidades** e busca também por CPF/CNPJ (padrão do projeto: filtros de seleção múltipla usam dropdown multi-select com espaçamento normal entre as opções)
 - Filtro por **cliente** e por **faixa de data** na lista de Pedidos
 - Editar a **forma de pagamento** de um pedido já confirmado (hoje só dá para cancelar e criar outro)
@@ -1735,7 +1809,9 @@ cd frontend/erp-portfolio-web; npm run lint           # lint do front (oxlint)
 - Mais relatórios: contas a receber/pagar vencidas, vendas agrupadas por produto, pedidos com os itens
 - Mover `clientes.css` (classes usadas também por Produtos, Categorias, Pedidos, Estoque e Contas a Receber/Pagar) para um arquivo compartilhado
 - Centralizar o tratamento de `ConflitoException` (hoje repetido nos controllers)
-- **Autenticação/login** (etapa 16)
+- **Autenticação/login** (etapa 17)
+- NF-e: cancelamento (24h, justificativa) e carta de correção, inutilização de numeração, código de barras da chave no DANFE, busca de endereço pelo CEP, IPI/ICMS-ST/DIFAL, Simples Nacional, NF-e de compra; envio real à SEFAZ exigiria certificado A1 e assinatura XML
+- Categorias de despesa (decidido em 28/09: só despesas, categoria fixa por origem nas contas automáticas, filtro em Contas a Pagar)
 - Fluxo de caixa: contas bancárias/caixas e saldo inicial, categorias de despesa, lançamentos do dia ao clicar, card no Dashboard
 - Devolução: desfazer/editar, crédito do cliente, troca num passo só, devolução de compra ao fornecedor, faturamento líquido nos Relatórios
 - Orçamentos: duplicar, reabrir, orçamento para não cliente, envio por e-mail, taxa de conversão no Dashboard/Relatórios; trava de concorrência ao gerar pedido se o ERP virar multiusuário

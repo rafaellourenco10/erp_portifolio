@@ -1,7 +1,7 @@
 # Plano de implementação: NF-e simulada (etapa 16)
 
 > Origem: [SPEC.md](../SPEC.md). Tarefas detalhadas e checklist em [todo.md](todo.md).
-> Status: **proposto** (28/09/2026).
+> Status: **aprovado e implementado** (28/09/2026).
 
 ## Visão geral
 

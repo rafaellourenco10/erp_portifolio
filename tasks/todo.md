@@ -43,6 +43,7 @@
 
 ## Fase 3: Fechamento
 
-- [ ] **T8: Fechamento** (S)
+- [x] **T8: Fechamento** (S) — *concluída em 28/09/2026*
   - README (etapa 16, login vira 17), SPEC marcada como implementada, `graphify update`, memória.
   - Verificar: critério 8.
+  - Resultado: README com a etapa 16 (introdução, menu com Fiscal, tabela de etapas com login em 17, funcionalidades, estrutura de pastas, rotas da API, tabelas do banco, seção de testes, próximas etapas com os extras da NF-e e as Categorias de despesa já decididas). SPEC com os critérios 1-8 conferidos e a numeração sem `proximo_numero`. Grafo gravado com `grava_grafo_etapa16.py` (7 conceitos novos: decisões da NF-e, cálculo puro, numeração com FOR UPDATE, DANFE do XML, devolução com dados da nota original, modal fora do Router, máscara que não some com letras; 1 hiperaresta do fluxo de emissão; nenhum conceito perdido) e HTML exportado. Build 0 avisos, `dotnet test` 292/292, `tsc -b`/`oxlint`/`npm run build` limpos.
