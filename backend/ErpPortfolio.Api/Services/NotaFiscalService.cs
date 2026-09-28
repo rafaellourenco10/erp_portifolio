@@ -72,6 +72,58 @@ public class NotaFiscalService(ErpPortfolioDbContext contexto)
         return NotaFiscalDetalheDto.DeEntidade(nota, chaveReferenciada: null);
     }
 
+    /// <summary>
+    /// NF7: nota de entrada da devolução, referenciando a NF-e de saída do pedido. Produtos (código, descrição,
+    /// NCM, unidade) e alíquota vêm da nota original; valores, da devolução. Nulo = devolução inexistente.
+    /// </summary>
+    public async Task<NotaFiscalDetalheDto?> EmitirDaDevolucaoAsync(int devolucaoId, CancellationToken cancelamento)
+    {
+        await using var transacao = await contexto.Database.BeginTransactionAsync(cancelamento);
+        var empresa = await TravarEmpresaAsync(cancelamento);
+
+        var devolucao = await contexto.Devolucoes
+            .Include(d => d.Pedido).ThenInclude(p => p!.Cliente)
+            .Include(d => d.Itens).ThenInclude(i => i.PedidoItem)
+            .FirstOrDefaultAsync(d => d.Id == devolucaoId, cancelamento);
+        if (devolucao is null)
+            return null;
+
+        var original = await contexto.NotasFiscais
+            .Include(n => n.Itens)
+            .FirstOrDefaultAsync(n => n.PedidoId == devolucao.PedidoId && n.Tipo == TipoNotaFiscal.Saida, cancelamento)
+            ?? throw new ConflitoException($"O pedido {devolucao.PedidoId} não tem NF-e de saída; a devolução não tem nota a referenciar.");
+
+        if (await contexto.NotasFiscais.AnyAsync(n => n.DevolucaoId == devolucaoId, cancelamento))
+            throw new ConflitoException($"A devolução {devolucaoId} já tem NF-e emitida.");
+
+        var cliente = devolucao.Pedido!.Cliente!;
+        Conferir(empresa, cliente, []);
+
+        var itens = devolucao.Itens.OrderBy(i => i.Id).ToList();
+        var itemOriginal = original.Itens.ToDictionary(i => i.ProdutoId);
+        // O "produto" da nota de devolução é o que saiu na nota original, não o cadastro de hoje.
+        var produtos = itens.Select(i => itemOriginal[i.PedidoItem!.ProdutoId]).Select(o => new Produto
+        {
+            Id = o.ProdutoId, Sku = o.Codigo, Nome = o.Descricao, Ncm = o.Ncm, Unidade = o.Unidade
+        }).ToList();
+        var entradas = itens
+            .Select(i => new NfeCalculo.ItemEntrada(i.Quantidade, i.PedidoItem!.PrecoUnitario, i.Valor))
+            .ToList();
+        var cfop = NfeCalculo.Cfop(devolucao: true, empresa!.Uf, original.DestinatarioUf);
+
+        var nota = await MontarAsync(TipoNotaFiscal.Entrada, empresa, cliente, devolucao.PedidoId,
+            produtos, entradas, devolucao.ValorTotal, original.Itens.First().AliquotaIcms, cfop, cancelamento);
+        nota.DevolucaoId = devolucaoId;
+        nota.NotaReferenciadaId = original.Id;
+        nota.Xml = NfeXml.Gerar(nota, empresa, cliente, formaPagamento: null, original.Chave);
+
+        contexto.NotasFiscais.Add(nota);
+        await contexto.SaveChangesAsync(cancelamento);
+        await transacao.CommitAsync(cancelamento);
+
+        return NotaFiscalDetalheDto.DeEntidade(nota, original.Chave);
+    }
+
     public async Task<ResultadoPaginadoDto<NotaFiscalResumoDto>> ListarAsync(NotaFiscalFiltroDto filtro, CancellationToken cancelamento)
     {
         var consulta = Filtrar(filtro);

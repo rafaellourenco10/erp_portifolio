@@ -71,7 +71,7 @@ public static class ExportadorDanfe
                 // Cabeçalho: emitente | DANFE | chave e protocolo.
                 c.Item().Border(0.5f).Row(linha =>
                 {
-                    linha.RelativeItem(4).Padding(4).Column(e =>
+                    linha.RelativeItem(3.5f).Padding(4).Column(e =>
                     {
                         e.Item().Text(V(emit, "xNome")).FontSize(10).Bold();
                         e.Item().Text(Endereco(enderEmit));
@@ -87,7 +87,7 @@ public static class ExportadorDanfe
                         d.Item().AlignCenter().Text($"Série {V(ide, "serie").PadLeft(3, '0')}");
                         d.Item().AlignCenter().Text(t => { t.Span("Folha "); t.CurrentPageNumber(); t.Span("/"); t.TotalPages(); });
                     });
-                    linha.RelativeItem(4).Padding(4).Column(k =>
+                    linha.RelativeItem(4.5f).Padding(4).Column(k =>
                     {
                         Campo(k.Item(), "CHAVE DE ACESSO", chaveFormatada, negrito: true);
                         k.Item().PaddingTop(4).Text("Consulta de autenticidade no portal nacional da NF-e (ambiente de homologação: documento de teste).").FontSize(6);

@@ -2,7 +2,8 @@
 // Arquivo....: NotasFiscaisController.cs
 // Versão.....: 1.0.0
 // Data.......: 28/09/2026
-// Descrição..: NF-e simulada (etapa 16): emissão pelo pedido (POST /api/pedidos/{id}/nfe);
+// Descrição..: NF-e simulada (etapa 16): emissão pelo pedido (POST /api/pedidos/{id}/nfe) e pela
+//              devolução (POST /api/devolucoes/{id}/nfe);
 //              lista com filtros (JSON, xlsx ou pdf), detalhe, XML e DANFE. Falta de dado
 //              fiscal → 400 com a lista em "Pendencias"; pedido não confirmado ou já com
 //              nota → 409.
@@ -70,6 +71,15 @@ public class NotasFiscaisController(NotaFiscalService notaFiscalService) : Contr
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public Task<ActionResult<NotaFiscalDetalheDto>> EmitirDoPedido(int id, CancellationToken cancelamento) =>
         Emitir(() => notaFiscalService.EmitirDoPedidoAsync(id, cancelamento));
+
+    /// <summary>Emite a NF-e de devolução (entrada, finalidade 4) referenciando a NF-e de saída do pedido.</summary>
+    [HttpPost("/api/devolucoes/{id:int}/nfe")]
+    [ProducesResponseType<NotaFiscalDetalheDto>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public Task<ActionResult<NotaFiscalDetalheDto>> EmitirDaDevolucao(int id, CancellationToken cancelamento) =>
+        Emitir(() => notaFiscalService.EmitirDaDevolucaoAsync(id, cancelamento));
 
     private async Task<ActionResult<NotaFiscalDetalheDto>> Emitir(Func<Task<NotaFiscalDetalheDto?>> emitir)
     {

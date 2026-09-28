@@ -1,6 +1,6 @@
 // =====================================================================================
 // Arquivo....: DevolucaoService.cs
-// Versão.....: 1.2.0
+// Versão.....: 1.3.0
 // Data.......: 24/09/2026
 // Descrição..: Devolução de venda (SPEC.md etapa 14). Valida os itens (DV1/DV2), calcula
 //              valor, abatimento, reembolso e estorno pelo DevolucaoCalculo (DV3-DV6) e
@@ -23,6 +23,7 @@
 //   1.0.0 - 24/09/2026 - Criação do arquivo.
 //   1.1.0 - 24/09/2026 - ObterResumoMesAsync (card do Dashboard, DB1).
 //   1.2.0 - 24/09/2026 - "Hoje" e limites de dia/mês em horário de Brasília (HorarioBrasilia).
+//   1.3.0 - 28/09/2026 - Lista traz a NF-e de cada devolução (etapa 16).
 // =====================================================================================
 
 using ErpPortfolio.Api.Data;
@@ -187,8 +188,15 @@ public class DevolucaoService(ErpPortfolioDbContext contexto, IEstoqueService es
             .Where(c => c.DevolucaoId != null && ids.Contains(c.DevolucaoId.Value))
             .ToDictionaryAsync(c => c.DevolucaoId!.Value, c => c.Valor, cancelamento);
 
+        var notas = await contexto.NotasFiscais.AsNoTracking()
+            .Where(n => n.DevolucaoId != null && ids.Contains(n.DevolucaoId.Value))
+            .ToDictionaryAsync(n => n.DevolucaoId!.Value, n => new { n.Id, n.Numero }, cancelamento);
+
         return devolucoes
-            .Select(d => ParaResposta(d, reembolsos.TryGetValue(d.Id, out var conta) ? conta : null, estornos.GetValueOrDefault(d.Id)))
+            .Select(d => ParaResposta(d, reembolsos.TryGetValue(d.Id, out var conta) ? conta : null, estornos.GetValueOrDefault(d.Id)) with
+            {
+                NotaFiscalId = notas.GetValueOrDefault(d.Id)?.Id, NumeroNfe = notas.GetValueOrDefault(d.Id)?.Numero
+            })
             .ToList();
     }
 
